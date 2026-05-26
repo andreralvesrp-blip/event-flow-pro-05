@@ -1,5 +1,14 @@
-// Shared Clicksign payload parser — used by clicksign-webhook and
-// reprocess-clicksign-webhook. Idempotent on (tenant_id, clicksign_document_key).
+// Shared Clicksign payload parser — Phase 2.3 (Kids Point deterministic mapping)
+// Idempotent on (tenant_id, clicksign_document_key).
+//
+// Matching policy:
+// - Each DB field maps to ONE canonical Clicksign field label (exact match
+//   after normalization: lowercase, accents stripped, non-alphanumerics removed).
+// - A small list of alternates is allowed only for backwards-compat; they are
+//   also exact (normalized) matches, not fuzzy substring matches.
+// - NEVER use partial/substring matching for sensitive fields — that's what
+//   caused "E-mail Kids Point" to fill clients.email and risked "Data de hoje"
+//   filling event_date.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -56,13 +65,21 @@ function getAnswers(payload: Json): Record<string, string> {
   return merged;
 }
 
-function fa(answers: Record<string, string>, keys: string[]): string | null {
-  for (const k of keys) {
-    const v = answers[normKey(k)];
+/**
+ * Exact (normalized) lookup. Tries each label in order and returns the first
+ * present non-empty value. There is NO substring or fuzzy match — labels must
+ * match exactly after accent/case/punctuation normalization. This guarantees
+ * "E-mail Kids Point" never collides with "E-mail do cliente".
+ */
+function exact(answers: Record<string, string>, labels: string[]): string | null {
+  for (const label of labels) {
+    const v = answers[normKey(label)];
     if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
   }
   return null;
 }
+
+// ---------- normalizers ----------
 
 function digits(s: unknown): string | null {
   if (s === null || s === undefined) return null;
@@ -117,6 +134,35 @@ function toIsoDate(v: unknown): string | null {
   const d = new Date(v); return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+/** "À vista" → 1, "Em 2x" → 2, "3x" → 3, "10 parcelas" → 10. */
+function normInstallments(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const raw = String(v).trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/\ba\s*vista\b/.test(lower) || /\bavista\b/.test(lower)) return 1;
+  const m = lower.match(/(\d+)\s*x/) ?? lower.match(/(\d+)\s*parcela/) ?? lower.match(/-?\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+/** Normalize "Formato de pagamento" to a canonical label. */
+function normPaymentMethod(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const raw = String(v).trim();
+  if (!raw) return null;
+  const k = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const hasPix = /\bpix\b/.test(k);
+  const hasCard = /\bcart(ao|ão)?\b/.test(k) || /\bcredit/.test(k) || /\bdebit/.test(k);
+  const hasCash = /\bdinheiro\b/.test(k) || /\bespecie\b/.test(k);
+  if (hasPix && hasCard) return "PIX + cartão";
+  if (hasPix) return "PIX";
+  if (hasCard) return "Cartão";
+  if (hasCash) return "Dinheiro";
+  return raw; // keep original if it doesn't match any known canonical
+}
+
+// ---------- status mapping ----------
+
 export function mapStatus(eventName: string | null, rawStatus: string | null): string {
   const bag = `${(eventName ?? "").toLowerCase()} ${(rawStatus ?? "").toLowerCase()}`;
   if (/(cancel|refus|reject|recus)/.test(bag)) return "cancelado";
@@ -132,6 +178,8 @@ export function extractTopLevel(payload: Json) {
   };
 }
 
+// ---------- main processor ----------
+
 export async function processClicksignPayload(
   admin: SupabaseClient,
   tenantId: string,
@@ -143,9 +191,10 @@ export async function processClicksignPayload(
   const answers = getAnswers(payload);
   const signers = (pick<unknown[]>(payload, "document.signers", "signers", "data.document.signers") ?? []) as Json[];
 
+  // CPF — exact label "CPF"
+  const cpfRaw = exact(answers, ["CPF"]);
   const cpf = normCpf(
-    fa(answers, ["CPF", "cpf", "Documento", "documentation", "CPF do contratante"])
-    ?? signers.map((s) => (s as Json).documentation ?? (s as Json).cpf).find(Boolean),
+    cpfRaw ?? signers.map((s) => (s as Json).documentation ?? (s as Json).cpf).find(Boolean),
   );
   if (!cpf) throw new Error("CPF não encontrado no payload");
 
@@ -153,18 +202,21 @@ export async function processClicksignPayload(
     (s) => normCpf((s as Json).documentation ?? (s as Json).cpf) === cpf,
   ) ?? signers[0] ?? {};
 
+  // ----- CLIENT (exact-match deterministic mapping) -----
+  // Email: ONLY "E-mail do cliente". NEVER "E-mail Kids Point".
+  // Signer email is a last-resort fallback if the client email field is empty.
+  const clientEmail = exact(answers, ["E-mail do cliente"]) ?? (primarySigner.email as string | undefined) ?? null;
+
   const clientData: Json = {
     tenant_id: tenantId,
     cpf,
-    full_name: fa(answers, ["Nome completo", "Nome do contratante", "Contratante", "nome_completo", "full_name", "nome"])
-      ?? (primarySigner.name as string) ?? "Sem nome",
-    email: fa(answers, ["E-mail", "Email", "email", "E-mail do contratante"])
-      ?? (primarySigner.email as string) ?? null,
-    phone: normPhone(fa(answers, ["Telefone", "Celular", "WhatsApp", "phone", "phone_number"]) ?? primarySigner.phone_number),
-    address_full: fa(answers, ["Endereço", "Endereco", "Endereço completo", "Endereço completo (com CEP)", "address", "address_full"]),
-    mother_name: fa(answers, ["Nome da mãe", "Nome da mae", "Nome da mamãe", "Nome da mamae", "Mãe", "Mae", "mother_name"]),
-    father_name: fa(answers, ["Nome do pai", "Nome do papai", "Pai", "father_name"]),
-    how_met: fa(answers, ["Como conheceu", "Como nos conheceu", "how_met"]),
+    full_name: exact(answers, ["Nome completo"]) ?? (primarySigner.name as string) ?? "Sem nome",
+    email: clientEmail,
+    phone: normPhone(exact(answers, ["Celular"]) ?? primarySigner.phone_number),
+    address_full: exact(answers, ["Endereço completo (com CEP)"]),
+    mother_name: exact(answers, ["Nome da mamãe"]),
+    father_name: exact(answers, ["Nome do papai"]),
+    how_met: exact(answers, ["Como conheceu o buffet", "Como conheceu"]),
   };
 
   let clientId: string;
@@ -183,6 +235,11 @@ export async function processClicksignPayload(
     clientId = created.id;
   }
 
+  // ----- CONTRACT (exact-match deterministic mapping) -----
+  // event_date: ONLY "Data da festa". NEVER "Data de hoje".
+  // installment_count: ONLY "Parcelamento". NEVER "Formato de pagamento".
+  // payment_method:    ONLY "Formato de pagamento". NEVER "Parcelamento"
+  //                    nor "Data + Valor + Forma de pagamento".
   const contractData: Json = {
     tenant_id: tenantId,
     client_id: clientId,
@@ -190,27 +247,28 @@ export async function processClicksignPayload(
     clicksign_template_name: pick<string>(payload, "document.template.name", "template.name") ?? null,
     clicksign_signed_pdf_url: pick<string>(payload, "document.downloads.signed_file_url", "document.signed_file_url", "signed_file_url"),
     status: mapStatus(eventName, rawStatus),
-    event_date: normDate(fa(answers, ["Data da festa", "Data do evento", "data_evento", "event_date"])),
-    event_start_time: normTime(fa(answers, ["Horário de início", "Horario de inicio", "Hora início", "Hora inicio", "hora_inicio", "event_start_time"])),
-    event_end_time: normTime(fa(answers, ["Horário de término", "Horario de termino", "Hora término", "Hora termino", "hora_fim", "event_end_time"])),
-    guest_count: normInt(fa(answers, ["Nº convidados", "No convidados", "Número de convidados", "Numero de convidados", "Convidados", "numero_convidados", "guest_count"])),
-    celebrant_name: fa(answers, ["Nome do aniversariante", "Aniversariante", "aniversariante", "celebrant_name"]),
-    celebrant_age: normInt(fa(answers, ["Idade do aniversariante", "Idade", "idade_aniversariante", "celebrant_age"])),
-    decoration: fa(answers, ["Decoração", "Decoracao", "Tema", "Tema da festa", "decoracao", "decoration"]),
-    cake: fa(answers, ["Bolo", "Sabor do bolo", "bolo", "cake"]),
-    tasting_menu: fa(answers, ["Menu degustação", "Menu degustacao", "Degustação", "Degustacao", "menu_degustacao", "tasting_menu"]),
-    hot_dish: fa(answers, ["Prato quente", "Prato Quente", "prato_quente", "hot_dish"]),
-    observations: fa(answers, ["Observações", "Observacoes", "Observação", "Observacao", "notes", "observations"]),
-    children_pay_from_age: normInt(fa(answers, [
-      "Crianças pagam a partir de", "Criancas pagam a partir de",
-      "Crianças pagantes a partir de", "Criancas pagantes a partir de",
-      "Idade pagante", "A partir de quantos anos paga",
-      "Criança paga a partir de", "Crianca paga a partir de",
-      "children_pay_from_age",
-    ])),
-    total_value: normMoney(fa(answers, ["Valor fechado (R$)", "Valor fechado", "Valor total", "valor_total", "total_value"])),
-    installment_count: normInt(fa(answers, ["Nº de parcelas", "No de parcelas", "Numero de parcelas", "Número de parcelas", "Parcelas", "Parcelamento", "numero_parcelas", "installment_count"])),
-    payment_method: fa(answers, ["Forma de pagamento", "Formato de pagamento", "Meio de pagamento", "Pagamento", "forma_pagamento", "payment_method"]),
+
+    event_date: normDate(exact(answers, ["Data da festa"])),
+    event_weekday_raw: exact(answers, ["Dia da semana"]),
+    event_start_time: normTime(exact(answers, ["Horário de início"])),
+    event_end_time: normTime(exact(answers, ["Horário de término"])),
+    guest_count: normInt(exact(answers, ["Nº convidados"])),
+    celebrant_name: exact(answers, ["Aniversariante"]),
+    celebrant_age: normInt(exact(answers, ["Idade"])),
+    decoration: exact(answers, ["Decoração"]),
+    cake: exact(answers, ["Bolo"]),
+    hot_dish: exact(answers, ["Prato Quente"]),
+    observations: exact(answers, ["Observações"]),
+    children_pay_from_age: normInt(exact(answers, ["Crianças pagam a partir de"])),
+
+    total_value: normMoney(exact(answers, ["Valor fechado (R$)"])),
+    installment_count: normInstallments(exact(answers, ["Parcelamento"])),
+    payment_method: normPaymentMethod(exact(answers, ["Formato de pagamento"])),
+    payment_schedule_raw: exact(answers, ["Data + Valor + Forma de pagamento"]),
+    contract_form_date: normDate(exact(answers, ["Data de hoje"])),
+
+    // tasting_menu intentionally omitted — not present in Kids Point template.
+
     client_signed_at: toIsoDate(pick(payload, "document.signed_at", "document.client_signed_at")),
     manager_signed_at: toIsoDate(pick(payload, "document.manager_signed_at")),
     finalized_at: toIsoDate(pick(payload, "document.finished_at", "document.finalized_at", "occurred_at")),
@@ -249,7 +307,6 @@ export async function verifyHmacSha256(rawBody: string, secret: string, signatur
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(rawBody));
   const bytes = new Uint8Array(sig);
   const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-  // timing-safe compare
   const a = hex.toLowerCase();
   const b = signatureHex.toLowerCase().replace(/^sha256=/, "").trim();
   if (a.length !== b.length) return false;

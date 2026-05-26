@@ -198,11 +198,13 @@ export type Database = {
           clicksign_template_name: string | null
           client_id: string
           client_signed_at: string | null
+          contract_form_date: string | null
           created_at: string
           decoration: string | null
           event_date: string | null
           event_end_time: string | null
           event_start_time: string | null
+          event_weekday_raw: string | null
           finalized_at: string | null
           guest_count: number | null
           hot_dish: string | null
@@ -211,6 +213,7 @@ export type Database = {
           manager_signed_at: string | null
           observations: string | null
           payment_method: string | null
+          payment_schedule_raw: string | null
           raw_webhook_payload: Json | null
           status: Database["public"]["Enums"]["contract_status"]
           tasting_menu: string | null
@@ -229,11 +232,13 @@ export type Database = {
           clicksign_template_name?: string | null
           client_id: string
           client_signed_at?: string | null
+          contract_form_date?: string | null
           created_at?: string
           decoration?: string | null
           event_date?: string | null
           event_end_time?: string | null
           event_start_time?: string | null
+          event_weekday_raw?: string | null
           finalized_at?: string | null
           guest_count?: number | null
           hot_dish?: string | null
@@ -242,6 +247,7 @@ export type Database = {
           manager_signed_at?: string | null
           observations?: string | null
           payment_method?: string | null
+          payment_schedule_raw?: string | null
           raw_webhook_payload?: Json | null
           status?: Database["public"]["Enums"]["contract_status"]
           tasting_menu?: string | null
@@ -260,11 +266,13 @@ export type Database = {
           clicksign_template_name?: string | null
           client_id?: string
           client_signed_at?: string | null
+          contract_form_date?: string | null
           created_at?: string
           decoration?: string | null
           event_date?: string | null
           event_end_time?: string | null
           event_start_time?: string | null
+          event_weekday_raw?: string | null
           finalized_at?: string | null
           guest_count?: number | null
           hot_dish?: string | null
@@ -273,6 +281,7 @@ export type Database = {
           manager_signed_at?: string | null
           observations?: string | null
           payment_method?: string | null
+          payment_schedule_raw?: string | null
           raw_webhook_payload?: Json | null
           status?: Database["public"]["Enums"]["contract_status"]
           tasting_menu?: string | null
