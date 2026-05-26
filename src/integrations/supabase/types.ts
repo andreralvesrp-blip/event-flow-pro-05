@@ -142,6 +142,9 @@ export type Database = {
           created_at: string
           due_date: string
           id: string
+          manually_edited: boolean
+          manually_edited_at: string | null
+          manually_edited_by: string | null
           order_index: number
           paid: boolean
           paid_at: string | null
@@ -158,6 +161,9 @@ export type Database = {
           created_at?: string
           due_date: string
           id?: string
+          manually_edited?: boolean
+          manually_edited_at?: string | null
+          manually_edited_by?: string | null
           order_index: number
           paid?: boolean
           paid_at?: string | null
@@ -174,6 +180,9 @@ export type Database = {
           created_at?: string
           due_date?: string
           id?: string
+          manually_edited?: boolean
+          manually_edited_at?: string | null
+          manually_edited_by?: string | null
           order_index?: number
           paid?: boolean
           paid_at?: string | null
@@ -191,6 +200,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contract_installments_manually_edited_by_fkey"
+            columns: ["manually_edited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contract_installments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -203,6 +219,10 @@ export type Database = {
         Row: {
           additional_services: string | null
           cake: string | null
+          canceled_at: string | null
+          canceled_by: string | null
+          cancellation_financial_action: string | null
+          cancellation_reason: string | null
           celebrant_age: number | null
           celebrant_name: string | null
           children_pay_from_age: number | null
@@ -226,6 +246,10 @@ export type Database = {
           installment_count: number | null
           kids_menu: string | null
           manager_signed_at: string | null
+          manual_status_override: boolean
+          manually_edited: boolean
+          manually_edited_at: string | null
+          manually_edited_by: string | null
           observations: string | null
           payment_method: string | null
           payment_schedule_raw: string | null
@@ -240,6 +264,10 @@ export type Database = {
         Insert: {
           additional_services?: string | null
           cake?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
+          cancellation_financial_action?: string | null
+          cancellation_reason?: string | null
           celebrant_age?: number | null
           celebrant_name?: string | null
           children_pay_from_age?: number | null
@@ -263,6 +291,10 @@ export type Database = {
           installment_count?: number | null
           kids_menu?: string | null
           manager_signed_at?: string | null
+          manual_status_override?: boolean
+          manually_edited?: boolean
+          manually_edited_at?: string | null
+          manually_edited_by?: string | null
           observations?: string | null
           payment_method?: string | null
           payment_schedule_raw?: string | null
@@ -277,6 +309,10 @@ export type Database = {
         Update: {
           additional_services?: string | null
           cake?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
+          cancellation_financial_action?: string | null
+          cancellation_reason?: string | null
           celebrant_age?: number | null
           celebrant_name?: string | null
           children_pay_from_age?: number | null
@@ -300,6 +336,10 @@ export type Database = {
           installment_count?: number | null
           kids_menu?: string | null
           manager_signed_at?: string | null
+          manual_status_override?: boolean
+          manually_edited?: boolean
+          manually_edited_at?: string | null
+          manually_edited_by?: string | null
           observations?: string | null
           payment_method?: string | null
           payment_schedule_raw?: string | null
@@ -313,10 +353,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "contracts_canceled_by_fkey"
+            columns: ["canceled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contracts_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_manually_edited_by_fkey"
+            columns: ["manually_edited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
