@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as ClientesRouteImport } from './routes/clientes'
@@ -24,6 +25,11 @@ const WebhooksRoute = WebhooksRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceiroRoute = FinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/clientes': typeof ClientesRoute
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
+  '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/clientes': typeof ClientesRoute
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
+  '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/clientes': typeof ClientesRoute
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
+  '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
 }
@@ -79,16 +88,25 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/contratos'
     | '/dashboard'
+    | '/financeiro'
     | '/login'
     | '/webhooks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/clientes' | '/contratos' | '/dashboard' | '/login' | '/webhooks'
+  to:
+    | '/'
+    | '/clientes'
+    | '/contratos'
+    | '/dashboard'
+    | '/financeiro'
+    | '/login'
+    | '/webhooks'
   id:
     | '__root__'
     | '/'
     | '/clientes'
     | '/contratos'
     | '/dashboard'
+    | '/financeiro'
     | '/login'
     | '/webhooks'
   fileRoutesById: FileRoutesById
@@ -98,6 +116,7 @@ export interface RootRouteChildren {
   ClientesRoute: typeof ClientesRoute
   ContratosRoute: typeof ContratosRoute
   DashboardRoute: typeof DashboardRoute
+  FinanceiroRoute: typeof FinanceiroRoute
   LoginRoute: typeof LoginRoute
   WebhooksRoute: typeof WebhooksRoute
 }
@@ -116,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financeiro': {
+      id: '/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof FinanceiroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -154,9 +180,20 @@ const rootRouteChildren: RootRouteChildren = {
   ClientesRoute: ClientesRoute,
   ContratosRoute: ContratosRoute,
   DashboardRoute: DashboardRoute,
+  FinanceiroRoute: FinanceiroRoute,
   LoginRoute: LoginRoute,
   WebhooksRoute: WebhooksRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
