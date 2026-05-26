@@ -1,14 +1,9 @@
-// Shared Clicksign payload parser — Phase 2.3 (Kids Point deterministic mapping)
+// Shared Clicksign payload parser — Phase 2.4
+// New Kids Point template: full persistence + structured installments.
 // Idempotent on (tenant_id, clicksign_document_key).
 //
-// Matching policy:
-// - Each DB field maps to ONE canonical Clicksign field label (exact match
-//   after normalization: lowercase, accents stripped, non-alphanumerics removed).
-// - A small list of alternates is allowed only for backwards-compat; they are
-//   also exact (normalized) matches, not fuzzy substring matches.
-// - NEVER use partial/substring matching for sensitive fields — that's what
-//   caused "E-mail Kids Point" to fill clients.email and risked "Data de hoje"
-//   filling event_date.
+// Matching policy: strict exact-label match after normalization
+// (lowercase, accents stripped, non-alphanumerics removed). No fuzzy/substring.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -41,6 +36,22 @@ function normKey(s: string): string {
     .replace(/[^a-z0-9]+/g, "");
 }
 
+/**
+ * Coerce a raw answer value to a string.
+ * - Arrays are joined with newlines (preserves multi-line fields like "Parcelas"
+ *   and multi-select like "Forma de pagamento").
+ * - Objects fall back to JSON.
+ */
+function answerToString(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string") return v.trim();
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) {
+    return v.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join("\n").trim();
+  }
+  return JSON.stringify(v);
+}
+
 function getAnswers(payload: Json): Record<string, string> {
   const candidates: unknown[] = [
     deepGet(payload, "document.template.data"),
@@ -56,21 +67,16 @@ function getAnswers(payload: Json): Record<string, string> {
         if (v === null || v === undefined) continue;
         const key = normKey(String(k));
         if (!key) continue;
-        if (merged[key] === undefined) {
-          merged[key] = typeof v === "string" ? v.trim() : String(v);
-        }
+        const str = answerToString(v);
+        if (!str) continue;
+        if (merged[key] === undefined) merged[key] = str;
       }
     }
   }
   return merged;
 }
 
-/**
- * Exact (normalized) lookup. Tries each label in order and returns the first
- * present non-empty value. There is NO substring or fuzzy match — labels must
- * match exactly after accent/case/punctuation normalization. This guarantees
- * "E-mail Kids Point" never collides with "E-mail do cliente".
- */
+/** Exact (normalized) lookup — no fuzzy match. */
 function exact(answers: Record<string, string>, labels: string[]): string | null {
   for (const label of labels) {
     const v = answers[normKey(label)];
@@ -110,6 +116,8 @@ function normTime(v: unknown): string | null {
   if (m) return `${m[1].padStart(2, "0")}:${m[2]}:${m[3] ?? "00"}`;
   m = s.match(/^(\d{1,2})h(\d{0,2})/);
   if (m) return `${m[1].padStart(2, "0")}:${(m[2] || "00").padStart(2, "0")}:00`;
+  m = s.match(/^(\d{1,2})$/);
+  if (m) return `${m[1].padStart(2, "0")}:00:00`;
   return null;
 }
 
@@ -134,7 +142,7 @@ function toIsoDate(v: unknown): string | null {
   const d = new Date(v); return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-/** "À vista" → 1, "Em 2x" → 2, "3x" → 3, "10 parcelas" → 10. */
+/** "À vista" → 1, "Em 2x" → 2, "3x" → 3, "10 parcelas" → 10, "1".."12" → number. */
 function normInstallments(v: unknown): number | null {
   if (v === null || v === undefined) return null;
   const raw = String(v).trim();
@@ -145,20 +153,96 @@ function normInstallments(v: unknown): number | null {
   return m ? parseInt(m[0], 10) : null;
 }
 
-/** Normalize "Formato de pagamento" to a canonical label. */
+/** Normalize a single payment-method token to canonical label. */
+function normMethodToken(raw: string): string {
+  const k = raw.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!k) return "";
+  if (/pix/.test(k)) return "PIX";
+  if (/cart/.test(k) || /credit/.test(k) || /debit/.test(k)) return "Cartão";
+  if (/dinheiro|especie/.test(k)) return "Dinheiro";
+  if (/transf|\bted\b|doc\b/.test(k)) return "Transf/TED";
+  // keep original capitalisation if unknown
+  return raw.trim();
+}
+
+/**
+ * Normalize "Forma de pagamento". Accepts:
+ *   - "PIX"
+ *   - "PIX, Cartão"
+ *   - "PIX\nCartão"
+ *   - already-joined "PIX + Cartão"
+ *   - array (already joined by newline upstream)
+ * Returns canonical "A + B + C".
+ */
 function normPaymentMethod(v: unknown): string | null {
   if (v === null || v === undefined) return null;
   const raw = String(v).trim();
   if (!raw) return null;
-  const k = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const hasPix = /\bpix\b/.test(k);
-  const hasCard = /\bcart(ao|ão)?\b/.test(k) || /\bcredit/.test(k) || /\bdebit/.test(k);
-  const hasCash = /\bdinheiro\b/.test(k) || /\bespecie\b/.test(k);
-  if (hasPix && hasCard) return "PIX + cartão";
-  if (hasPix) return "PIX";
-  if (hasCard) return "Cartão";
-  if (hasCash) return "Dinheiro";
-  return raw; // keep original if it doesn't match any known canonical
+  const parts = raw.split(/[\n,;|+\/]+/).map((p) => normMethodToken(p)).filter(Boolean);
+  if (!parts.length) return raw;
+  // de-dup preserving order
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const p of parts) {
+    if (!seen.has(p)) { seen.add(p); out.push(p); }
+  }
+  return out.join(" + ");
+}
+
+// ---------- "Parcelas" parser ----------
+
+export type ParsedInstallment = {
+  order_index: number;
+  due_date: string;     // YYYY-MM-DD
+  amount: number;
+  payment_method: string;
+  raw_line: string;
+};
+
+/**
+ * Parse the multi-line "Parcelas" field. Expected per-line format:
+ *   DD/MM/AAAA - R$ 0.000,00 - MÉTODO
+ * Lenient on separators (- or –), spaces, and missing R$.
+ */
+export function parseInstallments(raw: string | null | undefined): ParsedInstallment[] {
+  if (!raw) return [];
+  const lines = String(raw).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const out: ParsedInstallment[] = [];
+  let idx = 0;
+  for (const line of lines) {
+    // Find date
+    const dateMatch = line.match(/(\d{2}[\/\-]\d{2}[\/\-]\d{4})|(\d{4}-\d{2}-\d{2})/);
+    if (!dateMatch) continue;
+    const due = normDate(dateMatch[0]);
+    if (!due) continue;
+    // Find money (R$ 1.000,00 / 1000.00 / 1000,00)
+    const moneyMatch = line.match(/R?\$?\s*([\d.,]+)/g);
+    let amount: number | null = null;
+    if (moneyMatch) {
+      // Prefer the longest numeric token that isn't the date
+      const candidates = moneyMatch
+        .map((m) => m.replace(/^R?\$?\s*/, ""))
+        .filter((m) => !/\d{2}[\/\-]\d{2}[\/\-]\d{4}/.test(m) && /[.,]/.test(m) === true || /^\d{2,}$/.test(m));
+      for (const c of candidates) {
+        const n = normMoney(c);
+        if (n !== null && n > 0) { amount = n; break; }
+      }
+    }
+    if (amount === null) continue;
+    // Method = trailing token after last separator
+    const parts = line.split(/\s+[-–]\s+/);
+    const methodRaw = parts.length >= 3 ? parts[parts.length - 1] : "";
+    const method = normMethodToken(methodRaw) || "PIX";
+    idx += 1;
+    out.push({
+      order_index: idx,
+      due_date: due,
+      amount,
+      payment_method: method,
+      raw_line: line,
+    });
+  }
+  return out;
 }
 
 // ---------- status mapping ----------
@@ -184,14 +268,14 @@ export async function processClicksignPayload(
   admin: SupabaseClient,
   tenantId: string,
   payload: Json,
-): Promise<{ contract_id: string; client_id: string }> {
+): Promise<{ contract_id: string; client_id: string; warnings: string[] }> {
+  const warnings: string[] = [];
   const { eventName, documentKey, rawStatus } = extractTopLevel(payload);
   if (!documentKey) throw new Error("document_key não encontrado no payload");
 
   const answers = getAnswers(payload);
   const signers = (pick<unknown[]>(payload, "document.signers", "signers", "data.document.signers") ?? []) as Json[];
 
-  // CPF — exact label "CPF"
   const cpfRaw = exact(answers, ["CPF"]);
   const cpf = normCpf(
     cpfRaw ?? signers.map((s) => (s as Json).documentation ?? (s as Json).cpf).find(Boolean),
@@ -202,10 +286,11 @@ export async function processClicksignPayload(
     (s) => normCpf((s as Json).documentation ?? (s as Json).cpf) === cpf,
   ) ?? signers[0] ?? {};
 
-  // ----- CLIENT (exact-match deterministic mapping) -----
-  // Email: ONLY "E-mail do cliente". NEVER "E-mail Kids Point".
-  // Signer email is a last-resort fallback if the client email field is empty.
-  const clientEmail = exact(answers, ["E-mail do cliente"]) ?? (primarySigner.email as string | undefined) ?? null;
+  // ----- CLIENT -----
+  // Email: ONLY "E-mail Contratante" (NEVER "E-mail Contratada").
+  // Fallback to signer email only when contratante is empty.
+  const contratanteEmail = exact(answers, ["E-mail Contratante", "E-mail do cliente"]);
+  const clientEmail = contratanteEmail ?? (primarySigner.email as string | undefined) ?? null;
 
   const clientData: Json = {
     tenant_id: tenantId,
@@ -213,10 +298,10 @@ export async function processClicksignPayload(
     full_name: exact(answers, ["Nome completo"]) ?? (primarySigner.name as string) ?? "Sem nome",
     email: clientEmail,
     phone: normPhone(exact(answers, ["Celular"]) ?? primarySigner.phone_number),
-    address_full: exact(answers, ["Endereço completo (com CEP)"]),
+    address_full: exact(answers, ["Endereço completo (com CEP)", "Endereço completo"]),
     mother_name: exact(answers, ["Nome da mamãe"]),
     father_name: exact(answers, ["Nome do papai"]),
-    how_met: exact(answers, ["Como conheceu o buffet", "Como conheceu"]),
+    how_met: exact(answers, ["Como conheceu", "Como conheceu o buffet"]),
   };
 
   let clientId: string;
@@ -235,11 +320,11 @@ export async function processClicksignPayload(
     clientId = created.id;
   }
 
-  // ----- CONTRACT (exact-match deterministic mapping) -----
-  // event_date: ONLY "Data da festa". NEVER "Data de hoje".
-  // installment_count: ONLY "Parcelamento". NEVER "Formato de pagamento".
-  // payment_method:    ONLY "Formato de pagamento". NEVER "Parcelamento"
-  //                    nor "Data + Valor + Forma de pagamento".
+  // ----- CONTRACT -----
+  const paymentScheduleRaw = exact(answers, ["Parcelas", "Data + Valor + Forma de pagamento"]);
+  const totalValue = normMoney(exact(answers, ["Valor (R$)", "Valor fechado (R$)"]));
+  const installmentCount = normInstallments(exact(answers, ["Parcelamento"]));
+
   const contractData: Json = {
     tenant_id: tenantId,
     client_id: clientId,
@@ -252,22 +337,24 @@ export async function processClicksignPayload(
     event_weekday_raw: exact(answers, ["Dia da semana"]),
     event_start_time: normTime(exact(answers, ["Horário de início"])),
     event_end_time: normTime(exact(answers, ["Horário de término"])),
-    guest_count: normInt(exact(answers, ["Nº convidados"])),
+    guest_count: normInt(exact(answers, ["Nº convidados", "N convidados", "Numero de convidados"])),
     celebrant_name: exact(answers, ["Aniversariante"]),
     celebrant_age: normInt(exact(answers, ["Idade"])),
     decoration: exact(answers, ["Decoração"]),
-    cake: exact(answers, ["Bolo"]),
+    tasting_menu: exact(answers, ["Menu Degustação"]),
     hot_dish: exact(answers, ["Prato Quente"]),
+    cake: exact(answers, ["Bolo"]),
+    kids_menu: exact(answers, ["Prato Kids"]),
     observations: exact(answers, ["Observações"]),
+    additional_services: exact(answers, ["Serviços Adicionais"]),
     children_pay_from_age: normInt(exact(answers, ["Crianças pagam a partir de"])),
-
-    total_value: normMoney(exact(answers, ["Valor fechado (R$)"])),
-    installment_count: normInstallments(exact(answers, ["Parcelamento"])),
-    payment_method: normPaymentMethod(exact(answers, ["Formato de pagamento"])),
-    payment_schedule_raw: exact(answers, ["Data + Valor + Forma de pagamento"]),
     contract_form_date: normDate(exact(answers, ["Data de hoje"])),
+    contracted_company_email: exact(answers, ["E-mail Contratada"]),
 
-    // tasting_menu intentionally omitted — not present in Kids Point template.
+    total_value: totalValue,
+    installment_count: installmentCount,
+    payment_method: normPaymentMethod(exact(answers, ["Forma de pagamento", "Formato de pagamento"])),
+    payment_schedule_raw: paymentScheduleRaw,
 
     client_signed_at: toIsoDate(pick(payload, "document.signed_at", "document.client_signed_at")),
     manager_signed_at: toIsoDate(pick(payload, "document.manager_signed_at")),
@@ -295,7 +382,52 @@ export async function processClicksignPayload(
     contractId = created.id;
   }
 
-  return { contract_id: contractId, client_id: clientId };
+  // ----- INSTALLMENTS (idempotent: delete + recreate) -----
+  const parsed = parseInstallments(paymentScheduleRaw);
+
+  const { error: delErr } = await admin
+    .from("contract_installments")
+    .delete()
+    .eq("contract_id", contractId);
+  if (delErr) warnings.push(`Falha ao limpar parcelas antigas: ${delErr.message}`);
+
+  if (parsed.length === 0) {
+    if (paymentScheduleRaw) {
+      warnings.push("Campo Parcelas presente mas nenhuma linha pôde ser interpretada");
+    } else {
+      warnings.push("Campo Parcelas vazio; nenhuma parcela gerada");
+    }
+  } else {
+    const rows = parsed.map((p) => ({
+      tenant_id: tenantId,
+      contract_id: contractId,
+      order_index: p.order_index,
+      due_date: p.due_date,
+      amount: p.amount,
+      payment_method: p.payment_method,
+      paid: false,
+      payment_status: "pendente",
+      charge_customer: true,
+      card_installments: null,
+      raw_line: p.raw_line,
+    }));
+    const { error: insErr } = await admin.from("contract_installments").insert(rows);
+    if (insErr) warnings.push(`Falha ao inserir parcelas: ${insErr.message}`);
+  }
+
+  // ----- Financial validations (warnings only) -----
+  const sum = parsed.reduce((acc, p) => acc + p.amount, 0);
+  if (totalValue !== null && parsed.length > 0) {
+    const diff = Math.abs(sum - totalValue);
+    if (diff > 0.01) {
+      warnings.push(`Warning financeiro: total_value=${totalValue.toFixed(2)}, soma_parcelas=${sum.toFixed(2)}`);
+    }
+  }
+  if (installmentCount !== null && parsed.length > 0 && parsed.length !== installmentCount) {
+    warnings.push(`Warning financeiro: installment_count=${installmentCount}, parcelas_geradas=${parsed.length}`);
+  }
+
+  return { contract_id: contractId, client_id: clientId, warnings };
 }
 
 // ---------- HMAC SHA256 validator (hex) ----------
