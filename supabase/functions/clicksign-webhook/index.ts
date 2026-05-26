@@ -284,12 +284,31 @@ Deno.serve(async (req) => {
         if (v !== null && v !== undefined && k !== "tenant_id" && k !== "clicksign_document_key") update[k] = v;
       }
       if (Object.keys(update).length) {
-        await admin.from("contracts").update(update).eq("id", contractId);
+        const { error: uErr } = await admin.from("contracts").update(update).eq("id", contractId);
+        if (uErr) {
+          const debug = {
+            stage: "contract update",
+            document_key: documentKey,
+            template_name: contractData.clicksign_template_name,
+            fields_sent: Object.keys(update),
+            contract_payload: update,
+          };
+          throw new Error(`contract update failed: ${uErr.message} | ctx=${JSON.stringify(debug)}`);
+        }
       }
     } else {
       const { data: created, error: ctErr } = await admin
         .from("contracts").insert(contractData).select("id").single();
-      if (ctErr || !created) throw new Error(`contract insert failed: ${ctErr?.message}`);
+      if (ctErr || !created) {
+        const debug = {
+          stage: "contract insert",
+          document_key: documentKey,
+          template_name: contractData.clicksign_template_name,
+          fields_sent: Object.keys(contractData),
+          contract_payload: contractData,
+        };
+        throw new Error(`contract insert failed: ${ctErr?.message} | ctx=${JSON.stringify(debug)}`);
+      }
       contractId = created.id;
     }
 
