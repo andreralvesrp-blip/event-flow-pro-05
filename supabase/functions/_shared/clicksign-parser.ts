@@ -447,14 +447,42 @@ export async function processClicksignPayload(
     raw_webhook_payload: payload,
   };
 
+  // Fields that represent operational data subject to manual edits.
+  // When contracts.manually_edited = true, webhooks must not overwrite these.
+  const OPERATIONAL_FIELDS = new Set<string>([
+    "event_date", "event_weekday_raw", "event_start_time", "event_end_time",
+    "guest_count", "celebrant_name", "celebrant_age", "children_pay_from_age",
+    "decoration", "tasting_menu", "hot_dish", "cake", "kids_menu",
+    "observations", "additional_services", "contract_form_date",
+    "contracted_company_email",
+    "total_value", "installment_count", "payment_method", "payment_schedule_raw",
+  ]);
+
   let contractId: string;
-  const { data: existingC } = await admin.from("contracts").select("id")
+  let existingManuallyEdited = false;
+  let existingManualStatusOverride = false;
+  const { data: existingC } = await admin.from("contracts")
+    .select("id, manually_edited, manual_status_override, status")
     .eq("tenant_id", tenantId).eq("clicksign_document_key", documentKey).maybeSingle();
   if (existingC) {
-    contractId = existingC.id;
+    contractId = (existingC as { id: string }).id;
+    existingManuallyEdited = !!(existingC as { manually_edited?: boolean }).manually_edited;
+    existingManualStatusOverride = !!(existingC as { manual_status_override?: boolean }).manual_status_override;
     const upd: Json = {};
     for (const [k, v] of Object.entries(contractData)) {
-      if (v !== null && v !== undefined && k !== "tenant_id" && k !== "clicksign_document_key") upd[k] = v;
+      if (v === null || v === undefined) continue;
+      if (k === "tenant_id" || k === "clicksign_document_key") continue;
+      // Preserve manual operational edits
+      if (existingManuallyEdited && OPERATIONAL_FIELDS.has(k)) continue;
+      // Preserve manual cancellation
+      if (existingManualStatusOverride && k === "status") continue;
+      upd[k] = v;
+    }
+    if (existingManuallyEdited) {
+      warnings.push("Contrato possui edição manual; reprocessamento não sobrescreveu campos operacionais.");
+    }
+    if (existingManualStatusOverride && (existingC as { status?: string }).status === "cancelado") {
+      warnings.push("Contrato cancelado manualmente; webhook não alterou status.");
     }
     if (Object.keys(upd).length) {
       const { error: uErr } = await admin.from("contracts").update(upd).eq("id", contractId);
@@ -469,34 +497,38 @@ export async function processClicksignPayload(
   // ----- INSTALLMENTS (idempotent: delete + recreate) -----
   const parsed = parseInstallments(paymentScheduleRaw);
 
-  const { error: delErr } = await admin
-    .from("contract_installments")
-    .delete()
-    .eq("contract_id", contractId);
-  if (delErr) warnings.push(`Falha ao limpar parcelas antigas: ${delErr.message}`);
-
-  if (parsed.length === 0) {
-    if (paymentScheduleRaw) {
-      warnings.push("Campo Parcelas presente mas nenhuma linha pôde ser interpretada");
-    } else {
-      warnings.push("Campo Parcelas vazio; nenhuma parcela gerada");
-    }
+  if (existingManuallyEdited) {
+    warnings.push("Contrato possui edição manual; parcelas não foram recriadas pelo webhook.");
   } else {
-    const rows = parsed.map((p) => ({
-      tenant_id: tenantId,
-      contract_id: contractId,
-      order_index: p.order_index,
-      due_date: p.due_date,
-      amount: p.amount,
-      payment_method: p.payment_method,
-      paid: false,
-      payment_status: "pendente",
-      charge_customer: true,
-      card_installments: null,
-      raw_line: p.raw_line,
-    }));
-    const { error: insErr } = await admin.from("contract_installments").insert(rows);
-    if (insErr) warnings.push(`Falha ao inserir parcelas: ${insErr.message}`);
+    const { error: delErr } = await admin
+      .from("contract_installments")
+      .delete()
+      .eq("contract_id", contractId);
+    if (delErr) warnings.push(`Falha ao limpar parcelas antigas: ${delErr.message}`);
+
+    if (parsed.length === 0) {
+      if (paymentScheduleRaw) {
+        warnings.push("Campo Parcelas presente mas nenhuma linha pôde ser interpretada");
+      } else {
+        warnings.push("Campo Parcelas vazio; nenhuma parcela gerada");
+      }
+    } else {
+      const rows = parsed.map((p) => ({
+        tenant_id: tenantId,
+        contract_id: contractId,
+        order_index: p.order_index,
+        due_date: p.due_date,
+        amount: p.amount,
+        payment_method: p.payment_method,
+        paid: false,
+        payment_status: "pendente",
+        charge_customer: true,
+        card_installments: null,
+        raw_line: p.raw_line,
+      }));
+      const { error: insErr } = await admin.from("contract_installments").insert(rows);
+      if (insErr) warnings.push(`Falha ao inserir parcelas: ${insErr.message}`);
+    }
   }
 
   // ----- Financial validations (warnings only) -----
