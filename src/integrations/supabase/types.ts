@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      clicksign_webhook_events: {
+        Row: {
+          document_key: string | null
+          event_name: string | null
+          id: string
+          payload: Json
+          processed: boolean
+          processed_at: string | null
+          processing_error: string | null
+          received_at: string
+          status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          document_key?: string | null
+          event_name?: string | null
+          id?: string
+          payload: Json
+          processed?: boolean
+          processed_at?: string | null
+          processing_error?: string | null
+          received_at?: string
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          document_key?: string | null
+          event_name?: string | null
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+          processing_error?: string | null
+          received_at?: string
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clicksign_webhook_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address_full: string | null
