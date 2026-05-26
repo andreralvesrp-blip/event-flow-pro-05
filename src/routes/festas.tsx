@@ -563,7 +563,7 @@ function DetailContent({
       };
       const { error: cErr } = await supabase
         .from("contracts")
-        .update(updateBody)
+        .update(updateBody as never)
         .eq("id", f.id);
       if (cErr) throw new Error(cErr.message);
 
