@@ -309,22 +309,53 @@ export async function processClicksignPayload(
     (s) => normCpf((s as Json).documentation ?? (s as Json).cpf) === cpf,
   ) ?? signers[0] ?? {};
 
-  // ----- CLIENT -----
-  // Email: ONLY "E-mail Contratante" (NEVER "E-mail Contratada").
-  // Fallback to signer email only when contratante is empty.
-  const contratanteEmail = exact(answers, ["E-mail Contratante", "E-mail do cliente"]);
-  const contratadaEmail = exact(answers, ["E-mail Contratada"]);
-  const signerEmails = signers.map((s) => (s as Json).email).filter(Boolean) as string[];
-  let clientEmail: string | null = contratanteEmail;
-  if (!clientEmail) {
-    const fallback = signerEmails.find((e) => e !== contratadaEmail) ?? signerEmails[0] ?? null;
-    clientEmail = fallback ?? null;
-    if (fallback) warnings.push("E-mail Contratante não encontrado no template; usando fallback de signer");
+  // ----- Resolve fixed contracted company email (system_settings) -----
+  const FALLBACK_CONTRACTED_EMAIL = "andre@buffetkidspoint.com.br";
+  let contractedCompanyEmail = FALLBACK_CONTRACTED_EMAIL;
+  try {
+    const { data: setting } = await admin.from("system_settings")
+      .select("value").eq("tenant_id", tenantId).eq("key", "contracted_company_email").maybeSingle();
+    if (setting?.value && String(setting.value).trim()) {
+      contractedCompanyEmail = String(setting.value).trim();
+    } else {
+      warnings.push("system_settings.contracted_company_email não encontrada; usando fallback");
+    }
+  } catch (e) {
+    warnings.push(`Falha ao ler system_settings.contracted_company_email: ${(e as Error).message}`);
   }
-  if (!contratadaEmail) {
-    warnings.push("E-mail Contratada não encontrado no payload");
-  }
+  const contractedLc = contractedCompanyEmail.toLowerCase();
+  const isContracted = (e: string | null | undefined) =>
+    !!e && e.toLowerCase().trim() === contractedLc;
 
+  // ----- CLIENT EMAIL resolution -----
+  // A) "E-mail Contratante" do template (rejeitando se igual ao da contratada)
+  // B) Signers filtrados (excluindo e-mail fixo da contratada):
+  //    1 sobrando => usa; >1 => ambíguo (não escolhe); 0 => nenhum
+  const contratanteEmail = exact(answers, ["E-mail Contratante", "E-mail do cliente"]);
+  let clientEmail: string | null = null;
+  if (contratanteEmail) {
+    if (isContracted(contratanteEmail)) {
+      warnings.push("E-mail Contratante igual ao e-mail fixo da contratada; ignorado");
+    } else {
+      clientEmail = contratanteEmail;
+    }
+  }
+  if (!clientEmail) {
+    const signerEmailsRaw = signers
+      .map((s) => (s as Json).email)
+      .filter((e): e is string => typeof e === "string" && e.trim() !== "");
+    const candidates = Array.from(new Set(signerEmailsRaw.filter((e) => !isContracted(e))));
+    if (candidates.length === 1) {
+      clientEmail = candidates[0];
+      if (!contratanteEmail) {
+        warnings.push("E-mail Contratante não encontrado no template; usando signer único após excluir contratada");
+      }
+    } else if (candidates.length > 1) {
+      warnings.push("E-mail Contratante não encontrado e múltiplos signers possíveis; fallback não aplicado por ambiguidade.");
+    } else {
+      warnings.push("E-mail Contratante não encontrado e nenhum signer válido após excluir e-mail da contratada.");
+    }
+  }
 
   const clientData: Json = {
     tenant_id: tenantId,
@@ -339,16 +370,35 @@ export async function processClicksignPayload(
   };
 
   let clientId: string;
-  const { data: existing } = await admin.from("clients").select("id")
-    .eq("tenant_id", tenantId).eq("cpf", cpf).maybeSingle();
+  const { data: existing } = await admin.from("clients")
+    .select("id, email").eq("tenant_id", tenantId).eq("cpf", cpf).maybeSingle();
   if (existing) {
     clientId = existing.id;
+    const existingEmail = (existing as { email: string | null }).email ?? null;
     const upd: Json = {};
     for (const [k, v] of Object.entries(clientData)) {
-      if (v !== null && v !== undefined && k !== "tenant_id" && k !== "cpf") upd[k] = v;
+      if (k === "tenant_id" || k === "cpf") continue;
+      if (k === "email") {
+        // Nunca salvar o e-mail da contratada como cliente
+        if (typeof v === "string" && isContracted(v)) continue;
+        // Limpar legado: se o e-mail atual é o da contratada, sobrescrever
+        if (existingEmail && isContracted(existingEmail)) {
+          upd.email = (typeof v === "string" && v) ? v : null;
+          continue;
+        }
+        // Só atualiza se houver e-mail novo claramente identificado e diferente
+        if (typeof v === "string" && v && v !== existingEmail) {
+          upd.email = v;
+        }
+        continue;
+      }
+      if (v !== null && v !== undefined) upd[k] = v;
     }
     if (Object.keys(upd).length) await admin.from("clients").update(upd).eq("id", clientId);
   } else {
+    if (typeof clientData.email === "string" && isContracted(clientData.email as string)) {
+      clientData.email = null;
+    }
     const { data: created, error: cErr } = await admin.from("clients").insert(clientData).select("id").single();
     if (cErr || !created) throw new Error(`client insert failed: ${cErr?.message}`);
     clientId = created.id;
