@@ -313,7 +313,18 @@ export async function processClicksignPayload(
   // Email: ONLY "E-mail Contratante" (NEVER "E-mail Contratada").
   // Fallback to signer email only when contratante is empty.
   const contratanteEmail = exact(answers, ["E-mail Contratante", "E-mail do cliente"]);
-  const clientEmail = contratanteEmail ?? (primarySigner.email as string | undefined) ?? null;
+  const contratadaEmail = exact(answers, ["E-mail Contratada"]);
+  const signerEmails = signers.map((s) => (s as Json).email).filter(Boolean) as string[];
+  let clientEmail: string | null = contratanteEmail;
+  if (!clientEmail) {
+    const fallback = signerEmails.find((e) => e !== contratadaEmail) ?? signerEmails[0] ?? null;
+    clientEmail = fallback ?? null;
+    if (fallback) warnings.push("E-mail Contratante não encontrado no template; usando fallback de signer");
+  }
+  if (!contratadaEmail) {
+    warnings.push("E-mail Contratada não encontrado no payload");
+  }
+
 
   const clientData: Json = {
     tenant_id: tenantId,
