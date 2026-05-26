@@ -1,12 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AppLayout, PlaceholderCard } from "@/components/AppLayout";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/contratos")({
-  component: () => (
-    <AppLayout title="Contratos">
-      <PlaceholderCard>
-        Em construção — Fase 3 traz a listagem após sincronizar do Clicksign.
-      </PlaceholderCard>
-    </AppLayout>
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: "/festas" });
+  },
 });
