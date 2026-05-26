@@ -115,11 +115,13 @@ Deno.serve(async (req) => {
   const eventId = eventRow.id as string;
 
   try {
-    const { contract_id, client_id } = await processClicksignPayload(admin, tenantId, payload);
+    const { contract_id, client_id, warnings } = await processClicksignPayload(admin, tenantId, payload);
     await admin.from("clicksign_webhook_events").update({
-      processed: true, processing_error: null, processed_at: new Date().toISOString(),
+      processed: true,
+      processing_error: warnings.length ? warnings.join(" | ") : null,
+      processed_at: new Date().toISOString(),
     }).eq("id", eventId);
-    return new Response(JSON.stringify({ ok: true, contract_id, client_id }), {
+    return new Response(JSON.stringify({ ok: true, contract_id, client_id, warnings }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

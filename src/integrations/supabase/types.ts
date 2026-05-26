@@ -136,6 +136,8 @@ export type Database = {
       contract_installments: {
         Row: {
           amount: number
+          card_installments: number | null
+          charge_customer: boolean | null
           contract_id: string
           created_at: string
           due_date: string
@@ -144,10 +146,14 @@ export type Database = {
           paid: boolean
           paid_at: string | null
           payment_method: string
+          payment_status: string | null
+          raw_line: string | null
           tenant_id: string
         }
         Insert: {
           amount: number
+          card_installments?: number | null
+          charge_customer?: boolean | null
           contract_id: string
           created_at?: string
           due_date: string
@@ -156,10 +162,14 @@ export type Database = {
           paid?: boolean
           paid_at?: string | null
           payment_method: string
+          payment_status?: string | null
+          raw_line?: string | null
           tenant_id: string
         }
         Update: {
           amount?: number
+          card_installments?: number | null
+          charge_customer?: boolean | null
           contract_id?: string
           created_at?: string
           due_date?: string
@@ -168,6 +178,8 @@ export type Database = {
           paid?: boolean
           paid_at?: string | null
           payment_method?: string
+          payment_status?: string | null
+          raw_line?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -189,6 +201,7 @@ export type Database = {
       }
       contracts: {
         Row: {
+          additional_services: string | null
           cake: string | null
           celebrant_age: number | null
           celebrant_name: string | null
@@ -199,6 +212,7 @@ export type Database = {
           client_id: string
           client_signed_at: string | null
           contract_form_date: string | null
+          contracted_company_email: string | null
           created_at: string
           decoration: string | null
           event_date: string | null
@@ -210,6 +224,7 @@ export type Database = {
           hot_dish: string | null
           id: string
           installment_count: number | null
+          kids_menu: string | null
           manager_signed_at: string | null
           observations: string | null
           payment_method: string | null
@@ -223,6 +238,7 @@ export type Database = {
           webhook_received_at: string
         }
         Insert: {
+          additional_services?: string | null
           cake?: string | null
           celebrant_age?: number | null
           celebrant_name?: string | null
@@ -233,6 +249,7 @@ export type Database = {
           client_id: string
           client_signed_at?: string | null
           contract_form_date?: string | null
+          contracted_company_email?: string | null
           created_at?: string
           decoration?: string | null
           event_date?: string | null
@@ -244,6 +261,7 @@ export type Database = {
           hot_dish?: string | null
           id?: string
           installment_count?: number | null
+          kids_menu?: string | null
           manager_signed_at?: string | null
           observations?: string | null
           payment_method?: string | null
@@ -257,6 +275,7 @@ export type Database = {
           webhook_received_at?: string
         }
         Update: {
+          additional_services?: string | null
           cake?: string | null
           celebrant_age?: number | null
           celebrant_name?: string | null
@@ -267,6 +286,7 @@ export type Database = {
           client_id?: string
           client_signed_at?: string | null
           contract_form_date?: string | null
+          contracted_company_email?: string | null
           created_at?: string
           decoration?: string | null
           event_date?: string | null
@@ -278,6 +298,7 @@ export type Database = {
           hot_dish?: string | null
           id?: string
           installment_count?: number | null
+          kids_menu?: string | null
           manager_signed_at?: string | null
           observations?: string | null
           payment_method?: string | null
