@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as FestasRouteImport } from './routes/festas'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
@@ -31,6 +32,11 @@ const LoginRoute = LoginRouteImport.update({
 const FinanceiroRoute = FinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FestasRoute = FestasRouteImport.update({
+  id: '/festas',
+  path: '/festas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
+  '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
+  '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
+  '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contratos'
     | '/dashboard'
+    | '/festas'
     | '/financeiro'
     | '/login'
     | '/webhooks'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contratos'
     | '/dashboard'
+    | '/festas'
     | '/financeiro'
     | '/login'
     | '/webhooks'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contratos'
     | '/dashboard'
+    | '/festas'
     | '/financeiro'
     | '/login'
     | '/webhooks'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ContratosRoute: typeof ContratosRoute
   DashboardRoute: typeof DashboardRoute
+  FestasRoute: typeof FestasRoute
   FinanceiroRoute: typeof FinanceiroRoute
   LoginRoute: typeof LoginRoute
   WebhooksRoute: typeof WebhooksRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/financeiro'
       fullPath: '/financeiro'
       preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/festas': {
+      id: '/festas'
+      path: '/festas'
+      fullPath: '/festas'
+      preLoaderRoute: typeof FestasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   ContratosRoute: ContratosRoute,
   DashboardRoute: DashboardRoute,
+  FestasRoute: FestasRoute,
   FinanceiroRoute: FinanceiroRoute,
   LoginRoute: LoginRoute,
   WebhooksRoute: WebhooksRoute,
