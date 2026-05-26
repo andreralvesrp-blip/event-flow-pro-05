@@ -433,7 +433,7 @@ export async function processClicksignPayload(
     additional_services: exact(answers, ["Serviços Adicionais"]),
     children_pay_from_age: normInt(exact(answers, ["Crianças pagam a partir de"])),
     contract_form_date: normDate(exact(answers, ["Data de hoje"])),
-    contracted_company_email: contratadaEmail,
+    contracted_company_email: contractedCompanyEmail,
 
     total_value: totalValue,
     installment_count: installmentCount,
