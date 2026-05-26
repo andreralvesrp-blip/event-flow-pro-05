@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as IndexRouteImport } from './routes/index'
 
+const WebhooksRoute = WebhooksRouteImport.update({
+  id: '/webhooks',
+  path: '/webhooks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/webhooks': typeof WebhooksRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/webhooks': typeof WebhooksRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,27 @@ export interface FileRoutesById {
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/webhooks': typeof WebhooksRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/clientes' | '/contratos' | '/dashboard' | '/login'
+  fullPaths:
+    | '/'
+    | '/clientes'
+    | '/contratos'
+    | '/dashboard'
+    | '/login'
+    | '/webhooks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/clientes' | '/contratos' | '/dashboard' | '/login'
-  id: '__root__' | '/' | '/clientes' | '/contratos' | '/dashboard' | '/login'
+  to: '/' | '/clientes' | '/contratos' | '/dashboard' | '/login' | '/webhooks'
+  id:
+    | '__root__'
+    | '/'
+    | '/clientes'
+    | '/contratos'
+    | '/dashboard'
+    | '/login'
+    | '/webhooks'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,10 +99,18 @@ export interface RootRouteChildren {
   ContratosRoute: typeof ContratosRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  WebhooksRoute: typeof WebhooksRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/webhooks': {
+      id: '/webhooks'
+      path: '/webhooks'
+      fullPath: '/webhooks'
+      preLoaderRoute: typeof WebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -125,7 +155,18 @@ const rootRouteChildren: RootRouteChildren = {
   ContratosRoute: ContratosRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  WebhooksRoute: WebhooksRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
