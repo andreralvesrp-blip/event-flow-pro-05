@@ -124,10 +124,27 @@ function normTime(v: unknown): string | null {
 function normMoney(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
   if (typeof v === "number") return v;
-  let s = String(v).replace(/[^\d.,-]/g, ""); if (!s) return null;
-  if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
-  else if (s.includes(",")) s = s.replace(",", ".");
-  const n = Number(s); return isNaN(n) ? null : n;
+  let s = String(v).replace(/[^\d.,-]/g, "");
+  if (!s) return null;
+  const hasComma = s.includes(",");
+  const dots = (s.match(/\./g) ?? []).length;
+  if (hasComma) {
+    // Comma is decimal separator. Dots (if any) are thousand separators.
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (dots >= 1) {
+    if (dots > 1) {
+      // Multiple dots and no comma → all dots are thousand separators.
+      s = s.replace(/\./g, "");
+    } else {
+      // Single dot, ambiguous: decimal vs thousands.
+      // Rule: 3 digits after dot → thousands; otherwise → decimal.
+      const after = s.split(".")[1] ?? "";
+      if (after.length === 3) s = s.replace(".", "");
+      // else: leave as-is (e.g. "12000.00")
+    }
+  }
+  const n = Number(s);
+  return isNaN(n) ? null : n;
 }
 
 function normInt(v: unknown): number | null {
