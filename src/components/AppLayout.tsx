@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, FileText, Users, LogOut } from "lucide-react";
+import { Home, FileText, Users, LogOut, Webhook } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ const nav = [
   { to: "/dashboard", label: "Dashboard", icon: Home },
   { to: "/contratos", label: "Contratos", icon: FileText },
   { to: "/clientes", label: "Clientes", icon: Users },
+  { to: "/webhooks", label: "Webhooks", icon: Webhook },
 ];
 
 const roleLabel = { vendedor: "Vendedor", gestor: "Gestor", admin: "Admin" } as const;
