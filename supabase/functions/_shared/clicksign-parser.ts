@@ -216,7 +216,7 @@ export async function processClicksignPayload(
     address_full: exact(answers, ["Endereço completo (com CEP)"]),
     mother_name: exact(answers, ["Nome da mamãe"]),
     father_name: exact(answers, ["Nome do papai"]),
-    how_met: exact(answers, ["Como conheceu o buffet"]),
+    how_met: exact(answers, ["Como conheceu o buffet", "Como conheceu"]),
   };
 
   let clientId: string;
