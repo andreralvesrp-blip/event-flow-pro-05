@@ -210,29 +210,35 @@ export function parseInstallments(raw: string | null | undefined): ParsedInstall
   const out: ParsedInstallment[] = [];
   let idx = 0;
   for (const line of lines) {
-    // Find date
+    // Find date and strip it from the rest of the line so it doesn't pollute
+    // money extraction.
     const dateMatch = line.match(/(\d{2}[\/\-]\d{2}[\/\-]\d{4})|(\d{4}-\d{2}-\d{2})/);
     if (!dateMatch) continue;
     const due = normDate(dateMatch[0]);
     if (!due) continue;
-    // Find money (R$ 1.000,00 / 1000.00 / 1000,00)
-    const moneyMatch = line.match(/R?\$?\s*([\d.,]+)/g);
+    const rest = line.replace(dateMatch[0], " ");
+
+    // Prefer R$-prefixed money; else any decimal-looking number; else first int.
     let amount: number | null = null;
-    if (moneyMatch) {
-      // Prefer the longest numeric token that isn't the date
-      const candidates = moneyMatch
-        .map((m) => m.replace(/^R?\$?\s*/, ""))
-        .filter((m) => !/\d{2}[\/\-]\d{2}[\/\-]\d{4}/.test(m) && /[.,]/.test(m) === true || /^\d{2,}$/.test(m));
-      for (const c of candidates) {
-        const n = normMoney(c);
-        if (n !== null && n > 0) { amount = n; break; }
-      }
+    const rPrefixed = rest.match(/R\$\s*([\d.]+,\d{2}|\d+(?:\.\d{2})?)/i);
+    if (rPrefixed) amount = normMoney(rPrefixed[1]);
+    if (amount === null) {
+      const decimal = rest.match(/\d{1,3}(?:\.\d{3})*,\d{2}|\d+\.\d{2}|\d+,\d{2}/);
+      if (decimal) amount = normMoney(decimal[0]);
     }
-    if (amount === null) continue;
-    // Method = trailing token after last separator
-    const parts = line.split(/\s+[-–]\s+/);
-    const methodRaw = parts.length >= 3 ? parts[parts.length - 1] : "";
-    const method = normMethodToken(methodRaw) || "PIX";
+    if (amount === null) {
+      const anyNum = rest.match(/\d+/);
+      if (anyNum) amount = normMoney(anyNum[0]);
+    }
+    if (amount === null || amount <= 0) continue;
+
+    // Method = trailing token after the last " - " / " – " / ":" separator.
+    const parts = rest.split(/\s*[-–:|]\s*/).map((p) => p.trim()).filter(Boolean);
+    const methodRaw = parts.length >= 2 ? parts[parts.length - 1] : "";
+    // If the trailing part still looks like a number, no method was provided.
+    const looksLikeMoney = /^R?\$?\s*[\d.,]+$/i.test(methodRaw);
+    const method = (!looksLikeMoney && normMethodToken(methodRaw)) || "PIX";
+
     idx += 1;
     out.push({
       order_index: idx,
