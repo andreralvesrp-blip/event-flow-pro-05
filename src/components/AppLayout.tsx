@@ -1,15 +1,16 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, FileText, Users, LogOut, Webhook } from "lucide-react";
+import { Home, PartyPopper, LogOut, Webhook, DollarSign, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { Button } from "@/components/ui/button";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: Home },
-  { to: "/contratos", label: "Contratos", icon: FileText },
-  { to: "/clientes", label: "Clientes", icon: Users },
+  { to: "/festas", label: "Festas", icon: PartyPopper },
+  { to: "/financeiro", label: "Financeiro", icon: DollarSign },
   { to: "/webhooks", label: "Webhooks", icon: Webhook },
+  { to: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 const roleLabel = { vendedor: "Vendedor", gestor: "Gestor", admin: "Admin" } as const;
