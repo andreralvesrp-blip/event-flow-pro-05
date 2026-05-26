@@ -1,17 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -27,6 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Trash2, Plus, Pencil, XCircle } from "lucide-react";
 
 type ContractStatus = "assinado" | "aguardando_assinaturas" | "cancelado";
 
@@ -60,6 +71,12 @@ type Festa = {
   finalized_at: string | null;
   created_at: string;
   raw_webhook_payload: unknown;
+  manually_edited: boolean | null;
+  manually_edited_at: string | null;
+  canceled_at: string | null;
+  cancellation_reason: string | null;
+  cancellation_financial_action: string | null;
+  manual_status_override: boolean | null;
   client: {
     id: string;
     full_name: string;
@@ -85,6 +102,7 @@ type Installment = {
   paid_at: string | null;
   payment_status: string | null;
   raw_line: string | null;
+  charge_customer: boolean | null;
 };
 
 export const Route = createFileRoute("/festas")({
@@ -152,7 +170,7 @@ function financialBadge(f: Festa) {
 
 // ---------- page ----------
 function FestasPage() {
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const [festas, setFestas] = useState<Festa[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Festa | null>(null);
@@ -167,75 +185,66 @@ function FestasPage() {
   const [payF, setPayF] = useState<string>("todos");
   const [finF, setFinF] = useState<string>("todos");
 
+  const loadAll = useCallback(async () => {
+    const { data: contracts, error } = await supabase
+      .from("contracts")
+      .select(
+        `*, client:clients(id, full_name, cpf, email, phone, address_full, how_met, mother_name, father_name)`,
+      )
+      .order("created_at", { ascending: false });
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    const rows = contracts ?? [];
+    const ids = rows.map((r: any) => r.id);
+    const sums = new Map<string, { sum: number; count: number }>();
+    if (ids.length > 0) {
+      const { data: ins } = await supabase
+        .from("contract_installments")
+        .select("contract_id, amount")
+        .in("contract_id", ids);
+      for (const row of ins ?? []) {
+        const cur = sums.get(row.contract_id) ?? { sum: 0, count: 0 };
+        cur.sum += Number(row.amount);
+        cur.count += 1;
+        sums.set(row.contract_id, cur);
+      }
+    }
+    const result: Festa[] = (rows as any[]).map((r) => ({
+      ...r,
+      client: Array.isArray(r.client) ? r.client[0] ?? null : r.client ?? null,
+      installments_sum: sums.get(r.id)?.sum ?? 0,
+      installments_generated: sums.get(r.id)?.count ?? 0,
+    }));
+    setFestas(result);
+    // refresh selected snapshot
+    setSelected((prev) => (prev ? result.find((x) => x.id === prev.id) ?? null : null));
+  }, []);
+
   useEffect(() => {
     if (!session) return;
-    (async () => {
-      const { data: contracts, error } = await supabase
-        .from("contracts")
-        .select(
-          `id, clicksign_document_key, status, event_date, event_start_time, event_end_time, event_weekday_raw,
-           guest_count, celebrant_name, celebrant_age, children_pay_from_age, decoration, cake, tasting_menu,
-           hot_dish, kids_menu, additional_services, observations, total_value, installment_count, payment_method,
-           payment_schedule_raw, contracted_company_email, contract_form_date, client_signed_at, manager_signed_at,
-           finalized_at, created_at, raw_webhook_payload, client_id,
-           client:clients!contracts_client_id_fkey(id, full_name, cpf, email, phone, address_full, how_met, mother_name, father_name)`,
-        )
-        .order("created_at", { ascending: false });
-      if (error) {
-        // fallback without explicit FK name
-        const r2 = await supabase
-          .from("contracts")
-          .select("*, client:clients(id, full_name, cpf, email, phone, address_full, how_met, mother_name, father_name)")
-          .order("created_at", { ascending: false });
-        if (r2.error) {
-          setErr(r2.error.message);
-          return;
-        }
-        await hydrate(r2.data ?? []);
-        return;
-      }
-      await hydrate(contracts ?? []);
-    })();
-
-    async function hydrate(rows: unknown[]) {
-      const ids = rows.map((r: any) => r.id);
-      let sums = new Map<string, { sum: number; count: number }>();
-      if (ids.length > 0) {
-        const { data: ins } = await supabase
-          .from("contract_installments")
-          .select("contract_id, amount")
-          .in("contract_id", ids);
-        for (const row of ins ?? []) {
-          const cur = sums.get(row.contract_id) ?? { sum: 0, count: 0 };
-          cur.sum += Number(row.amount);
-          cur.count += 1;
-          sums.set(row.contract_id, cur);
-        }
-      }
-      const result: Festa[] = (rows as any[]).map((r) => ({
-        ...r,
-        client: Array.isArray(r.client) ? r.client[0] ?? null : r.client ?? null,
-        installments_sum: sums.get(r.id)?.sum ?? 0,
-        installments_generated: sums.get(r.id)?.count ?? 0,
-      }));
-      setFestas(result);
-    }
-  }, [session]);
+    loadAll();
+  }, [session, loadAll]);
 
   // load installments when a festa is selected
+  const loadInstallments = useCallback(async (contractId: string) => {
+    const { data } = await supabase
+      .from("contract_installments")
+      .select("id, order_index, due_date, amount, payment_method, paid, paid_at, payment_status, raw_line, charge_customer")
+      .eq("contract_id", contractId)
+      .order("order_index", { ascending: true });
+    setInstallments((data ?? []) as Installment[]);
+  }, []);
+
   useEffect(() => {
     if (!selected) {
       setInstallments([]);
       setShowPayload(false);
       return;
     }
-    supabase
-      .from("contract_installments")
-      .select("id, order_index, due_date, amount, payment_method, paid, paid_at, payment_status, raw_line")
-      .eq("contract_id", selected.id)
-      .order("order_index", { ascending: true })
-      .then(({ data }) => setInstallments((data ?? []) as Installment[]));
-  }, [selected]);
+    loadInstallments(selected.id);
+  }, [selected, loadInstallments]);
 
   const filtered = useMemo(() => {
     if (!festas) return [];
@@ -290,11 +299,12 @@ function FestasPage() {
     return arr;
   }, [festas, q, statusF, from, to, payF, finF]);
 
-  // top cards
+  // top cards — canceladas are excluded from active indicators
   const stats = useMemo(() => {
     const list = festas ?? [];
     const today = new Date().toISOString().slice(0, 10);
-    const assinadas = list.filter((f) => f.status === "assinado");
+    const active = list.filter((f) => f.status !== "cancelado");
+    const assinadas = active.filter((f) => f.status === "assinado");
     return {
       total: list.length,
       assinadas: assinadas.length,
@@ -360,7 +370,7 @@ function FestasPage() {
         {!festas && !err && <div className="p-6 text-sm text-slate-500">Carregando…</div>}
         {festas && filtered.length === 0 && !err && (
           <div className="p-8 text-sm text-slate-500 text-center">
-            Nenhuma festa encontrada ainda. As festas aparecerão aqui quando forem finalizadas na Clicksign.
+            Nenhuma festa encontrada ainda.
           </div>
         )}
         {festas && filtered.length > 0 && (
@@ -378,7 +388,6 @@ function FestasPage() {
                 <TableHead>Parcelas</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Financeiro</TableHead>
-                <TableHead>Criado em</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -398,8 +407,7 @@ function FestasPage() {
                   <TableCell className="max-w-[120px] truncate">{f.payment_method ?? "—"}</TableCell>
                   <TableCell>{f.installment_count ?? "—"}</TableCell>
                   <TableCell>{statusBadge(f.status)}</TableCell>
-                  <TableCell>{financialBadge(f)}</TableCell>
-                  <TableCell className="text-xs text-slate-500">{fmtDateTime(f.created_at)}</TableCell>
+                  <TableCell>{f.status === "cancelado" ? <span className="text-xs text-slate-400">—</span> : financialBadge(f)}</TableCell>
                   <TableCell>
                     <Button size="sm" variant="outline" onClick={() => setSelected(f)}>Ver detalhes</Button>
                   </TableCell>
@@ -412,13 +420,19 @@ function FestasPage() {
 
       {/* Detail Sheet */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
           {selected && (
             <DetailContent
+              key={selected.id}
               f={selected}
               installments={installments}
               showPayload={showPayload}
               onTogglePayload={() => setShowPayload((v) => !v)}
+              userId={user?.id ?? null}
+              onSaved={async () => {
+                await loadAll();
+                await loadInstallments(selected.id);
+              }}
             />
           )}
         </SheetContent>
@@ -454,37 +468,238 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// ---------- Detail (view + edit) ----------
+
+type EditableContract = Pick<
+  Festa,
+  | "event_date" | "event_weekday_raw" | "event_start_time" | "event_end_time"
+  | "guest_count" | "celebrant_name" | "celebrant_age" | "children_pay_from_age"
+  | "decoration" | "tasting_menu" | "hot_dish" | "cake" | "kids_menu"
+  | "observations" | "additional_services"
+  | "total_value" | "payment_method" | "installment_count"
+  | "payment_schedule_raw" | "contracted_company_email"
+>;
+
+type EditableInstallment = {
+  id?: string;        // optional for new
+  _new?: boolean;
+  _deleted?: boolean;
+  order_index: number;
+  due_date: string;
+  amount: number;
+  payment_method: string;
+  payment_status: string;
+  charge_customer: boolean;
+  paid: boolean;
+};
+
 function DetailContent({
   f,
   installments,
   showPayload,
   onTogglePayload,
+  onSaved,
+  userId,
 }: {
   f: Festa;
   installments: Installment[];
   showPayload: boolean;
   onTogglePayload: () => void;
+  onSaved: () => Promise<void>;
+  userId: string | null;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [form, setForm] = useState<EditableContract>(() => snapshot(f));
+  const [insForm, setInsForm] = useState<EditableInstallment[]>(() =>
+    installments.map(installmentToEditable),
+  );
+
+  // re-seed when underlying data changes (after save/reload)
+  useEffect(() => { setForm(snapshot(f)); }, [f]);
+  useEffect(() => { setInsForm(installments.map(installmentToEditable)); }, [installments]);
+
   const diff = Number(f.total_value ?? 0) - Number(f.installments_sum ?? 0);
   const countMismatch = (f.installment_count ?? 0) !== f.installments_generated;
   const ok = Math.abs(diff) < 0.01 && !countMismatch;
+  const isCanceled = f.status === "cancelado";
+
+  // Live preview during editing
+  const livePreview = useMemo(() => {
+    if (!editing) return null;
+    const active = insForm.filter((i) => !i._deleted);
+    const sum = active.reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const tv = Number(form.total_value ?? 0);
+    return {
+      sum,
+      diff: tv - sum,
+      count: active.length,
+      countMismatch: (Number(form.installment_count ?? 0) || 0) !== active.length,
+    };
+  }, [editing, insForm, form.total_value, form.installment_count]);
+
+  async function handleSave() {
+    if (!userId) return;
+    setSaving(true);
+    try {
+      const now = new Date().toISOString();
+      const updateBody: Record<string, unknown> = {
+        ...form,
+        // coerce numeric fields
+        total_value: form.total_value === null || form.total_value === undefined || (form.total_value as unknown) === ""
+          ? null
+          : Number(form.total_value),
+        installment_count: form.installment_count === null || form.installment_count === undefined || (form.installment_count as unknown) === ""
+          ? null
+          : Number(form.installment_count),
+        guest_count: form.guest_count ?? null,
+        celebrant_age: form.celebrant_age ?? null,
+        children_pay_from_age: form.children_pay_from_age ?? null,
+        manually_edited: true,
+        manually_edited_at: now,
+        manually_edited_by: userId,
+        updated_at: now,
+      };
+      const { error: cErr } = await supabase
+        .from("contracts")
+        .update(updateBody as never)
+        .eq("id", f.id);
+      if (cErr) throw new Error(cErr.message);
+
+      // installments diff
+      const toDelete = insForm.filter((i) => i._deleted && i.id).map((i) => i.id!);
+      const toUpdate = insForm.filter((i) => !i._deleted && i.id && !i._new);
+      const toInsert = insForm.filter((i) => !i._deleted && (i._new || !i.id));
+
+      if (toDelete.length) {
+        const { error: dErr } = await supabase
+          .from("contract_installments")
+          .delete()
+          .in("id", toDelete);
+        if (dErr) throw new Error(dErr.message);
+      }
+      for (const i of toUpdate) {
+        const { error: uErr } = await supabase
+          .from("contract_installments")
+          .update({
+            order_index: i.order_index,
+            due_date: i.due_date,
+            amount: Number(i.amount),
+            payment_method: i.payment_method,
+            payment_status: i.payment_status,
+            charge_customer: i.charge_customer,
+            paid: i.paid,
+            manually_edited: true,
+            manually_edited_at: now,
+            manually_edited_by: userId,
+          })
+          .eq("id", i.id!);
+        if (uErr) throw new Error(uErr.message);
+      }
+      if (toInsert.length) {
+        const rows = toInsert.map((i) => ({
+          tenant_id: (f as unknown as { tenant_id: string }).tenant_id ?? undefined,
+          contract_id: f.id,
+          order_index: i.order_index,
+          due_date: i.due_date,
+          amount: Number(i.amount),
+          payment_method: i.payment_method,
+          payment_status: i.payment_status,
+          charge_customer: i.charge_customer,
+          paid: i.paid,
+          manually_edited: true,
+          manually_edited_at: now,
+          manually_edited_by: userId,
+        }));
+        // tenant_id will be filled by RLS default? No — we need it. Fetch from contract row
+        if (!rows[0].tenant_id) {
+          const { data: ct } = await supabase
+            .from("contracts").select("tenant_id").eq("id", f.id).single();
+          if (ct?.tenant_id) for (const r of rows) r.tenant_id = ct.tenant_id;
+        }
+        const { error: iErr } = await supabase.from("contract_installments").insert(rows);
+        if (iErr) throw new Error(iErr.message);
+      }
+
+      await onSaved();
+      setEditing(false);
+    } catch (e) {
+      alert(`Erro ao salvar: ${(e as Error).message}`);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
       <SheetHeader>
-        <SheetTitle>Festa — {f.celebrant_name ?? "Sem aniversariante"}</SheetTitle>
+        <SheetTitle className="flex items-center gap-2">
+          Festa — {f.celebrant_name ?? "Sem aniversariante"}
+          {f.manually_edited && (
+            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 ml-2">Editada manualmente</Badge>
+          )}
+        </SheetTitle>
       </SheetHeader>
+
+      {/* Action bar */}
+      <div className="flex gap-2 mt-4">
+        {!editing && !isCanceled && (
+          <>
+            <Button size="sm" variant="default" onClick={() => setEditing(true)}>
+              <Pencil className="w-3.5 h-3.5 mr-1.5" />Editar festa
+            </Button>
+            <Button size="sm" variant="outline" className="text-red-700 border-red-200 hover:bg-red-50" onClick={() => setCancelOpen(true)}>
+              <XCircle className="w-3.5 h-3.5 mr-1.5" />Cancelar festa
+            </Button>
+          </>
+        )}
+        {editing && (
+          <>
+            <Button size="sm" disabled={saving} onClick={handleSave}>
+              {saving ? "Salvando…" : "Salvar alterações"}
+            </Button>
+            <Button size="sm" variant="outline" disabled={saving} onClick={() => { setEditing(false); setForm(snapshot(f)); setInsForm(installments.map(installmentToEditable)); }}>
+              Cancelar edição
+            </Button>
+          </>
+        )}
+        {isCanceled && (
+          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Festa cancelada</Badge>
+        )}
+      </div>
 
       <Section title="Resumo">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Status" value={statusBadge(f.status)} />
-          <Field label="Status financeiro" value={financialBadge(f)} />
+          <Field label="Status financeiro" value={isCanceled ? "—" : financialBadge(f)} />
           <Field label="Clicksign document key" value={<span className="text-xs font-mono">{f.clicksign_document_key ?? "—"}</span>} />
           <Field label="Criado em" value={fmtDateTime(f.created_at)} />
           <Field label="Finalizado em" value={fmtDateTime(f.finalized_at)} />
           <Field label="Data do contrato" value={fmtDate(f.contract_form_date)} />
+          {f.manually_edited && (
+            <Field label="Última edição manual" value={fmtDateTime(f.manually_edited_at)} />
+          )}
         </div>
       </Section>
+
+      {isCanceled && (
+        <Section title="Cancelamento">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Cancelada em" value={fmtDateTime(f.canceled_at)} />
+            <Field label="Ação financeira" value={
+              f.cancellation_financial_action === "cancel_open_installments"
+                ? "Cancelar parcelas em aberto"
+                : f.cancellation_financial_action === "keep_installments"
+                  ? "Manter parcelas"
+                  : f.cancellation_financial_action
+            } />
+            <div className="col-span-2">
+              <Field label="Motivo" value={<span className="whitespace-pre-wrap">{f.cancellation_reason}</span>} />
+            </div>
+          </div>
+        </Section>
+      )}
 
       <Section title="Cliente">
         <div className="grid grid-cols-2 gap-3">
@@ -500,93 +715,169 @@ function DetailContent({
       </Section>
 
       <Section title="Festa">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Data" value={fmtDate(f.event_date)} />
-          <Field label="Dia da semana" value={f.event_weekday_raw} />
-          <Field label="Início" value={fmtTime(f.event_start_time)} />
-          <Field label="Término" value={fmtTime(f.event_end_time)} />
-          <Field label="Nº convidados" value={f.guest_count} />
-          <Field label="Aniversariante" value={f.celebrant_name} />
-          <Field label="Idade" value={f.celebrant_age} />
-          <Field label="Crianças pagam a partir de" value={f.children_pay_from_age} />
-          <Field label="Decoração" value={f.decoration} />
-          <Field label="Menu Degustação" value={f.tasting_menu} />
-          <Field label="Prato Quente" value={f.hot_dish} />
-          <Field label="Bolo" value={f.cake} />
-          <Field label="Prato Kids" value={f.kids_menu} />
-          <Field label="Serviços Adicionais" value={f.additional_services} />
-        </div>
-        {f.observations && (
-          <div className="mt-3">
-            <Field label="Observações" value={<span className="whitespace-pre-wrap">{f.observations}</span>} />
+        {!editing ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Data" value={fmtDate(f.event_date)} />
+            <Field label="Dia da semana" value={f.event_weekday_raw} />
+            <Field label="Início" value={fmtTime(f.event_start_time)} />
+            <Field label="Término" value={fmtTime(f.event_end_time)} />
+            <Field label="Nº convidados" value={f.guest_count} />
+            <Field label="Aniversariante" value={f.celebrant_name} />
+            <Field label="Idade" value={f.celebrant_age} />
+            <Field label="Crianças pagam a partir de" value={f.children_pay_from_age} />
+            <Field label="Decoração" value={f.decoration} />
+            <Field label="Menu Degustação" value={f.tasting_menu} />
+            <Field label="Prato Quente" value={f.hot_dish} />
+            <Field label="Bolo" value={f.cake} />
+            <Field label="Prato Kids" value={f.kids_menu} />
+            <Field label="Serviços Adicionais" value={f.additional_services} />
+            {f.observations && (
+              <div className="col-span-2">
+                <Field label="Observações" value={<span className="whitespace-pre-wrap">{f.observations}</span>} />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <EField label="Data" type="date" value={form.event_date ?? ""} onChange={(v) => setForm({ ...form, event_date: v || null })} />
+            <EField label="Dia da semana" value={form.event_weekday_raw ?? ""} onChange={(v) => setForm({ ...form, event_weekday_raw: v || null })} />
+            <EField label="Início" type="time" value={(form.event_start_time ?? "").slice(0,5)} onChange={(v) => setForm({ ...form, event_start_time: v ? `${v}:00` : null })} />
+            <EField label="Término" type="time" value={(form.event_end_time ?? "").slice(0,5)} onChange={(v) => setForm({ ...form, event_end_time: v ? `${v}:00` : null })} />
+            <EField label="Nº convidados" type="number" value={form.guest_count ?? ""} onChange={(v) => setForm({ ...form, guest_count: v === "" ? null : Number(v) })} />
+            <EField label="Aniversariante" value={form.celebrant_name ?? ""} onChange={(v) => setForm({ ...form, celebrant_name: v || null })} />
+            <EField label="Idade" type="number" value={form.celebrant_age ?? ""} onChange={(v) => setForm({ ...form, celebrant_age: v === "" ? null : Number(v) })} />
+            <EField label="Crianças pagam a partir de" type="number" value={form.children_pay_from_age ?? ""} onChange={(v) => setForm({ ...form, children_pay_from_age: v === "" ? null : Number(v) })} />
+            <ETextarea label="Decoração" value={form.decoration ?? ""} onChange={(v) => setForm({ ...form, decoration: v || null })} />
+            <ETextarea label="Menu Degustação" value={form.tasting_menu ?? ""} onChange={(v) => setForm({ ...form, tasting_menu: v || null })} />
+            <ETextarea label="Prato Quente" value={form.hot_dish ?? ""} onChange={(v) => setForm({ ...form, hot_dish: v || null })} />
+            <ETextarea label="Bolo" value={form.cake ?? ""} onChange={(v) => setForm({ ...form, cake: v || null })} />
+            <ETextarea label="Prato Kids" value={form.kids_menu ?? ""} onChange={(v) => setForm({ ...form, kids_menu: v || null })} />
+            <ETextarea label="Serviços Adicionais" value={form.additional_services ?? ""} onChange={(v) => setForm({ ...form, additional_services: v || null })} />
+            <div className="col-span-2">
+              <ETextarea label="Observações" value={form.observations ?? ""} onChange={(v) => setForm({ ...form, observations: v || null })} />
+            </div>
           </div>
         )}
       </Section>
 
       <Section title="Financeiro">
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <Field label="Valor total" value={fmtBRL(f.total_value)} />
-          <Field label="Forma de pagamento" value={f.payment_method} />
-          <Field label="Parcelamento informado" value={f.installment_count} />
-          <Field label="Parcelas geradas" value={f.installments_generated} />
-          <Field label="Soma das parcelas" value={fmtBRL(f.installments_sum)} />
-          <Field label="Diferença" value={fmtBRL(diff)} />
-          <Field label="E-mail contratada" value={f.contracted_company_email} />
-        </div>
+        {!editing ? (
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <Field label="Valor total" value={fmtBRL(f.total_value)} />
+            <Field label="Forma de pagamento" value={f.payment_method} />
+            <Field label="Parcelamento informado" value={f.installment_count} />
+            <Field label="Parcelas geradas" value={f.installments_generated} />
+            <Field label="Soma das parcelas" value={fmtBRL(f.installments_sum)} />
+            <Field label="Diferença" value={fmtBRL(diff)} />
+            <Field label="E-mail contratada" value={f.contracted_company_email} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <EField label="Valor total (R$)" type="number" step="0.01" value={form.total_value ?? ""} onChange={(v) => setForm({ ...form, total_value: v === "" ? null : Number(v) })} />
+            <EField label="Forma de pagamento" value={form.payment_method ?? ""} onChange={(v) => setForm({ ...form, payment_method: v || null })} />
+            <EField label="Parcelamento informado" type="number" value={form.installment_count ?? ""} onChange={(v) => setForm({ ...form, installment_count: v === "" ? null : Number(v) })} />
+            <EField label="E-mail contratada" value={form.contracted_company_email ?? ""} onChange={(v) => setForm({ ...form, contracted_company_email: v || null })} />
+            <div className="col-span-2">
+              <ETextarea label="Cronograma bruto (informativo)" value={form.payment_schedule_raw ?? ""} onChange={(v) => setForm({ ...form, payment_schedule_raw: v || null })} />
+            </div>
+          </div>
+        )}
 
-        {ok && (
+        {!editing && !isCanceled && ok && (
           <div className="rounded-md bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm px-3 py-2 mb-3">
             Parcelas conferidas.
           </div>
         )}
-        {Math.abs(diff) >= 0.01 && (
+        {!editing && !isCanceled && Math.abs(diff) >= 0.01 && (
           <div className="rounded-md bg-orange-50 border border-orange-200 text-orange-900 text-sm px-3 py-2 mb-2">
             Atenção: o valor total da festa é {fmtBRL(f.total_value)}, mas a soma das parcelas é {fmtBRL(f.installments_sum)}. Diferença: {fmtBRL(diff)}.
           </div>
         )}
-        {countMismatch && (
+        {!editing && !isCanceled && countMismatch && (
           <div className="rounded-md bg-orange-50 border border-orange-200 text-orange-900 text-sm px-3 py-2 mb-2">
             Atenção: a festa informa {f.installment_count} parcelas, mas foram geradas {f.installments_generated} parcelas.
           </div>
         )}
 
-        {f.payment_schedule_raw && (
-          <div className="mt-3">
-            <div className="text-xs text-slate-500 mb-1">Cronograma bruto</div>
-            <pre className="text-xs bg-slate-50 border border-slate-200 rounded p-2 whitespace-pre-wrap">{f.payment_schedule_raw}</pre>
+        {editing && livePreview && (
+          <div className={`rounded-md border text-sm px-3 py-2 mb-3 ${
+            Math.abs(livePreview.diff) < 0.01 && !livePreview.countMismatch
+              ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+              : "bg-orange-50 border-orange-200 text-orange-900"
+          }`}>
+            Prévia: soma das parcelas {fmtBRL(livePreview.sum)} · diferença {fmtBRL(livePreview.diff)} · {livePreview.count} parcelas
+            {livePreview.countMismatch ? ` (informado: ${form.installment_count ?? "—"})` : ""}
           </div>
         )}
 
-        {installments.length > 0 && (
-          <div className="mt-4 overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>#</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Método</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Pago?</TableHead>
-                  <TableHead>Linha original</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {installments.map((i) => (
-                  <TableRow key={i.id}>
-                    <TableCell>{i.order_index}</TableCell>
-                    <TableCell>{fmtDate(i.due_date)}</TableCell>
-                    <TableCell>{fmtBRL(i.amount)}</TableCell>
-                    <TableCell>{i.payment_method}</TableCell>
-                    <TableCell>{i.payment_status ?? "—"}</TableCell>
-                    <TableCell>{i.paid ? "Sim" : "Não"}</TableCell>
-                    <TableCell className="text-xs text-slate-500 max-w-[200px] truncate" title={i.raw_line ?? ""}>{i.raw_line ?? "—"}</TableCell>
+        {/* Installments editor */}
+        <div className="mt-2 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">#</TableHead>
+                <TableHead>Vencimento</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Método</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Cobrar</TableHead>
+                <TableHead>Pago?</TableHead>
+                {editing && <TableHead></TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(editing ? insForm : installments.map(installmentToEditable))
+                .filter((i) => !i._deleted)
+                .map((i, idx) => (
+                  <TableRow key={i.id ?? `new-${idx}`}>
+                    <TableCell>{editing
+                      ? <Input className="h-8 w-14" type="number" value={i.order_index} onChange={(e) => updateInsAt(setInsForm, idx, { order_index: Number(e.target.value) })} />
+                      : i.order_index}</TableCell>
+                    <TableCell>{editing
+                      ? <Input className="h-8" type="date" value={i.due_date ?? ""} onChange={(e) => updateInsAt(setInsForm, idx, { due_date: e.target.value })} />
+                      : fmtDate(i.due_date)}</TableCell>
+                    <TableCell>{editing
+                      ? <Input className="h-8 w-28" type="number" step="0.01" value={i.amount} onChange={(e) => updateInsAt(setInsForm, idx, { amount: Number(e.target.value) })} />
+                      : fmtBRL(i.amount)}</TableCell>
+                    <TableCell>{editing
+                      ? <Input className="h-8 w-28" value={i.payment_method} onChange={(e) => updateInsAt(setInsForm, idx, { payment_method: e.target.value })} />
+                      : i.payment_method}</TableCell>
+                    <TableCell>{editing ? (
+                      <Select value={i.payment_status} onValueChange={(v) => updateInsAt(setInsForm, idx, { payment_status: v })}>
+                        <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pendente">Pendente</SelectItem>
+                          <SelectItem value="pago">Pago</SelectItem>
+                          <SelectItem value="cancelado">Cancelado</SelectItem>
+                          <SelectItem value="atrasado">Atrasado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (i.payment_status ?? "—")}</TableCell>
+                    <TableCell>{editing
+                      ? <input type="checkbox" checked={!!i.charge_customer} onChange={(e) => updateInsAt(setInsForm, idx, { charge_customer: e.target.checked })} />
+                      : (i.charge_customer ? "Sim" : "Não")}</TableCell>
+                    <TableCell>{editing
+                      ? <input type="checkbox" checked={!!i.paid} onChange={(e) => updateInsAt(setInsForm, idx, { paid: e.target.checked })} />
+                      : (i.paid ? "Sim" : "Não")}</TableCell>
+                    {editing && (
+                      <TableCell>
+                        <Button size="sm" variant="ghost" onClick={() => removeInsAt(setInsForm, idx)}>
+                          <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+            </TableBody>
+          </Table>
+          {editing && (
+            <div className="mt-2">
+              <Button size="sm" variant="outline" onClick={() => addIns(setInsForm)}>
+                <Plus className="w-3.5 h-3.5 mr-1" />Adicionar parcela
+              </Button>
+            </div>
+          )}
+        </div>
       </Section>
 
       <Section title="Debug">
@@ -599,6 +890,268 @@ function DetailContent({
           </pre>
         )}
       </Section>
+
+      <CancelDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        contractId={f.id}
+        userId={userId}
+        onDone={async () => { setCancelOpen(false); await onSaved(); }}
+      />
     </>
+  );
+}
+
+// ---------- helpers ----------
+function snapshot(f: Festa): EditableContract {
+  return {
+    event_date: f.event_date,
+    event_weekday_raw: f.event_weekday_raw,
+    event_start_time: f.event_start_time,
+    event_end_time: f.event_end_time,
+    guest_count: f.guest_count,
+    celebrant_name: f.celebrant_name,
+    celebrant_age: f.celebrant_age,
+    children_pay_from_age: f.children_pay_from_age,
+    decoration: f.decoration,
+    tasting_menu: f.tasting_menu,
+    hot_dish: f.hot_dish,
+    cake: f.cake,
+    kids_menu: f.kids_menu,
+    observations: f.observations,
+    additional_services: f.additional_services,
+    total_value: f.total_value,
+    payment_method: f.payment_method,
+    installment_count: f.installment_count,
+    payment_schedule_raw: f.payment_schedule_raw,
+    contracted_company_email: f.contracted_company_email,
+  };
+}
+function installmentToEditable(i: Installment): EditableInstallment {
+  return {
+    id: i.id,
+    order_index: i.order_index,
+    due_date: i.due_date,
+    amount: Number(i.amount),
+    payment_method: i.payment_method,
+    payment_status: i.payment_status ?? "pendente",
+    charge_customer: i.charge_customer ?? true,
+    paid: i.paid,
+  };
+}
+function updateInsAt(
+  setter: React.Dispatch<React.SetStateAction<EditableInstallment[]>>,
+  visibleIdx: number,
+  patch: Partial<EditableInstallment>,
+) {
+  setter((prev) => {
+    const visible = prev.map((p, i) => ({ p, i })).filter(({ p }) => !p._deleted);
+    const target = visible[visibleIdx];
+    if (!target) return prev;
+    const copy = [...prev];
+    copy[target.i] = { ...copy[target.i], ...patch };
+    return copy;
+  });
+}
+function removeInsAt(
+  setter: React.Dispatch<React.SetStateAction<EditableInstallment[]>>,
+  visibleIdx: number,
+) {
+  setter((prev) => {
+    const visible = prev.map((p, i) => ({ p, i })).filter(({ p }) => !p._deleted);
+    const target = visible[visibleIdx];
+    if (!target) return prev;
+    const copy = [...prev];
+    if (copy[target.i]._new) {
+      copy.splice(target.i, 1);
+    } else {
+      copy[target.i] = { ...copy[target.i], _deleted: true };
+    }
+    return copy;
+  });
+}
+function addIns(setter: React.Dispatch<React.SetStateAction<EditableInstallment[]>>) {
+  setter((prev) => {
+    const active = prev.filter((p) => !p._deleted);
+    const nextIdx = active.length ? Math.max(...active.map((p) => p.order_index)) + 1 : 1;
+    return [
+      ...prev,
+      {
+        _new: true,
+        order_index: nextIdx,
+        due_date: new Date().toISOString().slice(0, 10),
+        amount: 0,
+        payment_method: "PIX",
+        payment_status: "pendente",
+        charge_customer: true,
+        paid: false,
+      },
+    ];
+  });
+}
+
+function EField({
+  label, value, onChange, type = "text", step,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+  onChange: (v: string) => void;
+  type?: string;
+  step?: string;
+}) {
+  return (
+    <div>
+      <Label className="text-xs text-slate-500">{label}</Label>
+      <Input
+        className="h-9 mt-1"
+        type={type}
+        step={step}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+function ETextarea({
+  label, value, onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <Label className="text-xs text-slate-500">{label}</Label>
+      <Textarea
+        className="mt-1 min-h-[60px]"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+// ---------- Cancel Dialog ----------
+function CancelDialog({
+  open, onOpenChange, contractId, userId, onDone,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  contractId: string;
+  userId: string | null;
+  onDone: () => Promise<void>;
+}) {
+  const [reason, setReason] = useState("");
+  const [action, setAction] = useState<"cancel_open_installments" | "keep_installments" | "">("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { if (open) { setReason(""); setAction(""); } }, [open]);
+
+  async function confirm() {
+    if (!reason.trim() || !action || !userId) return;
+    setBusy(true);
+    try {
+      const now = new Date().toISOString();
+      const { error: cErr } = await supabase
+        .from("contracts")
+        .update({
+          status: "cancelado",
+          canceled_at: now,
+          canceled_by: userId,
+          cancellation_reason: reason.trim(),
+          cancellation_financial_action: action,
+          manual_status_override: true,
+          manually_edited: true,
+          manually_edited_at: now,
+          manually_edited_by: userId,
+          updated_at: now,
+        })
+        .eq("id", contractId);
+      if (cErr) throw new Error(cErr.message);
+
+      if (action === "cancel_open_installments") {
+        const { error: iErr } = await supabase
+          .from("contract_installments")
+          .update({
+            payment_status: "cancelado",
+            manually_edited: true,
+            manually_edited_at: now,
+            manually_edited_by: userId,
+          })
+          .eq("contract_id", contractId)
+          .eq("paid", false);
+        if (iErr) throw new Error(iErr.message);
+      }
+      await onDone();
+    } catch (e) {
+      alert(`Erro: ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Cancelar festa</DialogTitle>
+          <DialogDescription>
+            Essa ação não apaga o histórico, mas remove a festa dos indicadores ativos.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label className="text-xs">Motivo do cancelamento</Label>
+            <Textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Descreva o motivo…"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-xs mb-2 block">O que fazer com parcelas em aberto?</Label>
+            <div className="space-y-2">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="finact"
+                  className="mt-1"
+                  checked={action === "cancel_open_installments"}
+                  onChange={() => setAction("cancel_open_installments")}
+                />
+                <div className="text-sm">
+                  <div className="font-medium">Cancelar parcelas em aberto</div>
+                  <div className="text-xs text-slate-500">Parcelas pagas são preservadas.</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="finact"
+                  className="mt-1"
+                  checked={action === "keep_installments"}
+                  onChange={() => setAction("keep_installments")}
+                />
+                <div className="text-sm">
+                  <div className="font-medium">Manter parcelas para tratativa financeira</div>
+                  <div className="text-xs text-slate-500">As parcelas continuam pendentes para acompanhamento.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Voltar</Button>
+          <Button
+            disabled={busy || !reason.trim() || !action}
+            onClick={confirm}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {busy ? "Cancelando…" : "Confirmar cancelamento"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
