@@ -124,10 +124,27 @@ function normTime(v: unknown): string | null {
 function normMoney(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
   if (typeof v === "number") return v;
-  let s = String(v).replace(/[^\d.,-]/g, ""); if (!s) return null;
-  if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
-  else if (s.includes(",")) s = s.replace(",", ".");
-  const n = Number(s); return isNaN(n) ? null : n;
+  let s = String(v).replace(/[^\d.,-]/g, "");
+  if (!s) return null;
+  const hasComma = s.includes(",");
+  const dots = (s.match(/\./g) ?? []).length;
+  if (hasComma) {
+    // Comma is decimal separator. Dots (if any) are thousand separators.
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (dots >= 1) {
+    if (dots > 1) {
+      // Multiple dots and no comma → all dots are thousand separators.
+      s = s.replace(/\./g, "");
+    } else {
+      // Single dot, ambiguous: decimal vs thousands.
+      // Rule: 3 digits after dot → thousands; otherwise → decimal.
+      const after = s.split(".")[1] ?? "";
+      if (after.length === 3) s = s.replace(".", "");
+      // else: leave as-is (e.g. "12000.00")
+    }
+  }
+  const n = Number(s);
+  return isNaN(n) ? null : n;
 }
 
 function normInt(v: unknown): number | null {
@@ -296,7 +313,18 @@ export async function processClicksignPayload(
   // Email: ONLY "E-mail Contratante" (NEVER "E-mail Contratada").
   // Fallback to signer email only when contratante is empty.
   const contratanteEmail = exact(answers, ["E-mail Contratante", "E-mail do cliente"]);
-  const clientEmail = contratanteEmail ?? (primarySigner.email as string | undefined) ?? null;
+  const contratadaEmail = exact(answers, ["E-mail Contratada"]);
+  const signerEmails = signers.map((s) => (s as Json).email).filter(Boolean) as string[];
+  let clientEmail: string | null = contratanteEmail;
+  if (!clientEmail) {
+    const fallback = signerEmails.find((e) => e !== contratadaEmail) ?? signerEmails[0] ?? null;
+    clientEmail = fallback ?? null;
+    if (fallback) warnings.push("E-mail Contratante não encontrado no template; usando fallback de signer");
+  }
+  if (!contratadaEmail) {
+    warnings.push("E-mail Contratada não encontrado no payload");
+  }
+
 
   const clientData: Json = {
     tenant_id: tenantId,
@@ -355,7 +383,7 @@ export async function processClicksignPayload(
     additional_services: exact(answers, ["Serviços Adicionais"]),
     children_pay_from_age: normInt(exact(answers, ["Crianças pagam a partir de"])),
     contract_form_date: normDate(exact(answers, ["Data de hoje"])),
-    contracted_company_email: exact(answers, ["E-mail Contratada"]),
+    contracted_company_email: contratadaEmail,
 
     total_value: totalValue,
     installment_count: installmentCount,
