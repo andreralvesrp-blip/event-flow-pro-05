@@ -17,6 +17,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 
 const WebhooksRoute = WebhooksRouteImport.update({
@@ -59,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfiguracoesIndexRoute = ConfiguracoesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ConfiguracoesRoute,
+} as any)
 const ConfiguracoesImportacaoHistoricaRoute =
   ConfiguracoesImportacaoHistoricaRouteImport.update({
     id: '/importacao-historica',
@@ -76,10 +82,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/': typeof ConfiguracoesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/configuracoes': typeof ConfiguracoesRouteWithChildren
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
@@ -87,6 +93,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes': typeof ConfiguracoesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -99,6 +106,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/': typeof ConfiguracoesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -112,10 +120,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/webhooks'
     | '/configuracoes/importacao-historica'
+    | '/configuracoes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/configuracoes'
     | '/contratos'
     | '/dashboard'
     | '/festas'
@@ -123,6 +131,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/webhooks'
     | '/configuracoes/importacao-historica'
+    | '/configuracoes'
   id:
     | '__root__'
     | '/'
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/webhooks'
     | '/configuracoes/importacao-historica'
+    | '/configuracoes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -205,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/configuracoes/': {
+      id: '/configuracoes/'
+      path: '/'
+      fullPath: '/configuracoes/'
+      preLoaderRoute: typeof ConfiguracoesIndexRouteImport
+      parentRoute: typeof ConfiguracoesRoute
+    }
     '/configuracoes/importacao-historica': {
       id: '/configuracoes/importacao-historica'
       path: '/importacao-historica'
@@ -217,10 +234,12 @@ declare module '@tanstack/react-router' {
 
 interface ConfiguracoesRouteChildren {
   ConfiguracoesImportacaoHistoricaRoute: typeof ConfiguracoesImportacaoHistoricaRoute
+  ConfiguracoesIndexRoute: typeof ConfiguracoesIndexRoute
 }
 
 const ConfiguracoesRouteChildren: ConfiguracoesRouteChildren = {
   ConfiguracoesImportacaoHistoricaRoute: ConfiguracoesImportacaoHistoricaRoute,
+  ConfiguracoesIndexRoute: ConfiguracoesIndexRoute,
 }
 
 const ConfiguracoesRouteWithChildren = ConfiguracoesRoute._addFileChildren(
@@ -240,3 +259,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
