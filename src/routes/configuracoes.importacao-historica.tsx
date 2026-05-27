@@ -232,29 +232,58 @@ function ImportPage() {
       }));
       await insertChunked("legacy_import_festas", fRows);
 
-      // Stage parcelas
+      // Stage parcelas — filtra linhas bancárias (CNPJ/agência/conta) e envia para revisão
       setBusy(`Carregando ${parcelas.length} parcelas em staging...`);
-      const pRows = parcelas.map((r) => ({
-        import_batch_id: batchId,
-        tenant_id: tenantId,
-        legacy_contract_key: toStr(r.legacy_contract_key),
-        order_index: toInt(r.order_index),
-        due_date: excelToDate(r.due_date),
-        amount: toNum(r.amount),
-        payment_method: toStr(r.payment_method) || "PIX",
-        payment_status: toStr(r.payment_status),
-        paid: toBool(r.paid),
-        paid_at: r.paid_at ? new Date(r.paid_at).toISOString() : null,
-        charge_customer: r.charge_customer === null ? null : toBool(r.charge_customer),
-        card_installments: toInt(r.card_installments),
-        raw_line: toStr(r.raw_line),
-        is_historical: toBool(r.is_historical),
-        financial_scope: toStr(r.financial_scope),
-        needs_review: toBool(r.needs_review),
-        warnings: toStr(r.warnings),
-        raw_row: r,
-      }));
+      const pRows: any[] = [];
+      const bankInfoSkipped: any[] = [];
+      parcelas.forEach((r, idx) => {
+        const rawLine = toStr(r.raw_line);
+        const amount = toNum(r.amount);
+        const { isBankInfo, reason } = classifyParcela(rawLine, amount);
+        if (isBankInfo) {
+          bankInfoSkipped.push({
+            import_batch_id: batchId,
+            tenant_id: tenantId,
+            origem: "parcelas",
+            source_row_number: idx + 2, // header + 1-based
+            legacy_client_key: null,
+            legacy_contract_key: toStr(r.legacy_contract_key),
+            tipo_problema: "linha_bancaria_ignorada",
+            campo: "amount/raw_line",
+            valor_original: rawLine || (amount !== null ? String(amount) : null),
+            valor_normalizado: null,
+            severidade: "alta",
+            acao_recomendada: "Conferir manualmente; linha ignorada como parcela",
+            observacao: reason,
+            raw_row: r,
+          });
+          return;
+        }
+        pRows.push({
+          import_batch_id: batchId,
+          tenant_id: tenantId,
+          legacy_contract_key: toStr(r.legacy_contract_key),
+          order_index: toInt(r.order_index),
+          due_date: excelToDate(r.due_date),
+          amount,
+          payment_method: toStr(r.payment_method) || "PIX",
+          payment_status: toStr(r.payment_status),
+          paid: toBool(r.paid),
+          paid_at: r.paid_at ? new Date(r.paid_at).toISOString() : null,
+          charge_customer: r.charge_customer === null ? null : toBool(r.charge_customer),
+          card_installments: toInt(r.card_installments),
+          raw_line: rawLine,
+          is_historical: toBool(r.is_historical),
+          financial_scope: toStr(r.financial_scope),
+          needs_review: toBool(r.needs_review),
+          warnings: toStr(r.warnings),
+          raw_row: r,
+        });
+      });
       await insertChunked("legacy_import_parcelas", pRows);
+      if (bankInfoSkipped.length) {
+        await insertChunked("legacy_import_revisao", bankInfoSkipped);
+      }
 
       // Stage revisao
       if (revisao.length) {
