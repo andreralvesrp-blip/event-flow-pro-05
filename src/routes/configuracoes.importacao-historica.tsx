@@ -325,7 +325,7 @@ function ImportPage() {
       sb.from("legacy_import_clients").select("document_type, document_number, email, phone").eq("import_batch_id", batchId),
       sb.from("legacy_import_festas").select("legacy_contract_key, financial_scope, needs_review, total_value, status").eq("import_batch_id", batchId),
       sb.from("legacy_import_parcelas").select("financial_scope, amount, paid").eq("import_batch_id", batchId),
-      sb.from("legacy_import_revisao").select("severidade").eq("import_batch_id", batchId),
+      sb.from("legacy_import_revisao").select("severidade, tipo_problema").eq("import_batch_id", batchId),
     ]);
 
     const clientesStg = cs.data || [];
@@ -333,26 +333,37 @@ function ImportPage() {
     const parcelasStg = ps.data || [];
     const revStg = rv.data || [];
 
-    // Existing match counts
+    // --- Matching detalhado contra public.clients (tenant-scoped via RLS) ---
     const docs = Array.from(new Set(clientesStg.map((c: any) => c.document_number).filter(Boolean)));
-    let existingDocs = 0;
-    if (docs.length) {
-      const { data: existing } = await sb
-        .from("clients")
-        .select("document_number")
-        .in("document_number", docs);
-      existingDocs = (existing || []).length;
-    }
+    const emails = Array.from(new Set(clientesStg.map((c: any) => c.email).filter(Boolean)));
+    const phones = Array.from(new Set(clientesStg.map((c: any) => c.phone).filter(Boolean)));
+
+    const [byDocRes, byCpfRes, byEmailRes, byPhoneRes, totalClientsRes] = await Promise.all([
+      docs.length ? sb.from("clients").select("document_number").in("document_number", docs) : Promise.resolve({ data: [] }),
+      docs.length ? sb.from("clients").select("cpf").in("cpf", docs) : Promise.resolve({ data: [] }),
+      emails.length ? sb.from("clients").select("email").in("email", emails) : Promise.resolve({ data: [] }),
+      phones.length ? sb.from("clients").select("phone").in("phone", phones) : Promise.resolve({ data: [] }),
+      sb.from("clients").select("id", { count: "exact", head: true }),
+    ]);
+    const matchDoc = new Set((byDocRes.data || []).map((x: any) => x.document_number)).size;
+    const matchCpf = new Set((byCpfRes.data || []).map((x: any) => x.cpf)).size;
+    const matchEmail = new Set((byEmailRes.data || []).map((x: any) => x.email)).size;
+    const matchPhone = new Set((byPhoneRes.data || []).map((x: any) => x.phone)).size;
+    const existingDocs = new Set([
+      ...(byDocRes.data || []).map((x: any) => x.document_number),
+      ...(byCpfRes.data || []).map((x: any) => x.cpf),
+    ]).size;
+    const totalClientsInDb = totalClientsRes.count ?? 0;
 
     const keys = Array.from(new Set(festasStg.map((f: any) => f.legacy_contract_key).filter(Boolean)));
     let existingContracts = 0;
     if (keys.length) {
       const { data: existing } = await sb
-        .from("contracts")
-        .select("legacy_contract_key")
-        .in("legacy_contract_key", keys);
+        .from("contracts").select("legacy_contract_key").in("legacy_contract_key", keys);
       existingContracts = (existing || []).length;
     }
+
+    const parcelasBankInfoIgnoradas = revStg.filter((r: any) => r.tipo_problema === "linha_bancaria_ignorada").length;
 
     const diagnostic = {
       clientes_total: clientesStg.length,
@@ -361,6 +372,11 @@ function ImportPage() {
       clientes_com_email: clientesStg.filter((c: any) => c.email).length,
       clientes_ja_existem: existingDocs,
       clientes_serao_criados: clientesStg.length - existingDocs,
+      match_document_number: matchDoc,
+      match_cpf: matchCpf,
+      match_email: matchEmail,
+      match_phone: matchPhone,
+      total_clients_in_db: totalClientsInDb,
       festas_total: festasStg.length,
       festas_historicas: festasStg.filter((f: any) => f.financial_scope === "historico").length,
       festas_ativas: festasStg.filter((f: any) => f.financial_scope === "ativo").length,
@@ -370,6 +386,9 @@ function ImportPage() {
       parcelas_total: parcelasStg.length,
       parcelas_historicas: parcelasStg.filter((p: any) => p.financial_scope === "historico").length,
       parcelas_ativas: parcelasStg.filter((p: any) => p.financial_scope === "ativo").length,
+      parcelas_bank_info_ignoradas: parcelasBankInfoIgnoradas,
+      soma_parcelas_historicas: parcelasStg.filter((p: any) => p.financial_scope === "historico").reduce((s: number, p: any) => s + Number(p.amount || 0), 0),
+      soma_parcelas_ativas: parcelasStg.filter((p: any) => p.financial_scope === "ativo").reduce((s: number, p: any) => s + Number(p.amount || 0), 0),
       revisao_total: revStg.length,
       revisao_alta: revStg.filter((r: any) => r.severidade === "alta").length,
       revisao_media: revStg.filter((r: any) => r.severidade === "media").length,
@@ -381,6 +400,59 @@ function ImportPage() {
     await sb.from("legacy_import_batches").update({ diagnostic }).eq("id", batchId);
     setDiag(diagnostic);
   }
+
+  // Reaplica o filtro de linhas bancárias sobre o staging já carregado.
+  // Move da tabela `legacy_import_parcelas` para `legacy_import_revisao` qualquer
+  // linha que agora seja reconhecida como dado bancário.
+  async function reprocessParcelas(batchId: string) {
+    const sb: any = supabase;
+    setBusy("Reprocessando parcelas do staging...");
+    setErr(null);
+    try {
+      const { data: ps, error } = await sb
+        .from("legacy_import_parcelas")
+        .select("id, raw_line, amount, legacy_contract_key, raw_row")
+        .eq("import_batch_id", batchId);
+      if (error) throw new Error(error.message);
+
+      const toDelete: string[] = [];
+      const toRevisao: any[] = [];
+      for (const p of ps || []) {
+        const { isBankInfo, reason } = classifyParcela(p.raw_line, Number(p.amount));
+        if (!isBankInfo) continue;
+        toDelete.push(p.id);
+        toRevisao.push({
+          import_batch_id: batchId,
+          tenant_id: profile!.tenant_id,
+          origem: "parcelas",
+          legacy_contract_key: p.legacy_contract_key,
+          tipo_problema: "linha_bancaria_ignorada",
+          campo: "amount/raw_line",
+          valor_original: p.raw_line || String(p.amount),
+          severidade: "alta",
+          acao_recomendada: "Conferir manualmente; linha ignorada como parcela (reprocessamento)",
+          observacao: reason,
+          raw_row: p.raw_row,
+        });
+      }
+      if (toRevisao.length) await insertChunked("legacy_import_revisao", toRevisao);
+      if (toDelete.length) {
+        for (let i = 0; i < toDelete.length; i += CHUNK) {
+          const chunk = toDelete.slice(i, i + CHUNK);
+          const { error: dErr } = await sb.from("legacy_import_parcelas").delete().in("id", chunk);
+          if (dErr) throw new Error(dErr.message);
+        }
+      }
+      await computeDiagnostic(batchId);
+      setMsg(`Reprocessamento concluído: ${toDelete.length} parcelas movidas para revisão.`);
+      await loadBatches();
+    } catch (e: any) {
+      setErr(e.message || String(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
 
   async function openBatch(b: Batch) {
     setActive(b);
