@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Webhook, Building2, Plug } from "lucide-react";
+import { Webhook, Building2, Plug, FileSpreadsheet } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 
 export const Route = createFileRoute("/configuracoes")({
