@@ -223,10 +223,14 @@ export type ParsedInstallment = {
  */
 export function parseInstallments(raw: string | null | undefined): ParsedInstallment[] {
   if (!raw) return [];
+  const BANK_INFO = /(cnpj|\bcpf\b|banco|ag[eê]ncia|\bconta\b|favorecid|dados\s+para\s+transfer|chave\s*pix|pix\s*cnpj|0001-|agencia:|conta:)/i;
+  const ABSURD_AMOUNT = 200_000;
   const lines = String(raw).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const out: ParsedInstallment[] = [];
   let idx = 0;
   for (const line of lines) {
+    // Skip pure bank-info lines (CNPJ/agência/conta/PIX details)
+    if (BANK_INFO.test(line)) continue;
     // Find date and strip it from the rest of the line so it doesn't pollute
     // money extraction.
     const dateMatch = line.match(/(\d{2}[\/\-]\d{2}[\/\-]\d{4})|(\d{4}-\d{2}-\d{2})/);
