@@ -1,0 +1,1 @@
+ALTER TABLE public.clients ALTER COLUMN phone TYPE text; ALTER TABLE public.clients ALTER COLUMN cpf TYPE text;
