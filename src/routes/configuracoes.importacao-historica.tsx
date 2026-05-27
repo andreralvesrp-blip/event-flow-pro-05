@@ -67,6 +67,35 @@ const excelToTime = (v: any): string | null => {
   return m ? `${m[1].padStart(2, "0")}:${m[2]}:00` : null;
 };
 
+// Detecta linhas que NÃO são parcela e sim dados bancários / CNPJ / conta
+// devolvidos pela aba "parcelas" da planilha canônica.
+const BANK_INFO_REGEX = new RegExp(
+  [
+    "cnpj", "\\bcpf\\b", "banco", "ag[eê]ncia", "\\bconta\\b", "favorecid",
+    "dados\\s+para\\s+transfer", "chave\\s*pix", "pix\\s*cnpj",
+    "0001-", "agencia:", "conta:",
+  ].join("|"),
+  "i",
+);
+
+// Valor de parcela "absurdo" = provavelmente CNPJ/conta colado na coluna amount.
+// Parcelas de buffet infantil dificilmente passam de R$ 200k.
+const ABSURD_AMOUNT_THRESHOLD = 200_000;
+
+function classifyParcela(rawLine: string | null, amount: number | null): {
+  isBankInfo: boolean;
+  reason: string | null;
+} {
+  const txt = (rawLine || "").trim();
+  if (txt && BANK_INFO_REGEX.test(txt)) {
+    return { isBankInfo: true, reason: `raw_line contém padrão bancário: "${txt.slice(0, 120)}"` };
+  }
+  if (amount !== null && amount >= ABSURD_AMOUNT_THRESHOLD) {
+    return { isBankInfo: true, reason: `valor absurdo (${amount}) — provável CNPJ/conta` };
+  }
+  return { isBankInfo: false, reason: null };
+}
+
 const CHUNK = 200;
 async function insertChunked(table: any, rows: any[]) {
   const tableAny = supabase.from(table) as any;
