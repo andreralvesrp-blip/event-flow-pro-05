@@ -252,6 +252,7 @@ export function parseInstallments(raw: string | null | undefined): ParsedInstall
       if (anyNum) amount = normMoney(anyNum[0]);
     }
     if (amount === null || amount <= 0) continue;
+    if (amount >= ABSURD_AMOUNT) continue; // provável CNPJ/conta colado como valor
 
     // Method = trailing token after the last " - " / " – " / ":" separator.
     const parts = rest.split(/\s*[-–:|]\s*/).map((p) => p.trim()).filter(Boolean);
