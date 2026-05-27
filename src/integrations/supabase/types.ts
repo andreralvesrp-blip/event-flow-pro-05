@@ -149,7 +149,7 @@ export type Database = {
           charge_customer: boolean | null
           contract_id: string
           created_at: string
-          due_date: string
+          due_date: string | null
           financial_scope: string | null
           id: string
           import_warnings: string | null
@@ -175,7 +175,7 @@ export type Database = {
           charge_customer?: boolean | null
           contract_id: string
           created_at?: string
-          due_date: string
+          due_date?: string | null
           financial_scope?: string | null
           id?: string
           import_warnings?: string | null
@@ -201,7 +201,7 @@ export type Database = {
           charge_customer?: boolean | null
           contract_id?: string
           created_at?: string
-          due_date?: string
+          due_date?: string | null
           financial_scope?: string | null
           id?: string
           import_warnings?: string | null

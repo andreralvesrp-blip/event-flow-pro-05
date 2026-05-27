@@ -1,0 +1,1 @@
+ALTER TABLE public.contract_installments ALTER COLUMN due_date DROP NOT NULL;
