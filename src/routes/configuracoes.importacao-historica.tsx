@@ -571,6 +571,11 @@ function ImportPage() {
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => computeDiagnostic(active.id)}>Recalcular</Button>
                 {active.status !== "committed" && (
+                  <Button size="sm" variant="outline" onClick={() => reprocessParcelas(active.id)} disabled={!!busy}>
+                    Reprocessar parcelas
+                  </Button>
+                )}
+                {active.status !== "committed" && (
                   <Button size="sm" className="bg-emerald-700 hover:bg-emerald-800" onClick={() => commitBatch(active)} disabled={!!busy}>
                     Confirmar importação
                   </Button>
