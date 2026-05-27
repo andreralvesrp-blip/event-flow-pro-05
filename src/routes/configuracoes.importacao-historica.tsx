@@ -586,10 +586,15 @@ function ImportPage() {
               <div className="text-xs text-slate-500">Sem diagnóstico ainda.</div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                <Stat label="Clientes — total" value={diag.clientes_total} />
+                <Stat label="Clientes no banco (total)" value={diag.total_clients_in_db} />
+                <Stat label="Clientes — staging" value={diag.clientes_total} />
                 <Stat label="Clientes CPF" value={diag.clientes_cpf} />
                 <Stat label="Clientes CNPJ" value={diag.clientes_cnpj} />
-                <Stat label="Já existem no sistema" value={diag.clientes_ja_existem} />
+                <Stat label="Match por document_number" value={diag.match_document_number} />
+                <Stat label="Match por cpf (legado)" value={diag.match_cpf} />
+                <Stat label="Match por email" value={diag.match_email} />
+                <Stat label="Match por phone" value={diag.match_phone} />
+                <Stat label="Já existem (consolidado)" value={diag.clientes_ja_existem} />
                 <Stat label="Serão criados" value={diag.clientes_serao_criados} highlight />
                 <Stat label="Festas — total" value={diag.festas_total} />
                 <Stat label="Festas históricas" value={diag.festas_historicas} />
@@ -600,6 +605,9 @@ function ImportPage() {
                 <Stat label="Parcelas — total" value={diag.parcelas_total} />
                 <Stat label="Parcelas históricas" value={diag.parcelas_historicas} />
                 <Stat label="Parcelas ativas" value={diag.parcelas_ativas} />
+                <Stat label="Parcelas bancárias ignoradas" value={diag.parcelas_bank_info_ignoradas} />
+                <Stat label="Soma parcelas históricas" value={fmtBRL(diag.soma_parcelas_historicas)} />
+                <Stat label="Soma parcelas ativas" value={fmtBRL(diag.soma_parcelas_ativas)} />
                 <Stat label="Revisão — alta" value={diag.revisao_alta} />
                 <Stat label="Revisão — média" value={diag.revisao_media} />
                 <Stat label="Revisão — baixa" value={diag.revisao_baixa} />
