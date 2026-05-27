@@ -16,6 +16,13 @@ function ConfiguracoesPage() {
       enabled: true,
     },
     {
+      to: "/configuracoes/importacao-historica",
+      title: "Importação histórica",
+      desc: "Carregue a planilha canônica de festas antigas e confirme o commit em staging.",
+      icon: FileSpreadsheet,
+      enabled: true,
+    },
+    {
       to: "#",
       title: "Dados da empresa",
       desc: "Nome do buffet, CNPJ e informações da contratada.",
