@@ -64,15 +64,18 @@ export type Database = {
       clients: {
         Row: {
           address_full: string | null
-          cpf: string
+          cpf: string | null
           created_at: string
           created_by: string | null
+          document_number: string | null
+          document_type: string | null
           email: string | null
           father_name: string | null
           first_contact_at: string
           full_name: string
           how_met: string | null
           id: string
+          legacy_document_raw: string | null
           mother_name: string | null
           notes: string | null
           phone: string | null
@@ -82,15 +85,18 @@ export type Database = {
         }
         Insert: {
           address_full?: string | null
-          cpf: string
+          cpf?: string | null
           created_at?: string
           created_by?: string | null
+          document_number?: string | null
+          document_type?: string | null
           email?: string | null
           father_name?: string | null
           first_contact_at?: string
           full_name: string
           how_met?: string | null
           id?: string
+          legacy_document_raw?: string | null
           mother_name?: string | null
           notes?: string | null
           phone?: string | null
@@ -100,15 +106,18 @@ export type Database = {
         }
         Update: {
           address_full?: string | null
-          cpf?: string
+          cpf?: string | null
           created_at?: string
           created_by?: string | null
+          document_number?: string | null
+          document_type?: string | null
           email?: string | null
           father_name?: string | null
           first_contact_at?: string
           full_name?: string
           how_met?: string | null
           id?: string
+          legacy_document_raw?: string | null
           mother_name?: string | null
           notes?: string | null
           phone?: string | null
@@ -141,16 +150,23 @@ export type Database = {
           contract_id: string
           created_at: string
           due_date: string
+          financial_scope: string | null
           id: string
+          import_warnings: string | null
+          is_historical: boolean | null
+          legacy_contract_key: string | null
+          legacy_import_batch_id: string | null
           manually_edited: boolean
           manually_edited_at: string | null
           manually_edited_by: string | null
+          needs_review: boolean | null
           order_index: number
           paid: boolean
           paid_at: string | null
           payment_method: string
           payment_status: string | null
           raw_line: string | null
+          source_system: string | null
           tenant_id: string
         }
         Insert: {
@@ -160,16 +176,23 @@ export type Database = {
           contract_id: string
           created_at?: string
           due_date: string
+          financial_scope?: string | null
           id?: string
+          import_warnings?: string | null
+          is_historical?: boolean | null
+          legacy_contract_key?: string | null
+          legacy_import_batch_id?: string | null
           manually_edited?: boolean
           manually_edited_at?: string | null
           manually_edited_by?: string | null
+          needs_review?: boolean | null
           order_index: number
           paid?: boolean
           paid_at?: string | null
           payment_method: string
           payment_status?: string | null
           raw_line?: string | null
+          source_system?: string | null
           tenant_id: string
         }
         Update: {
@@ -179,16 +202,23 @@ export type Database = {
           contract_id?: string
           created_at?: string
           due_date?: string
+          financial_scope?: string | null
           id?: string
+          import_warnings?: string | null
+          is_historical?: boolean | null
+          legacy_contract_key?: string | null
+          legacy_import_batch_id?: string | null
           manually_edited?: boolean
           manually_edited_at?: string | null
           manually_edited_by?: string | null
+          needs_review?: boolean | null
           order_index?: number
           paid?: boolean
           paid_at?: string | null
           payment_method?: string
           payment_status?: string | null
           raw_line?: string | null
+          source_system?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -240,20 +270,28 @@ export type Database = {
           event_start_time: string | null
           event_weekday_raw: string | null
           finalized_at: string | null
+          financial_scope: string | null
           guest_count: number | null
           hot_dish: string | null
           id: string
+          import_warnings: string | null
           installment_count: number | null
+          is_historical: boolean | null
           kids_menu: string | null
+          legacy_contract_key: string | null
+          legacy_import_batch_id: string | null
+          legacy_notes: string | null
           manager_signed_at: string | null
           manual_status_override: boolean
           manually_edited: boolean
           manually_edited_at: string | null
           manually_edited_by: string | null
+          needs_review: boolean | null
           observations: string | null
           payment_method: string | null
           payment_schedule_raw: string | null
           raw_webhook_payload: Json | null
+          source_system: string | null
           status: Database["public"]["Enums"]["contract_status"]
           tasting_menu: string | null
           tenant_id: string
@@ -285,20 +323,28 @@ export type Database = {
           event_start_time?: string | null
           event_weekday_raw?: string | null
           finalized_at?: string | null
+          financial_scope?: string | null
           guest_count?: number | null
           hot_dish?: string | null
           id?: string
+          import_warnings?: string | null
           installment_count?: number | null
+          is_historical?: boolean | null
           kids_menu?: string | null
+          legacy_contract_key?: string | null
+          legacy_import_batch_id?: string | null
+          legacy_notes?: string | null
           manager_signed_at?: string | null
           manual_status_override?: boolean
           manually_edited?: boolean
           manually_edited_at?: string | null
           manually_edited_by?: string | null
+          needs_review?: boolean | null
           observations?: string | null
           payment_method?: string | null
           payment_schedule_raw?: string | null
           raw_webhook_payload?: Json | null
+          source_system?: string | null
           status?: Database["public"]["Enums"]["contract_status"]
           tasting_menu?: string | null
           tenant_id: string
@@ -330,20 +376,28 @@ export type Database = {
           event_start_time?: string | null
           event_weekday_raw?: string | null
           finalized_at?: string | null
+          financial_scope?: string | null
           guest_count?: number | null
           hot_dish?: string | null
           id?: string
+          import_warnings?: string | null
           installment_count?: number | null
+          is_historical?: boolean | null
           kids_menu?: string | null
+          legacy_contract_key?: string | null
+          legacy_import_batch_id?: string | null
+          legacy_notes?: string | null
           manager_signed_at?: string | null
           manual_status_override?: boolean
           manually_edited?: boolean
           manually_edited_at?: string | null
           manually_edited_by?: string | null
+          needs_review?: boolean | null
           observations?: string | null
           payment_method?: string | null
           payment_schedule_raw?: string | null
           raw_webhook_payload?: Json | null
+          source_system?: string | null
           status?: Database["public"]["Enums"]["contract_status"]
           tasting_menu?: string | null
           tenant_id?: string
@@ -375,6 +429,466 @@ export type Database = {
           },
           {
             foreignKeyName: "contracts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legacy_import_batches: {
+        Row: {
+          committed_at: string | null
+          committed_by: string | null
+          created_at: string
+          created_by: string | null
+          diagnostic: Json | null
+          id: string
+          source_file_name: string | null
+          status: string
+          tenant_id: string
+          total_clients: number | null
+          total_festas: number | null
+          total_parcelas: number | null
+          total_revisao: number | null
+        }
+        Insert: {
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          diagnostic?: Json | null
+          id?: string
+          source_file_name?: string | null
+          status?: string
+          tenant_id: string
+          total_clients?: number | null
+          total_festas?: number | null
+          total_parcelas?: number | null
+          total_revisao?: number | null
+        }
+        Update: {
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          diagnostic?: Json | null
+          id?: string
+          source_file_name?: string | null
+          status?: string
+          tenant_id?: string
+          total_clients?: number | null
+          total_festas?: number | null
+          total_parcelas?: number | null
+          total_revisao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legacy_import_batches_committed_by_fkey"
+            columns: ["committed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_import_batches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legacy_import_clients: {
+        Row: {
+          address_full: string | null
+          created_at: string
+          created_client_id: string | null
+          document_number: string | null
+          document_type: string | null
+          email: string | null
+          errors: string | null
+          father_name: string | null
+          full_name: string | null
+          how_met: string | null
+          id: string
+          import_batch_id: string
+          import_status: string | null
+          legacy_client_key: string | null
+          legacy_document_raw: string | null
+          mother_name: string | null
+          needs_review: boolean | null
+          notes: string | null
+          phone: string | null
+          raw_row: Json | null
+          tenant_id: string
+          warnings: string | null
+        }
+        Insert: {
+          address_full?: string | null
+          created_at?: string
+          created_client_id?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          email?: string | null
+          errors?: string | null
+          father_name?: string | null
+          full_name?: string | null
+          how_met?: string | null
+          id?: string
+          import_batch_id: string
+          import_status?: string | null
+          legacy_client_key?: string | null
+          legacy_document_raw?: string | null
+          mother_name?: string | null
+          needs_review?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          raw_row?: Json | null
+          tenant_id: string
+          warnings?: string | null
+        }
+        Update: {
+          address_full?: string | null
+          created_at?: string
+          created_client_id?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          email?: string | null
+          errors?: string | null
+          father_name?: string | null
+          full_name?: string | null
+          how_met?: string | null
+          id?: string
+          import_batch_id?: string
+          import_status?: string | null
+          legacy_client_key?: string | null
+          legacy_document_raw?: string | null
+          mother_name?: string | null
+          needs_review?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          raw_row?: Json | null
+          tenant_id?: string
+          warnings?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legacy_import_clients_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "legacy_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_import_clients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legacy_import_festas: {
+        Row: {
+          additional_services: string | null
+          cake: string | null
+          celebrant_age: number | null
+          celebrant_name: string | null
+          children_pay_from_age: number | null
+          contract_form_date: string | null
+          contracted_company_email: string | null
+          created_at: string
+          created_contract_id: string | null
+          decoration: string | null
+          errors: string | null
+          event_date: string | null
+          event_end_time: string | null
+          event_start_time: string | null
+          event_weekday_raw: string | null
+          financial_scope: string | null
+          guest_count: number | null
+          hot_dish: string | null
+          id: string
+          import_batch_id: string
+          import_status: string | null
+          installment_count: number | null
+          is_historical: boolean | null
+          kids_menu: string | null
+          legacy_client_key: string | null
+          legacy_contract_key: string | null
+          legacy_notes: string | null
+          needs_review: boolean | null
+          observations: string | null
+          payment_method: string | null
+          payment_schedule_raw: string | null
+          raw_row: Json | null
+          status: string | null
+          tasting_menu: string | null
+          tenant_id: string
+          total_value: number | null
+          warnings: string | null
+        }
+        Insert: {
+          additional_services?: string | null
+          cake?: string | null
+          celebrant_age?: number | null
+          celebrant_name?: string | null
+          children_pay_from_age?: number | null
+          contract_form_date?: string | null
+          contracted_company_email?: string | null
+          created_at?: string
+          created_contract_id?: string | null
+          decoration?: string | null
+          errors?: string | null
+          event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
+          event_weekday_raw?: string | null
+          financial_scope?: string | null
+          guest_count?: number | null
+          hot_dish?: string | null
+          id?: string
+          import_batch_id: string
+          import_status?: string | null
+          installment_count?: number | null
+          is_historical?: boolean | null
+          kids_menu?: string | null
+          legacy_client_key?: string | null
+          legacy_contract_key?: string | null
+          legacy_notes?: string | null
+          needs_review?: boolean | null
+          observations?: string | null
+          payment_method?: string | null
+          payment_schedule_raw?: string | null
+          raw_row?: Json | null
+          status?: string | null
+          tasting_menu?: string | null
+          tenant_id: string
+          total_value?: number | null
+          warnings?: string | null
+        }
+        Update: {
+          additional_services?: string | null
+          cake?: string | null
+          celebrant_age?: number | null
+          celebrant_name?: string | null
+          children_pay_from_age?: number | null
+          contract_form_date?: string | null
+          contracted_company_email?: string | null
+          created_at?: string
+          created_contract_id?: string | null
+          decoration?: string | null
+          errors?: string | null
+          event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
+          event_weekday_raw?: string | null
+          financial_scope?: string | null
+          guest_count?: number | null
+          hot_dish?: string | null
+          id?: string
+          import_batch_id?: string
+          import_status?: string | null
+          installment_count?: number | null
+          is_historical?: boolean | null
+          kids_menu?: string | null
+          legacy_client_key?: string | null
+          legacy_contract_key?: string | null
+          legacy_notes?: string | null
+          needs_review?: boolean | null
+          observations?: string | null
+          payment_method?: string | null
+          payment_schedule_raw?: string | null
+          raw_row?: Json | null
+          status?: string | null
+          tasting_menu?: string | null
+          tenant_id?: string
+          total_value?: number | null
+          warnings?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legacy_import_festas_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "legacy_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_import_festas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legacy_import_parcelas: {
+        Row: {
+          amount: number | null
+          card_installments: number | null
+          charge_customer: boolean | null
+          created_at: string
+          created_installment_id: string | null
+          due_date: string | null
+          errors: string | null
+          financial_scope: string | null
+          id: string
+          import_batch_id: string
+          import_status: string | null
+          is_historical: boolean | null
+          legacy_contract_key: string | null
+          needs_review: boolean | null
+          order_index: number | null
+          paid: boolean | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_status: string | null
+          raw_line: string | null
+          raw_row: Json | null
+          tenant_id: string
+          warnings: string | null
+        }
+        Insert: {
+          amount?: number | null
+          card_installments?: number | null
+          charge_customer?: boolean | null
+          created_at?: string
+          created_installment_id?: string | null
+          due_date?: string | null
+          errors?: string | null
+          financial_scope?: string | null
+          id?: string
+          import_batch_id: string
+          import_status?: string | null
+          is_historical?: boolean | null
+          legacy_contract_key?: string | null
+          needs_review?: boolean | null
+          order_index?: number | null
+          paid?: boolean | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          raw_line?: string | null
+          raw_row?: Json | null
+          tenant_id: string
+          warnings?: string | null
+        }
+        Update: {
+          amount?: number | null
+          card_installments?: number | null
+          charge_customer?: boolean | null
+          created_at?: string
+          created_installment_id?: string | null
+          due_date?: string | null
+          errors?: string | null
+          financial_scope?: string | null
+          id?: string
+          import_batch_id?: string
+          import_status?: string | null
+          is_historical?: boolean | null
+          legacy_contract_key?: string | null
+          needs_review?: boolean | null
+          order_index?: number | null
+          paid?: boolean | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          raw_line?: string | null
+          raw_row?: Json | null
+          tenant_id?: string
+          warnings?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legacy_import_parcelas_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "legacy_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_import_parcelas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legacy_import_revisao: {
+        Row: {
+          acao_recomendada: string | null
+          campo: string | null
+          created_at: string
+          id: string
+          import_batch_id: string
+          legacy_client_key: string | null
+          legacy_contract_key: string | null
+          observacao: string | null
+          origem: string | null
+          raw_row: Json | null
+          severidade: string | null
+          source_row_number: number | null
+          tenant_id: string
+          tipo_problema: string | null
+          valor_normalizado: string | null
+          valor_original: string | null
+        }
+        Insert: {
+          acao_recomendada?: string | null
+          campo?: string | null
+          created_at?: string
+          id?: string
+          import_batch_id: string
+          legacy_client_key?: string | null
+          legacy_contract_key?: string | null
+          observacao?: string | null
+          origem?: string | null
+          raw_row?: Json | null
+          severidade?: string | null
+          source_row_number?: number | null
+          tenant_id: string
+          tipo_problema?: string | null
+          valor_normalizado?: string | null
+          valor_original?: string | null
+        }
+        Update: {
+          acao_recomendada?: string | null
+          campo?: string | null
+          created_at?: string
+          id?: string
+          import_batch_id?: string
+          legacy_client_key?: string | null
+          legacy_contract_key?: string | null
+          observacao?: string | null
+          origem?: string | null
+          raw_row?: Json | null
+          severidade?: string | null
+          source_row_number?: number | null
+          tenant_id?: string
+          tipo_problema?: string | null
+          valor_normalizado?: string | null
+          valor_original?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legacy_import_revisao_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "legacy_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_import_revisao_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

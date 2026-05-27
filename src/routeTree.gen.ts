@@ -17,6 +17,8 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
+import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 
 const WebhooksRoute = WebhooksRouteImport.update({
   id: '/webhooks',
@@ -58,37 +60,53 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfiguracoesIndexRoute = ConfiguracoesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ConfiguracoesRoute,
+} as any)
+const ConfiguracoesImportacaoHistoricaRoute =
+  ConfiguracoesImportacaoHistoricaRouteImport.update({
+    id: '/importacao-historica',
+    path: '/importacao-historica',
+    getParentRoute: () => ConfiguracoesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/configuracoes': typeof ConfiguracoesRoute
+  '/configuracoes': typeof ConfiguracoesRouteWithChildren
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
+  '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/': typeof ConfiguracoesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
+  '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes': typeof ConfiguracoesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/configuracoes': typeof ConfiguracoesRoute
+  '/configuracoes': typeof ConfiguracoesRouteWithChildren
   '/contratos': typeof ContratosRoute
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/webhooks': typeof WebhooksRoute
+  '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/': typeof ConfiguracoesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,16 +119,19 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/login'
     | '/webhooks'
+    | '/configuracoes/importacao-historica'
+    | '/configuracoes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/configuracoes'
     | '/contratos'
     | '/dashboard'
     | '/festas'
     | '/financeiro'
     | '/login'
     | '/webhooks'
+    | '/configuracoes/importacao-historica'
+    | '/configuracoes'
   id:
     | '__root__'
     | '/'
@@ -121,11 +142,13 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/login'
     | '/webhooks'
+    | '/configuracoes/importacao-historica'
+    | '/configuracoes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ConfiguracoesRoute: typeof ConfiguracoesRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRouteWithChildren
   ContratosRoute: typeof ContratosRoute
   DashboardRoute: typeof DashboardRoute
   FestasRoute: typeof FestasRoute
@@ -192,12 +215,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/configuracoes/': {
+      id: '/configuracoes/'
+      path: '/'
+      fullPath: '/configuracoes/'
+      preLoaderRoute: typeof ConfiguracoesIndexRouteImport
+      parentRoute: typeof ConfiguracoesRoute
+    }
+    '/configuracoes/importacao-historica': {
+      id: '/configuracoes/importacao-historica'
+      path: '/importacao-historica'
+      fullPath: '/configuracoes/importacao-historica'
+      preLoaderRoute: typeof ConfiguracoesImportacaoHistoricaRouteImport
+      parentRoute: typeof ConfiguracoesRoute
+    }
   }
 }
 
+interface ConfiguracoesRouteChildren {
+  ConfiguracoesImportacaoHistoricaRoute: typeof ConfiguracoesImportacaoHistoricaRoute
+  ConfiguracoesIndexRoute: typeof ConfiguracoesIndexRoute
+}
+
+const ConfiguracoesRouteChildren: ConfiguracoesRouteChildren = {
+  ConfiguracoesImportacaoHistoricaRoute: ConfiguracoesImportacaoHistoricaRoute,
+  ConfiguracoesIndexRoute: ConfiguracoesIndexRoute,
+}
+
+const ConfiguracoesRouteWithChildren = ConfiguracoesRoute._addFileChildren(
+  ConfiguracoesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ConfiguracoesRoute: ConfiguracoesRoute,
+  ConfiguracoesRoute: ConfiguracoesRouteWithChildren,
   ContratosRoute: ContratosRoute,
   DashboardRoute: DashboardRoute,
   FestasRoute: FestasRoute,
