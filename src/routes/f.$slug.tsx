@@ -489,10 +489,13 @@ function Bubble({ from, children }: { from: "bot" | "user"; children: React.Reac
             background: AVATAR_BG,
             borderRadius: "50%",
             flexShrink: 0,
-            fontSize: 15,
+            fontSize: 13,
+            fontWeight: 600,
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
-          className="flex items-center justify-center text-white"
-          style={{ fontSize: 13, fontWeight: 600 }}
         >
           KP
         </div>
