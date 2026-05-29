@@ -705,12 +705,12 @@ function DetailContent({
               <Field
                 label="Oportunidade de origem"
                 value={
-                  <span
-                    className="text-sm text-blue-600 underline cursor-not-allowed"
-                    title="Tela de oportunidades em breve"
+                  <a
+                    href={`/oportunidades?op=${f.opportunity_id}`}
+                    className="text-sm text-blue-600 underline"
                   >
                     Ver oportunidade de origem →
-                  </span>
+                  </a>
                 }
               />
             </div>
