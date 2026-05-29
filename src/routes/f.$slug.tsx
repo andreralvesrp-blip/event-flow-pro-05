@@ -326,12 +326,12 @@ function PublicForm() {
                 <div
                   style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", marginBottom: 12 }}
                 >
-                  Perfeito, {parentName}! 🎉
+                  Feito, {parentName}!
                 </div>
                 <div style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65 }}>
-                  Em instantes você vai receber uma mensagem no WhatsApp com o resultado.
+                  Em instantes você recebe uma mensagem no WhatsApp com o resultado.
                   <br />
-                  Fique de olho! 📲
+                  Fique de olho.
                 </div>
               </div>
             </div>
