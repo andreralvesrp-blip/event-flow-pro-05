@@ -87,9 +87,9 @@ function PublicForm() {
   }, [slug]);
 
   async function startConversation() {
-    pushUser("Vamos! 🥳");
+    pushUser("Vamos lá");
     setStep("name");
-    await pushBot("Que ótimo! Como vai se chamar o(a) aniversariante?");
+    await pushBot("Nome do aniversariante?");
   }
 
   async function submitName(e: React.FormEvent) {
