@@ -116,7 +116,7 @@ function PublicForm() {
     pushUser(`${d}/${m}/${y}`);
     setStep("contact");
     await pushBot(
-      "Quase lá! Me passa seu nome e WhatsApp que eu já verifico a disponibilidade pra você.",
+      "Me passa seu nome e WhatsApp que eu verifico a disponibilidade pra você.",
     );
   }
 
