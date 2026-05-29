@@ -194,7 +194,7 @@ function FestasPage() {
     const { data: contracts, error } = await supabase
       .from("contracts")
       .select(
-        `*, client:clients(id, full_name, cpf, email, phone, address_full, how_met, mother_name, father_name)`,
+        `*, client:clients(id, full_name, cpf, email, phone, address_full, cep, bairro, cidade, source, how_met, mother_name, father_name)`,
       )
       .order("created_at", { ascending: false });
     if (error) {
