@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as OportunidadesRouteImport } from './routes/oportunidades'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FormulariosRouteImport } from './routes/formularios'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as FestasRouteImport } from './routes/festas'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -19,6 +20,7 @@ import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
+import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 
 const WebhooksRoute = WebhooksRouteImport.update({
@@ -34,6 +36,11 @@ const OportunidadesRoute = OportunidadesRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FormulariosRoute = FormulariosRouteImport.update({
+  id: '/formularios',
+  path: '/formularios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinanceiroRoute = FinanceiroRouteImport.update({
@@ -71,6 +78,11 @@ const ConfiguracoesIndexRoute = ConfiguracoesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
+const FSlugRoute = FSlugRouteImport.update({
+  id: '/f/$slug',
+  path: '/f/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConfiguracoesImportacaoHistoricaRoute =
   ConfiguracoesImportacaoHistoricaRouteImport.update({
     id: '/importacao-historica',
@@ -85,10 +97,12 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
+  '/formularios': typeof FormulariosRoute
   '/login': typeof LoginRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -97,10 +111,12 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
+  '/formularios': typeof FormulariosRoute
   '/login': typeof LoginRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/f/$slug': typeof FSlugRoute
   '/configuracoes': typeof ConfiguracoesIndexRoute
 }
 export interface FileRoutesById {
@@ -111,10 +127,12 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
+  '/formularios': typeof FormulariosRoute
   '/login': typeof LoginRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
 }
 export interface FileRouteTypes {
@@ -126,10 +144,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/festas'
     | '/financeiro'
+    | '/formularios'
     | '/login'
     | '/oportunidades'
     | '/webhooks'
     | '/configuracoes/importacao-historica'
+    | '/f/$slug'
     | '/configuracoes/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -138,10 +158,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/festas'
     | '/financeiro'
+    | '/formularios'
     | '/login'
     | '/oportunidades'
     | '/webhooks'
     | '/configuracoes/importacao-historica'
+    | '/f/$slug'
     | '/configuracoes'
   id:
     | '__root__'
@@ -151,10 +173,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/festas'
     | '/financeiro'
+    | '/formularios'
     | '/login'
     | '/oportunidades'
     | '/webhooks'
     | '/configuracoes/importacao-historica'
+    | '/f/$slug'
     | '/configuracoes/'
   fileRoutesById: FileRoutesById
 }
@@ -165,9 +189,11 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   FestasRoute: typeof FestasRoute
   FinanceiroRoute: typeof FinanceiroRoute
+  FormulariosRoute: typeof FormulariosRoute
   LoginRoute: typeof LoginRoute
   OportunidadesRoute: typeof OportunidadesRoute
   WebhooksRoute: typeof WebhooksRoute
+  FSlugRoute: typeof FSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -191,6 +217,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/formularios': {
+      id: '/formularios'
+      path: '/formularios'
+      fullPath: '/formularios'
+      preLoaderRoute: typeof FormulariosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/financeiro': {
@@ -242,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesIndexRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
+    '/f/$slug': {
+      id: '/f/$slug'
+      path: '/f/$slug'
+      fullPath: '/f/$slug'
+      preLoaderRoute: typeof FSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/configuracoes/importacao-historica': {
       id: '/configuracoes/importacao-historica'
       path: '/importacao-historica'
@@ -273,9 +313,11 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   FestasRoute: FestasRoute,
   FinanceiroRoute: FinanceiroRoute,
+  FormulariosRoute: FormulariosRoute,
   LoginRoute: LoginRoute,
   OportunidadesRoute: OportunidadesRoute,
   WebhooksRoute: WebhooksRoute,
+  FSlugRoute: FSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -458,6 +458,56 @@ export type Database = {
           },
         ]
       }
+      forms: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          slug: string
+          source: Database["public"]["Enums"]["opportunity_source"]
+          tenant_id: string
+          updated_at: string
+          utm_campaign: string | null
+          welcome_message: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          slug: string
+          source?: Database["public"]["Enums"]["opportunity_source"]
+          tenant_id: string
+          updated_at?: string
+          utm_campaign?: string | null
+          welcome_message?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          source?: Database["public"]["Enums"]["opportunity_source"]
+          tenant_id?: string
+          updated_at?: string
+          utm_campaign?: string | null
+          welcome_message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legacy_import_batches: {
         Row: {
           committed_at: string | null
@@ -932,6 +982,7 @@ export type Database = {
           desired_slot: Database["public"]["Enums"]["event_slot"] | null
           estimated_value: number | null
           first_response_at: string | null
+          form_id: string | null
           guest_estimate: number | null
           id: string
           loss_reason: Database["public"]["Enums"]["loss_reason"] | null
@@ -964,6 +1015,7 @@ export type Database = {
           desired_slot?: Database["public"]["Enums"]["event_slot"] | null
           estimated_value?: number | null
           first_response_at?: string | null
+          form_id?: string | null
           guest_estimate?: number | null
           id?: string
           loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
@@ -996,6 +1048,7 @@ export type Database = {
           desired_slot?: Database["public"]["Enums"]["event_slot"] | null
           estimated_value?: number | null
           first_response_at?: string | null
+          form_id?: string | null
           guest_estimate?: number | null
           id?: string
           loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
@@ -1028,6 +1081,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
             referencedColumns: ["id"]
           },
           {
