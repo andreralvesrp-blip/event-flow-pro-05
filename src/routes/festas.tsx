@@ -702,6 +702,21 @@ function DetailContent({
           {f.manually_edited && (
             <Field label="Última edição manual" value={fmtDateTime(f.manually_edited_at)} />
           )}
+          {f.opportunity_id && (
+            <div className="col-span-2">
+              <Field
+                label="Oportunidade de origem"
+                value={
+                  <span
+                    className="text-sm text-blue-600 underline cursor-not-allowed"
+                    title="Tela de oportunidades em breve"
+                  >
+                    Ver oportunidade de origem →
+                  </span>
+                }
+              />
+            </div>
+          )}
         </div>
       </Section>
 
