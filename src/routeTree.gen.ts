@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as OportunidadesRouteImport } from './routes/oportunidades'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FormulariosRouteImport } from './routes/formularios'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as FestasRouteImport } from './routes/festas'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -34,6 +35,11 @@ const OportunidadesRoute = OportunidadesRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FormulariosRoute = FormulariosRouteImport.update({
+  id: '/formularios',
+  path: '/formularios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinanceiroRoute = FinanceiroRouteImport.update({
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
+  '/formularios': typeof FormulariosRoute
   '/login': typeof LoginRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
+  '/formularios': typeof FormulariosRoute
   '/login': typeof LoginRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
+  '/formularios': typeof FormulariosRoute
   '/login': typeof LoginRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/festas'
     | '/financeiro'
+    | '/formularios'
     | '/login'
     | '/oportunidades'
     | '/webhooks'
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/festas'
     | '/financeiro'
+    | '/formularios'
     | '/login'
     | '/oportunidades'
     | '/webhooks'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/festas'
     | '/financeiro'
+    | '/formularios'
     | '/login'
     | '/oportunidades'
     | '/webhooks'
@@ -165,6 +177,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   FestasRoute: typeof FestasRoute
   FinanceiroRoute: typeof FinanceiroRoute
+  FormulariosRoute: typeof FormulariosRoute
   LoginRoute: typeof LoginRoute
   OportunidadesRoute: typeof OportunidadesRoute
   WebhooksRoute: typeof WebhooksRoute
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/formularios': {
+      id: '/formularios'
+      path: '/formularios'
+      fullPath: '/formularios'
+      preLoaderRoute: typeof FormulariosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/financeiro': {
@@ -273,6 +293,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   FestasRoute: FestasRoute,
   FinanceiroRoute: FinanceiroRoute,
+  FormulariosRoute: FormulariosRoute,
   LoginRoute: LoginRoute,
   OportunidadesRoute: OportunidadesRoute,
   WebhooksRoute: WebhooksRoute,
@@ -280,3 +301,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
