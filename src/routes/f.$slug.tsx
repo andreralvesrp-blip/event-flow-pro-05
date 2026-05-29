@@ -106,9 +106,7 @@ function PublicForm() {
     if (!n || n < 1 || n > 17) return;
     pushUser(`${n} aninhos`);
     setStep("date");
-    await pushBot(
-      `Que fase gostosa! E quando seria a festa do(a) ${celebrantName}? Qual data você tem em mente?`,
-    );
+    await pushBot("Qual data você tem em mente?");
   }
 
   async function submitDate(e: React.FormEvent) {
