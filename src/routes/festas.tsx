@@ -465,15 +465,13 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
-  google: "Google",
-  instagram: "Instagram",
+  meta: "Meta (Instagram/Facebook)",
+  ga: "Google Ads",
   indicacao: "Indicação",
-  convidado: "Convidado",
-  ja_cliente: "Já era cliente",
+  veio_em_festa: "Veio em festa",
+  offline: "Off-line",
+  ja_cliente: "Já é cliente",
   recorrencia: "Recorrência",
-  passou_frente: "Passou em frente",
-  mora_proximo: "Mora próximo",
-  internet: "Internet",
   outro: "Outro",
 };
 function fmtSource(s: string | null | undefined) {
@@ -707,12 +705,12 @@ function DetailContent({
               <Field
                 label="Oportunidade de origem"
                 value={
-                  <span
-                    className="text-sm text-blue-600 underline cursor-not-allowed"
-                    title="Tela de oportunidades em breve"
+                  <a
+                    href={`/oportunidades?op=${f.opportunity_id}`}
+                    className="text-sm text-blue-600 underline"
                   >
                     Ver oportunidade de origem →
-                  </span>
+                  </a>
                 }
               />
             </div>
