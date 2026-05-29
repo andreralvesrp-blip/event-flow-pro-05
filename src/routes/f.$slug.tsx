@@ -125,7 +125,7 @@ function PublicForm() {
     if (!parentName.trim() || !parentPhone.trim()) return;
     pushUser(`${parentName} · ${parentPhone}`);
     setStep("submitting");
-    await pushBot(`Verificando a disponibilidade para a festa do(a) ${celebrantName}...`);
+    await pushBot("Verificando...");
 
     const url = new URL(window.location.href);
     const utm_source = url.searchParams.get("utm_source") || undefined;
