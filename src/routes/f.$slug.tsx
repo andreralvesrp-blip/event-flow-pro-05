@@ -78,7 +78,7 @@ function PublicForm() {
         }
         setCfg(data);
         setStep("intro");
-        await pushBot("Vamos planejar a festa do(a) seu pequeno(a)? 🎉 Me conta rapidinho!");
+        await pushBot("Oi! Vamos verificar a disponibilidade para a festa?");
       } catch {
         setStep("unavailable");
       }
@@ -87,9 +87,9 @@ function PublicForm() {
   }, [slug]);
 
   async function startConversation() {
-    pushUser("Vamos! 🥳");
+    pushUser("Vamos lá");
     setStep("name");
-    await pushBot("Que ótimo! Como vai se chamar o(a) aniversariante?");
+    await pushBot("Nome do aniversariante?");
   }
 
   async function submitName(e: React.FormEvent) {
@@ -97,7 +97,7 @@ function PublicForm() {
     if (!celebrantName.trim()) return;
     pushUser(celebrantName);
     setStep("age");
-    await pushBot(`Que lindo! E quantos aninhos o(a) ${celebrantName} vai completar?`);
+    await pushBot(`Quantos anos o(a) ${celebrantName} vai fazer?`);
   }
 
   async function submitAge(e: React.FormEvent) {
@@ -106,9 +106,7 @@ function PublicForm() {
     if (!n || n < 1 || n > 17) return;
     pushUser(`${n} aninhos`);
     setStep("date");
-    await pushBot(
-      `Que fase gostosa! E quando seria a festa do(a) ${celebrantName}? Qual data você tem em mente?`,
-    );
+    await pushBot("Qual data você tem em mente?");
   }
 
   async function submitDate(e: React.FormEvent) {
@@ -118,7 +116,7 @@ function PublicForm() {
     pushUser(`${d}/${m}/${y}`);
     setStep("contact");
     await pushBot(
-      "Quase lá! Me passa seu nome e WhatsApp que eu já verifico a disponibilidade pra você.",
+      "Me passa seu nome e WhatsApp que eu verifico a disponibilidade pra você.",
     );
   }
 
@@ -127,7 +125,7 @@ function PublicForm() {
     if (!parentName.trim() || !parentPhone.trim()) return;
     pushUser(`${parentName} · ${parentPhone}`);
     setStep("submitting");
-    await pushBot(`Verificando a disponibilidade para a festa do(a) ${celebrantName}...`);
+    await pushBot("Verificando...");
 
     const url = new URL(window.location.href);
     const utm_source = url.searchParams.get("utm_source") || undefined;
@@ -328,12 +326,12 @@ function PublicForm() {
                 <div
                   style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", marginBottom: 12 }}
                 >
-                  Perfeito, {parentName}! 🎉
+                  Feito, {parentName}!
                 </div>
                 <div style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65 }}>
-                  Em instantes você vai receber uma mensagem no WhatsApp com o resultado.
+                  Em instantes você recebe uma mensagem no WhatsApp com o resultado.
                   <br />
-                  Fique de olho! 📲
+                  Fique de olho.
                 </div>
               </div>
             </div>
@@ -380,7 +378,7 @@ function PublicForm() {
                     onClick={startConversation}
                     disabled={typing}
                   >
-                    Vamos! 🥳
+                    Vamos lá
                   </button>
                 )}
                 {step === "name" && (
