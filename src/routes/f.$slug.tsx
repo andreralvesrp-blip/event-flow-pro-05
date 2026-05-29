@@ -39,8 +39,8 @@ function useTypingMessages() {
 }
 
 const PAGE_BG = "linear-gradient(135deg, #FFF0F5 0%, #EFF9FF 100%)";
-const HEADER_BG = "linear-gradient(135deg, #F97316 0%, #EC4899 100%)";
-const AVATAR_BG = "linear-gradient(135deg, #F97316, #EC4899)";
+const HEADER_BG = "#F97316";
+const AVATAR_BG = "#F97316";
 const USER_BG = "linear-gradient(135deg, #10B981, #059669)";
 
 function PublicForm() {
@@ -89,7 +89,7 @@ function PublicForm() {
   async function startConversation() {
     pushUser("Vamos! 🥳");
     setStep("name");
-    await pushBot("Que ótimo! Como vai se chamar o(a) aniversariante? 🎈");
+    await pushBot("Que ótimo! Como vai se chamar o(a) aniversariante?");
   }
 
   async function submitName(e: React.FormEvent) {
@@ -97,7 +97,7 @@ function PublicForm() {
     if (!celebrantName.trim()) return;
     pushUser(celebrantName);
     setStep("age");
-    await pushBot(`Que lindo! E quantos aninhos o(a) ${celebrantName} vai completar? 🎂`);
+    await pushBot(`Que lindo! E quantos aninhos o(a) ${celebrantName} vai completar?`);
   }
 
   async function submitAge(e: React.FormEvent) {
@@ -107,7 +107,7 @@ function PublicForm() {
     pushUser(`${n} aninhos`);
     setStep("date");
     await pushBot(
-      `Que fase gostosa! E quando seria a festa do(a) ${celebrantName}? Qual data você tem em mente? 🗓️`,
+      `Que fase gostosa! E quando seria a festa do(a) ${celebrantName}? Qual data você tem em mente?`,
     );
   }
 
@@ -118,7 +118,7 @@ function PublicForm() {
     pushUser(`${d}/${m}/${y}`);
     setStep("contact");
     await pushBot(
-      "Quase lá! Me passa seu nome e WhatsApp que eu já verifico a disponibilidade pra você 🤍",
+      "Quase lá! Me passa seu nome e WhatsApp que eu já verifico a disponibilidade pra você.",
     );
   }
 
@@ -489,15 +489,19 @@ function Bubble({ from, children }: { from: "bot" | "user"; children: React.Reac
             background: AVATAR_BG,
             borderRadius: "50%",
             flexShrink: 0,
-            fontSize: 15,
+            fontSize: 13,
+            fontWeight: 600,
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
-          className="flex items-center justify-center"
         >
-          🎉
+          KP
         </div>
         <div
           style={{
-            background: "#FFF8F2",
+            background: "var(--color-background-secondary)",
             borderRadius: "18px 18px 18px 4px",
             padding: "10px 14px",
             fontSize: 14.5,
