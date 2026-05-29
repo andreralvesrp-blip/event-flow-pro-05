@@ -471,6 +471,11 @@ export type Database = {
           updated_at: string
           utm_campaign: string | null
           welcome_message: string
+          widget_avatar_url: string | null
+          widget_delay: number | null
+          widget_msg_1: string | null
+          widget_msg_2: string | null
+          widget_msg_3: string | null
         }
         Insert: {
           active?: boolean
@@ -484,6 +489,11 @@ export type Database = {
           updated_at?: string
           utm_campaign?: string | null
           welcome_message?: string
+          widget_avatar_url?: string | null
+          widget_delay?: number | null
+          widget_msg_1?: string | null
+          widget_msg_2?: string | null
+          widget_msg_3?: string | null
         }
         Update: {
           active?: boolean
@@ -497,6 +507,11 @@ export type Database = {
           updated_at?: string
           utm_campaign?: string | null
           welcome_message?: string
+          widget_avatar_url?: string | null
+          widget_delay?: number | null
+          widget_msg_1?: string | null
+          widget_msg_2?: string | null
+          widget_msg_3?: string | null
         }
         Relationships: [
           {

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -31,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Copy, Code2, Pencil } from "lucide-react";
+import { Plus, Copy, Code2, Pencil, ChevronLeft, User, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/formularios")({
@@ -68,6 +69,11 @@ type FormRow = {
   utm_campaign: string | null;
   active: boolean;
   created_at: string;
+  widget_delay: number | null;
+  widget_avatar_url: string | null;
+  widget_msg_1: string | null;
+  widget_msg_2: string | null;
+  widget_msg_3: string | null;
 };
 
 function slugify(s: string) {
@@ -80,6 +86,49 @@ function slugify(s: string) {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .slice(0, 60);
+}
+
+function buildWidgetScript(row: FormRow, origin: string) {
+  const formUrl = `${origin}/f/${row.slug}`;
+  const delay = row.widget_delay ?? "null";
+  const av = (row.widget_avatar_url ?? "").replace(/'/g, "\\'");
+  const m1 = (row.widget_msg_1 ?? "").replace(/'/g, "\\'");
+  const m2 = (row.widget_msg_2 ?? "").replace(/'/g, "\\'");
+  const m3 = (row.widget_msg_3 ?? "").replace(/'/g, "\\'");
+
+  return `<script>
+(function(){
+  var F='${formUrl}',D=${delay},AV='${av}';
+  var MS=['${m1}','${m2}','${m3}'].filter(function(m){return m.trim()!=='';});
+  var id='kpw'+Math.random().toString(36).substr(2,5);
+  var s=document.createElement('style');
+  s.textContent='#'+id+'-w{position:fixed;bottom:20px;right:20px;z-index:99998;display:flex;align-items:flex-end;gap:10px;flex-direction:row-reverse}'
+    +'#'+id+'-btn{width:60px;height:60px;border-radius:50%;overflow:hidden;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.22);border:3px solid #fff;flex-shrink:0;background:#e5e7eb}'
+    +'#'+id+'-btn img{width:100%;height:100%;object-fit:cover}'
+    +'#'+id+'-bbl{background:#fff;border-radius:16px 16px 4px 16px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:14px;color:#1a1a2e;line-height:1.45;max-width:220px;cursor:pointer;transition:opacity .3s;font-family:-apple-system,sans-serif}'
+    +'#'+id+'-frm{position:fixed;bottom:90px;right:20px;z-index:99999;width:380px;height:600px;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.2);display:none}'
+    +'#'+id+'-frm iframe{width:100%;height:100%;border:none}'
+    +'#'+id+'-cls{position:absolute;top:10px;right:12px;background:rgba(0,0,0,.35);color:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1}'
+    +'@media(max-width:480px){#'+id+'-frm{width:calc(100vw - 16px);right:8px;bottom:84px;height:72vh;border-radius:16px 16px 0 0}}';
+  document.head.appendChild(s);
+  var av=AV?'<img src="'+AV+'" alt="">':'';
+  var w=document.createElement('div'); w.id=id+'-w';
+  w.innerHTML='<div id="'+id+'-btn">'+av+'</div>'+(MS.length?'<div id="'+id+'-bbl">'+MS[0]+'</div>':'');
+  document.body.appendChild(w);
+  var fc=document.createElement('div'); fc.id=id+'-frm';
+  fc.innerHTML='<button id="'+id+'-cls">\u2715</button><iframe src="'+F+'"></iframe>';
+  document.body.appendChild(fc);
+  var opened=false;
+  function open(){fc.style.display='block';opened=true;}
+  function close(){fc.style.display='none';}
+  document.getElementById(id+'-btn').onclick=function(){fc.style.display==='block'?close():open();};
+  var bbl=document.getElementById(id+'-bbl');
+  if(bbl){bbl.onclick=open;}
+  document.getElementById(id+'-cls').onclick=close;
+  if(D!==null&&typeof D==='number'&&D>=0){setTimeout(function(){if(!opened)open();},D*1000);}
+  if(MS.length>1){var mi=0;setInterval(function(){if(!bbl)return;mi=(mi+1)%MS.length;bbl.style.opacity='0';setTimeout(function(){bbl.textContent=MS[mi];bbl.style.opacity='1';},300);},3500);}
+})();
+</script>`;
 }
 
 function FormulariosPage() {
@@ -137,12 +186,34 @@ function FormulariosPage() {
     );
   }
 
+  function copyWidget(row: FormRow) {
+    if (!row.widget_msg_1 || !row.widget_msg_1.trim()) {
+      toast.warning("Configure ao menos uma mensagem antes de copiar o widget.");
+      return;
+    }
+    const script = buildWidgetScript(row, origin);
+    navigator.clipboard.writeText(script).then(
+      () => toast.success("Script copiado!"),
+      () => toast.error("Não foi possível copiar"),
+    );
+  }
+
   function iframeFor(slug: string) {
     return `<iframe src="${origin}/f/${slug}" style="width:100%;height:620px;border:none;border-radius:12px;" allow="clipboard-write" loading="lazy"></iframe>`;
   }
 
   return (
     <AppLayout title="Formulários">
+      <div className="mb-4">
+        <Link
+          to="/configuracoes"
+          className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+          Configurações
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <p className="text-sm text-slate-600">
           Crie formulários conversacionais para capturar leads em landings, anúncios e site.
@@ -218,6 +289,14 @@ function FormulariosPage() {
                     >
                       <Code2 className="w-3.5 h-3.5" />
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyWidget(r)}
+                      title="Copiar widget"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </Button>
                     <Switch
                       checked={r.active}
                       onCheckedChange={() => toggleActive(r)}
@@ -267,6 +346,16 @@ function FormDialog({
   const [source, setSource] = useState<Source>(initial?.source ?? "outro");
   const [utm, setUtm] = useState(initial?.utm_campaign ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
+
+  const [widgetAvatar, setWidgetAvatar] = useState(initial?.widget_avatar_url ?? "");
+  const [widgetDelay, setWidgetDelay] = useState<string>(
+    initial?.widget_delay != null ? String(initial.widget_delay) : "",
+  );
+  const [msg1, setMsg1] = useState(initial?.widget_msg_1 ?? "");
+  const [msg2, setMsg2] = useState(initial?.widget_msg_2 ?? "");
+  const [msg3, setMsg3] = useState(initial?.widget_msg_3 ?? "");
+  const [avatarError, setAvatarError] = useState(false);
+
   const [saving, setSaving] = useState(false);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -274,6 +363,10 @@ function FormDialog({
   useEffect(() => {
     if (!slugTouched) setSlug(slugify(name));
   }, [name, slugTouched]);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [widgetAvatar]);
 
   const slugOk = useMemo(() => /^[a-z0-9-]+$/.test(slug) && slug.length > 0, [slug]);
 
@@ -288,6 +381,7 @@ function FormDialog({
       return;
     }
     setSaving(true);
+    const delayNum = widgetDelay.trim() === "" ? null : Number(widgetDelay);
     const payload = {
       name: name.trim(),
       slug: slug.trim(),
@@ -295,6 +389,11 @@ function FormDialog({
       source,
       utm_campaign: utm.trim() || null,
       active,
+      widget_avatar_url: widgetAvatar.trim() || null,
+      widget_delay: delayNum !== null && !Number.isNaN(delayNum) && delayNum >= 0 ? delayNum : null,
+      widget_msg_1: msg1.trim() || null,
+      widget_msg_2: msg2.trim() || null,
+      widget_msg_3: msg3.trim() || null,
     };
     let error;
     if (initial) {
@@ -316,9 +415,11 @@ function FormDialog({
     onSaved();
   }
 
+  const showPreviewImg = widgetAvatar.trim() !== "" && !avatarError;
+
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initial ? "Editar formulário" : "Novo formulário"}</DialogTitle>
         </DialogHeader>
@@ -380,6 +481,72 @@ function FormDialog({
             <Label>Ativo</Label>
             <Switch checked={active} onCheckedChange={setActive} />
           </div>
+
+          <Separator />
+          <h3 className="text-sm font-semibold text-slate-900">Widget flutuante</h3>
+
+          <div>
+            <Label>Foto de perfil</Label>
+            <Input
+              type="url"
+              value={widgetAvatar}
+              onChange={(e) => setWidgetAvatar(e.target.value)}
+              placeholder="URL direta da imagem — Imgur, Cloudinary, etc."
+            />
+            <div className="mt-2 flex items-center gap-2">
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center">
+                {showPreviewImg ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={widgetAvatar}
+                    alt="preview"
+                    className="w-full h-full object-cover"
+                    onError={() => setAvatarError(true)}
+                  />
+                ) : (
+                  <User className="w-5 h-5 text-slate-400" />
+                )}
+              </div>
+              <span className="text-xs text-slate-500">Pré-visualização</span>
+            </div>
+          </div>
+
+          <div>
+            <Label>Abrir automaticamente após X segundos</Label>
+            <Input
+              type="number"
+              min={0}
+              value={widgetDelay}
+              onChange={(e) => setWidgetDelay(e.target.value)}
+              placeholder="Segundos — ex: 10"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Deixe vazio para não abrir automaticamente.
+            </p>
+          </div>
+
+          {[
+            { label: "Mensagem 1", value: msg1, set: setMsg1, ph: "Tem festa em mente?" },
+            { label: "Mensagem 2", value: msg2, set: setMsg2, ph: "Verifico a data pra você!" },
+            { label: "Mensagem 3", value: msg3, set: setMsg3, ph: "Fale comigo agora" },
+          ].map((m) => (
+            <div key={m.label}>
+              <div className="flex items-center justify-between">
+                <Label>{m.label}</Label>
+                <span className="text-xs text-slate-400 tabular-nums">{m.value.length}/60</span>
+              </div>
+              <Input
+                maxLength={60}
+                value={m.value}
+                onChange={(e) => m.set(e.target.value)}
+                placeholder={m.ph}
+              />
+            </div>
+          ))}
+          <p className="text-xs text-slate-500">
+            As mensagens aparecem em rotação no botão flutuante. Use para testar qual copy gera
+            mais cliques.
+          </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
