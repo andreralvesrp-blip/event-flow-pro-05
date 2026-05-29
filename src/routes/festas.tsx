@@ -77,6 +77,7 @@ type Festa = {
   cancellation_reason: string | null;
   cancellation_financial_action: string | null;
   manual_status_override: boolean | null;
+  opportunity_id: string | null;
   client: {
     id: string;
     full_name: string;
@@ -84,6 +85,10 @@ type Festa = {
     email: string | null;
     phone: string | null;
     address_full: string | null;
+    cep: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    source: string | null;
     how_met: string | null;
     mother_name: string | null;
     father_name: string | null;
@@ -189,7 +194,7 @@ function FestasPage() {
     const { data: contracts, error } = await supabase
       .from("contracts")
       .select(
-        `*, client:clients(id, full_name, cpf, email, phone, address_full, how_met, mother_name, father_name)`,
+        `*, client:clients(id, full_name, cpf, email, phone, address_full, cep, bairro, cidade, source, how_met, mother_name, father_name)`,
       )
       .order("created_at", { ascending: false });
     if (error) {
@@ -459,6 +464,23 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+  google: "Google",
+  instagram: "Instagram",
+  indicacao: "Indicação",
+  convidado: "Convidado",
+  ja_cliente: "Já era cliente",
+  recorrencia: "Recorrência",
+  passou_frente: "Passou em frente",
+  mora_proximo: "Mora próximo",
+  internet: "Internet",
+  outro: "Outro",
+};
+function fmtSource(s: string | null | undefined) {
+  if (!s) return "—";
+  return SOURCE_LABELS[s] ?? s;
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="border-t border-slate-200 pt-4 mt-4">
@@ -680,6 +702,21 @@ function DetailContent({
           {f.manually_edited && (
             <Field label="Última edição manual" value={fmtDateTime(f.manually_edited_at)} />
           )}
+          {f.opportunity_id && (
+            <div className="col-span-2">
+              <Field
+                label="Oportunidade de origem"
+                value={
+                  <span
+                    className="text-sm text-blue-600 underline cursor-not-allowed"
+                    title="Tela de oportunidades em breve"
+                  >
+                    Ver oportunidade de origem →
+                  </span>
+                }
+              />
+            </div>
+          )}
         </div>
       </Section>
 
@@ -707,10 +744,18 @@ function DetailContent({
           <Field label="CPF" value={fmtCPF(f.client?.cpf)} />
           <Field label="E-mail" value={f.client?.email} />
           <Field label="Celular" value={fmtPhone(f.client?.phone)} />
-          <Field label="Endereço" value={f.client?.address_full} />
-          <Field label="Como conheceu" value={f.client?.how_met} />
+          <Field label="Bairro" value={f.client?.bairro} />
+          <Field label="Cidade" value={f.client?.cidade} />
+          <Field label="CEP" value={f.client?.cep} />
+          <Field label="Como conheceu" value={fmtSource(f.client?.source)} />
           <Field label="Nome da mamãe" value={f.client?.mother_name} />
           <Field label="Nome do papai" value={f.client?.father_name} />
+          {f.client?.address_full && (
+            <div className="col-span-2">
+              <div className="text-xs text-slate-400">Endereço completo (legado)</div>
+              <div className="text-xs text-slate-500 whitespace-pre-wrap">{f.client.address_full}</div>
+            </div>
+          )}
         </div>
       </Section>
 

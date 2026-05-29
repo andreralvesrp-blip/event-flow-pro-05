@@ -64,6 +64,9 @@ export type Database = {
       clients: {
         Row: {
           address_full: string | null
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
           cpf: string | null
           created_at: string
           created_by: string | null
@@ -79,12 +82,16 @@ export type Database = {
           mother_name: string | null
           notes: string | null
           phone: string | null
+          source: Database["public"]["Enums"]["opportunity_source"] | null
           status: Database["public"]["Enums"]["client_status"]
           tenant_id: string
           updated_at: string
         }
         Insert: {
           address_full?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -100,12 +107,16 @@ export type Database = {
           mother_name?: string | null
           notes?: string | null
           phone?: string | null
+          source?: Database["public"]["Enums"]["opportunity_source"] | null
           status?: Database["public"]["Enums"]["client_status"]
           tenant_id: string
           updated_at?: string
         }
         Update: {
           address_full?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -121,6 +132,7 @@ export type Database = {
           mother_name?: string | null
           notes?: string | null
           phone?: string | null
+          source?: Database["public"]["Enums"]["opportunity_source"] | null
           status?: Database["public"]["Enums"]["client_status"]
           tenant_id?: string
           updated_at?: string
@@ -288,6 +300,7 @@ export type Database = {
           manually_edited_by: string | null
           needs_review: boolean | null
           observations: string | null
+          opportunity_id: string | null
           payment_method: string | null
           payment_schedule_raw: string | null
           raw_webhook_payload: Json | null
@@ -341,6 +354,7 @@ export type Database = {
           manually_edited_by?: string | null
           needs_review?: boolean | null
           observations?: string | null
+          opportunity_id?: string | null
           payment_method?: string | null
           payment_schedule_raw?: string | null
           raw_webhook_payload?: Json | null
@@ -394,6 +408,7 @@ export type Database = {
           manually_edited_by?: string | null
           needs_review?: boolean | null
           observations?: string | null
+          opportunity_id?: string | null
           payment_method?: string | null
           payment_schedule_raw?: string | null
           raw_webhook_payload?: Json | null
@@ -425,6 +440,13 @@ export type Database = {
             columns: ["manually_edited_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
             referencedColumns: ["id"]
           },
           {
@@ -896,6 +918,134 @@ export type Database = {
           },
         ]
       }
+      opportunities: {
+        Row: {
+          celebrant_age: number | null
+          celebrant_birthdate: string | null
+          celebrant_name: string | null
+          client_id: string
+          closed_at: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          desired_date: string | null
+          desired_slot: Database["public"]["Enums"]["event_slot"] | null
+          estimated_value: number | null
+          first_response_at: string | null
+          guest_estimate: number | null
+          id: string
+          loss_reason: Database["public"]["Enums"]["loss_reason"] | null
+          lost_from_stage:
+            | Database["public"]["Enums"]["opportunity_stage"]
+            | null
+          notes: string | null
+          owner_id: string | null
+          pre_reserva_at: string | null
+          pre_reserva_expires_at: string | null
+          source: Database["public"]["Enums"]["opportunity_source"] | null
+          stage: Database["public"]["Enums"]["opportunity_stage"]
+          stage_changed_at: string
+          tenant_id: string
+          updated_at: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          celebrant_age?: number | null
+          celebrant_birthdate?: string | null
+          celebrant_name?: string | null
+          client_id: string
+          closed_at?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          desired_date?: string | null
+          desired_slot?: Database["public"]["Enums"]["event_slot"] | null
+          estimated_value?: number | null
+          first_response_at?: string | null
+          guest_estimate?: number | null
+          id?: string
+          loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
+          lost_from_stage?:
+            | Database["public"]["Enums"]["opportunity_stage"]
+            | null
+          notes?: string | null
+          owner_id?: string | null
+          pre_reserva_at?: string | null
+          pre_reserva_expires_at?: string | null
+          source?: Database["public"]["Enums"]["opportunity_source"] | null
+          stage?: Database["public"]["Enums"]["opportunity_stage"]
+          stage_changed_at?: string
+          tenant_id: string
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          celebrant_age?: number | null
+          celebrant_birthdate?: string | null
+          celebrant_name?: string | null
+          client_id?: string
+          closed_at?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          desired_date?: string | null
+          desired_slot?: Database["public"]["Enums"]["event_slot"] | null
+          estimated_value?: number | null
+          first_response_at?: string | null
+          guest_estimate?: number | null
+          id?: string
+          loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
+          lost_from_stage?:
+            | Database["public"]["Enums"]["opportunity_stage"]
+            | null
+          notes?: string | null
+          owner_id?: string | null
+          pre_reserva_at?: string | null
+          pre_reserva_expires_at?: string | null
+          source?: Database["public"]["Enums"]["opportunity_source"] | null
+          stage?: Database["public"]["Enums"]["opportunity_stage"]
+          stage_changed_at?: string
+          tenant_id?: string
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string
@@ -1005,6 +1155,60 @@ export type Database = {
           },
         ]
       }
+      visits: {
+        Row: {
+          confirmed: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          opportunity_id: string
+          scheduled_at: string
+          status: Database["public"]["Enums"]["visit_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          confirmed?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          opportunity_id: string
+          scheduled_at: string
+          status?: Database["public"]["Enums"]["visit_status"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          confirmed?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          opportunity_id?: string
+          scheduled_at?: string
+          status?: Database["public"]["Enums"]["visit_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visits_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1023,7 +1227,41 @@ export type Database = {
         | "aguardando_assinaturas"
         | "assinado"
         | "cancelado"
+      event_slot: "almoco" | "jantar"
+      loss_reason:
+        | "preco"
+        | "data_indisponivel"
+        | "sem_resposta"
+        | "fechou_concorrente"
+        | "festa_em_casa"
+        | "fora_perfil"
+        | "desistiu"
+        | "outro"
+      opportunity_source:
+        | "google"
+        | "instagram"
+        | "indicacao"
+        | "convidado"
+        | "ja_cliente"
+        | "recorrencia"
+        | "passou_frente"
+        | "mora_proximo"
+        | "internet"
+        | "outro"
+      opportunity_stage:
+        | "em_conversa"
+        | "visita_agendada"
+        | "visita_realizada"
+        | "pre_reserva"
+        | "ganho"
+        | "perdido"
       user_role: "vendedor" | "gestor" | "admin"
+      visit_status:
+        | "agendada"
+        | "realizada"
+        | "no_show"
+        | "remarcada"
+        | "cancelada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1158,7 +1396,45 @@ export const Constants = {
         "assinado",
         "cancelado",
       ],
+      event_slot: ["almoco", "jantar"],
+      loss_reason: [
+        "preco",
+        "data_indisponivel",
+        "sem_resposta",
+        "fechou_concorrente",
+        "festa_em_casa",
+        "fora_perfil",
+        "desistiu",
+        "outro",
+      ],
+      opportunity_source: [
+        "google",
+        "instagram",
+        "indicacao",
+        "convidado",
+        "ja_cliente",
+        "recorrencia",
+        "passou_frente",
+        "mora_proximo",
+        "internet",
+        "outro",
+      ],
+      opportunity_stage: [
+        "em_conversa",
+        "visita_agendada",
+        "visita_realizada",
+        "pre_reserva",
+        "ganho",
+        "perdido",
+      ],
       user_role: ["vendedor", "gestor", "admin"],
+      visit_status: [
+        "agendada",
+        "realizada",
+        "no_show",
+        "remarcada",
+        "cancelada",
+      ],
     },
   },
 } as const
