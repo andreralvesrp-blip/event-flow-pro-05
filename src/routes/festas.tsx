@@ -729,10 +729,18 @@ function DetailContent({
           <Field label="CPF" value={fmtCPF(f.client?.cpf)} />
           <Field label="E-mail" value={f.client?.email} />
           <Field label="Celular" value={fmtPhone(f.client?.phone)} />
-          <Field label="Endereço" value={f.client?.address_full} />
-          <Field label="Como conheceu" value={f.client?.how_met} />
+          <Field label="Bairro" value={f.client?.bairro} />
+          <Field label="Cidade" value={f.client?.cidade} />
+          <Field label="CEP" value={f.client?.cep} />
+          <Field label="Como conheceu" value={fmtSource(f.client?.source)} />
           <Field label="Nome da mamãe" value={f.client?.mother_name} />
           <Field label="Nome do papai" value={f.client?.father_name} />
+          {f.client?.address_full && (
+            <div className="col-span-2">
+              <div className="text-xs text-slate-400">Endereço completo (legado)</div>
+              <div className="text-xs text-slate-500 whitespace-pre-wrap">{f.client.address_full}</div>
+            </div>
+          )}
         </div>
       </Section>
 
