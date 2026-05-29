@@ -378,7 +378,7 @@ function PublicForm() {
                     onClick={startConversation}
                     disabled={typing}
                   >
-                    Vamos! 🥳
+                    Vamos lá
                   </button>
                 )}
                 {step === "name" && (
