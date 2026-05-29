@@ -78,7 +78,7 @@ function PublicForm() {
         }
         setCfg(data);
         setStep("intro");
-        await pushBot("Vamos planejar a festa do(a) seu pequeno(a)? 🎉 Me conta rapidinho!");
+        await pushBot("Oi! Vamos verificar a disponibilidade para a festa?");
       } catch {
         setStep("unavailable");
       }
