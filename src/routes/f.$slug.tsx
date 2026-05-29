@@ -97,7 +97,7 @@ function PublicForm() {
     if (!celebrantName.trim()) return;
     pushUser(celebrantName);
     setStep("age");
-    await pushBot(`Que lindo! E quantos aninhos o(a) ${celebrantName} vai completar?`);
+    await pushBot(`Quantos anos o(a) ${celebrantName} vai fazer?`);
   }
 
   async function submitAge(e: React.FormEvent) {
