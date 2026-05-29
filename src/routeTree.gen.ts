@@ -20,6 +20,7 @@ import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
+import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 
 const WebhooksRoute = WebhooksRouteImport.update({
@@ -77,6 +78,11 @@ const ConfiguracoesIndexRoute = ConfiguracoesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
+const FSlugRoute = FSlugRouteImport.update({
+  id: '/f/$slug',
+  path: '/f/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConfiguracoesImportacaoHistoricaRoute =
   ConfiguracoesImportacaoHistoricaRouteImport.update({
     id: '/importacao-historica',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/f/$slug': typeof FSlugRoute
   '/configuracoes': typeof ConfiguracoesIndexRoute
 }
 export interface FileRoutesById {
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
 }
 export interface FileRouteTypes {
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/oportunidades'
     | '/webhooks'
     | '/configuracoes/importacao-historica'
+    | '/f/$slug'
     | '/configuracoes/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/oportunidades'
     | '/webhooks'
     | '/configuracoes/importacao-historica'
+    | '/f/$slug'
     | '/configuracoes'
   id:
     | '__root__'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/oportunidades'
     | '/webhooks'
     | '/configuracoes/importacao-historica'
+    | '/f/$slug'
     | '/configuracoes/'
   fileRoutesById: FileRoutesById
 }
@@ -181,6 +193,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OportunidadesRoute: typeof OportunidadesRoute
   WebhooksRoute: typeof WebhooksRoute
+  FSlugRoute: typeof FSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -262,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesIndexRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
+    '/f/$slug': {
+      id: '/f/$slug'
+      path: '/f/$slug'
+      fullPath: '/f/$slug'
+      preLoaderRoute: typeof FSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/configuracoes/importacao-historica': {
       id: '/configuracoes/importacao-historica'
       path: '/importacao-historica'
@@ -297,7 +317,18 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OportunidadesRoute: OportunidadesRoute,
   WebhooksRoute: WebhooksRoute,
+  FSlugRoute: FSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
