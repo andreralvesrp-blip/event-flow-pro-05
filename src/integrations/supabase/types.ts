@@ -1238,15 +1238,13 @@ export type Database = {
         | "desistiu"
         | "outro"
       opportunity_source:
-        | "google"
-        | "instagram"
+        | "meta"
+        | "ga"
         | "indicacao"
-        | "convidado"
+        | "veio_em_festa"
+        | "offline"
         | "ja_cliente"
         | "recorrencia"
-        | "passou_frente"
-        | "mora_proximo"
-        | "internet"
         | "outro"
       opportunity_stage:
         | "em_conversa"
@@ -1408,15 +1406,13 @@ export const Constants = {
         "outro",
       ],
       opportunity_source: [
-        "google",
-        "instagram",
+        "meta",
+        "ga",
         "indicacao",
-        "convidado",
+        "veio_em_festa",
+        "offline",
         "ja_cliente",
         "recorrencia",
-        "passou_frente",
-        "mora_proximo",
-        "internet",
         "outro",
       ],
       opportunity_stage: [
