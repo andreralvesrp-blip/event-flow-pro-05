@@ -464,6 +464,23 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+  google: "Google",
+  instagram: "Instagram",
+  indicacao: "Indicação",
+  convidado: "Convidado",
+  ja_cliente: "Já era cliente",
+  recorrencia: "Recorrência",
+  passou_frente: "Passou em frente",
+  mora_proximo: "Mora próximo",
+  internet: "Internet",
+  outro: "Outro",
+};
+function fmtSource(s: string | null | undefined) {
+  if (!s) return "—";
+  return SOURCE_LABELS[s] ?? s;
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="border-t border-slate-200 pt-4 mt-4">
