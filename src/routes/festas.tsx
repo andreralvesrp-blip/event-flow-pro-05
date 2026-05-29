@@ -77,6 +77,7 @@ type Festa = {
   cancellation_reason: string | null;
   cancellation_financial_action: string | null;
   manual_status_override: boolean | null;
+  opportunity_id: string | null;
   client: {
     id: string;
     full_name: string;
@@ -84,6 +85,10 @@ type Festa = {
     email: string | null;
     phone: string | null;
     address_full: string | null;
+    cep: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    source: string | null;
     how_met: string | null;
     mother_name: string | null;
     father_name: string | null;
