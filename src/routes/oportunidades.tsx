@@ -801,7 +801,7 @@ function OpDetail({
       patch.pre_reserva_at = now;
       patch.pre_reserva_expires_at = addBusinessDays(new Date(), 3).toISOString();
     }
-    const { error } = await supabase.from("opportunities").update(patch).eq("id", op.id);
+    const { error } = await supabase.from("opportunities").update(patch as any).eq("id", op.id);
     setBusy(false);
     if (error) {
       alert(error.message);
