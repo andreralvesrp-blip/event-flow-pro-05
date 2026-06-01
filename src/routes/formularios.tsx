@@ -395,9 +395,14 @@ function FormDialog({
       toast.error("Slug inválido (só letras minúsculas, números e hífen)");
       return;
     }
+    const unitId = chosenUnit || defaultUnitId;
+    if (!initial && !unitId) {
+      toast.error("Selecione a unidade");
+      return;
+    }
     setSaving(true);
     const delayNum = widgetDelay.trim() === "" ? null : Number(widgetDelay);
-    const payload = {
+    const payload: Record<string, any> = {
       name: name.trim(),
       slug: slug.trim(),
       welcome_message: welcome.trim() || "Vamos planejar sua festa? 🎉",
@@ -416,6 +421,7 @@ function FormDialog({
     } else {
       ({ error } = await supabase.from("forms").insert({
         ...payload,
+        unit_id: unitId,
         tenant_id: profile.tenant_id,
         created_by: profile.id,
       }));
