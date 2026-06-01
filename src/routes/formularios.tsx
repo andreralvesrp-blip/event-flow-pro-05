@@ -317,6 +317,9 @@ function FormulariosPage() {
       {(creating || editing) && (
         <FormDialog
           initial={editing}
+          units={units}
+          defaultUnitId={defaultCreateUnitId}
+          mustChooseUnit={mustChooseUnit}
           onClose={() => {
             setCreating(false);
             setEditing(null);
