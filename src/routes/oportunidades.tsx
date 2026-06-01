@@ -197,6 +197,7 @@ export const Route = createFileRoute("/oportunidades")({
 
 function OportunidadesPage() {
   const { session, user, profile } = useAuth();
+  const { unitFilter, units, defaultCreateUnitId, mustChooseUnit, isOwner } = useUnit();
   const search = useSearch({ from: "/oportunidades" });
   const [ops, setOps] = useState<Opportunity[] | null>(null);
   const [visits, setVisits] = useState<Visit[]>([]);
@@ -205,10 +206,19 @@ function OportunidadesPage() {
   const [showNew, setShowNew] = useState(false);
 
   const loadAll = useCallback(async () => {
-    const { data, error } = await supabase
+    let oppsQ = supabase
       .from("opportunities")
       .select("*, client:clients(id, full_name, phone, email)")
       .order("created_at", { ascending: false });
+    let visitsQ = supabase
+      .from("visits")
+      .select("*")
+      .order("scheduled_at", { ascending: true });
+    if (unitFilter) {
+      oppsQ = oppsQ.eq("unit_id", unitFilter);
+      visitsQ = visitsQ.eq("unit_id", unitFilter);
+    }
+    const { data, error } = await oppsQ;
     if (error) {
       setErr(error.message);
       return;
@@ -220,12 +230,9 @@ function OportunidadesPage() {
     setOps(rows);
     setSelected((prev) => (prev ? rows.find((x) => x.id === prev.id) ?? null : null));
 
-    const { data: vs } = await supabase
-      .from("visits")
-      .select("*")
-      .order("scheduled_at", { ascending: true });
+    const { data: vs } = await visitsQ;
     setVisits((vs ?? []) as Visit[]);
-  }, []);
+  }, [unitFilter]);
 
   useEffect(() => {
     if (!session) return;
