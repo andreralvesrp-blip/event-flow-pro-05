@@ -177,6 +177,7 @@ function financialBadge(f: Festa) {
 // ---------- page ----------
 function FestasPage() {
   const { session, user } = useAuth();
+  const { unitFilter } = useUnit();
   const [festas, setFestas] = useState<Festa[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Festa | null>(null);
