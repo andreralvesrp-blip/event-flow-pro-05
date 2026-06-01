@@ -134,6 +134,7 @@ function buildWidgetScript(row: FormRow, origin: string) {
 
 function FormulariosPage() {
   const { profile } = useAuth();
+  const { unitFilter, units, defaultCreateUnitId, mustChooseUnit } = useUnit();
   const [rows, setRows] = useState<FormRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -144,10 +145,12 @@ function FormulariosPage() {
 
   async function load() {
     setLoading(true);
-    const { data: forms } = await supabase
+    let q = supabase
       .from("forms")
       .select("*")
       .order("created_at", { ascending: false });
+    if (unitFilter) q = q.eq("unit_id", unitFilter);
+    const { data: forms } = await q;
     const list = (forms ?? []) as FormRow[];
     setRows(list);
 
@@ -169,7 +172,8 @@ function FormulariosPage() {
 
   useEffect(() => {
     if (profile) load();
-  }, [profile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, unitFilter]);
 
   async function toggleActive(row: FormRow) {
     const { error } = await supabase
