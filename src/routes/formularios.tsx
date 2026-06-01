@@ -402,7 +402,7 @@ function FormDialog({
     }
     setSaving(true);
     const delayNum = widgetDelay.trim() === "" ? null : Number(widgetDelay);
-    const payload: Record<string, any> = {
+    const payload = {
       name: name.trim(),
       slug: slug.trim(),
       welcome_message: welcome.trim() || "Vamos planejar sua festa? 🎉",
@@ -421,10 +421,10 @@ function FormDialog({
     } else {
       ({ error } = await supabase.from("forms").insert({
         ...payload,
-        unit_id: unitId,
+        unit_id: unitId!,
         tenant_id: profile.tenant_id,
         created_by: profile.id,
-      }));
+      } as any));
     }
     setSaving(false);
     if (error) {
