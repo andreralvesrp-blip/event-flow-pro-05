@@ -24,6 +24,7 @@ import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as ConfiguracoesUnidadesRouteImport } from './routes/configuracoes.unidades'
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.equipe'
+import { Route as AvaliarSlugRouteImport } from './routes/avaliar.$slug'
 
 const WebhooksRoute = WebhooksRouteImport.update({
   id: '/webhooks',
@@ -101,6 +102,11 @@ const ConfiguracoesEquipeRoute = ConfiguracoesEquipeRouteImport.update({
   path: '/equipe',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
+const AvaliarSlugRoute = AvaliarSlugRouteImport.update({
+  id: '/avaliar/$slug',
+  path: '/avaliar/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
+  '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
+  '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
+  '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/oportunidades'
     | '/webhooks'
+    | '/avaliar/$slug'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
     | '/configuracoes/unidades'
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/oportunidades'
     | '/webhooks'
+    | '/avaliar/$slug'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
     | '/configuracoes/unidades'
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/oportunidades'
     | '/webhooks'
+    | '/avaliar/$slug'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
     | '/configuracoes/unidades'
@@ -217,6 +229,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OportunidadesRoute: typeof OportunidadesRoute
   WebhooksRoute: typeof WebhooksRoute
+  AvaliarSlugRoute: typeof AvaliarSlugRoute
   FSlugRoute: typeof FSlugRoute
 }
 
@@ -327,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesEquipeRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
+    '/avaliar/$slug': {
+      id: '/avaliar/$slug'
+      path: '/avaliar/$slug'
+      fullPath: '/avaliar/$slug'
+      preLoaderRoute: typeof AvaliarSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -359,6 +379,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OportunidadesRoute: OportunidadesRoute,
   WebhooksRoute: WebhooksRoute,
+  AvaliarSlugRoute: AvaliarSlugRoute,
   FSlugRoute: FSlugRoute,
 }
 export const routeTree = rootRouteImport
