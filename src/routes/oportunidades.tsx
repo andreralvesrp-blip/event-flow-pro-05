@@ -598,6 +598,7 @@ function NewOpportunityDialog({
           .from("clients")
           .insert({
             tenant_id: tenantId,
+            unit_id: unitId,
             full_name: newName.trim(),
             phone: newPhone.trim(),
             email: newEmail.trim() || null,
