@@ -1,14 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Webhook, Building2, Plug, FileSpreadsheet, FileText } from "lucide-react";
+import { Webhook, Building2, Plug, FileSpreadsheet, FileText, Users } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/configuracoes/")({
   component: ConfiguracoesIndex,
 });
 
 function ConfiguracoesIndex() {
+  const { profile } = useAuth();
+  const isOwner = profile?.tenant_role === "owner";
   const [activeForms, setActiveForms] = useState<number | null>(null);
 
   useEffect(() => {
@@ -29,10 +32,14 @@ function ConfiguracoesIndex() {
       badge: activeForms !== null ? `${activeForms} ativo${activeForms === 1 ? "" : "s"}` : null,
       group: "Captura de leads",
     },
-    { to: "/webhooks", title: "Webhooks", desc: "Eventos recebidos da Clicksign, payload e reprocessamento.", icon: Webhook, enabled: true },
-    { to: "/configuracoes/importacao-historica", title: "Importação histórica", desc: "Carregue a planilha canônica de festas antigas e confirme o commit em staging.", icon: FileSpreadsheet, enabled: true },
-    { to: "#", title: "Dados da empresa", desc: "Nome do buffet, CNPJ e informações da contratada.", icon: Building2, enabled: false },
-    { to: "#", title: "Integrações", desc: "Clicksign, WhatsApp e outras integrações.", icon: Plug, enabled: false },
+    { to: "/webhooks", title: "Webhooks", desc: "Eventos recebidos da Clicksign, payload e reprocessamento.", icon: Webhook, enabled: true, group: "Administração" },
+    { to: "/configuracoes/importacao-historica", title: "Importação histórica", desc: "Carregue a planilha canônica de festas antigas e confirme o commit em staging.", icon: FileSpreadsheet, enabled: true, group: "Administração" },
+    ...(isOwner ? [
+      { to: "/configuracoes/unidades", title: "Unidades", desc: "Gerencie as unidades do buffet.", icon: Building2, enabled: true, group: "Administração" },
+      { to: "/configuracoes/equipe", title: "Equipe", desc: "Defina quais unidades cada pessoa acessa.", icon: Users, enabled: true, group: "Administração" },
+    ] : []),
+    { to: "#", title: "Dados da empresa", desc: "Nome do buffet, CNPJ e informações da contratada.", icon: Building2, enabled: false, group: "Administração" },
+    { to: "#", title: "Integrações", desc: "Clicksign, WhatsApp e outras integrações.", icon: Plug, enabled: false, group: "Administração" },
   ];
 
   const captura = cards.filter((c) => c.group === "Captura de leads");
@@ -47,9 +54,9 @@ function ConfiguracoesIndex() {
             <Icon className="w-4 h-4 text-emerald-700" />
             <h3 className="text-sm font-semibold text-slate-900">{c.title}</h3>
           </div>
-          {c.badge && (
+          {(c as any).badge && (
             <span className="text-[10px] uppercase tracking-wide bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">
-              {c.badge}
+              {(c as any).badge}
             </span>
           )}
         </div>

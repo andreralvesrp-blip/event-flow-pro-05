@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnit } from "@/contexts/UnitContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -133,6 +134,7 @@ function buildWidgetScript(row: FormRow, origin: string) {
 
 function FormulariosPage() {
   const { profile } = useAuth();
+  const { unitFilter, units, defaultCreateUnitId, mustChooseUnit } = useUnit();
   const [rows, setRows] = useState<FormRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -143,10 +145,12 @@ function FormulariosPage() {
 
   async function load() {
     setLoading(true);
-    const { data: forms } = await supabase
+    let q = supabase
       .from("forms")
       .select("*")
       .order("created_at", { ascending: false });
+    if (unitFilter) q = q.eq("unit_id", unitFilter);
+    const { data: forms } = await q;
     const list = (forms ?? []) as FormRow[];
     setRows(list);
 
@@ -168,7 +172,8 @@ function FormulariosPage() {
 
   useEffect(() => {
     if (profile) load();
-  }, [profile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, unitFilter]);
 
   async function toggleActive(row: FormRow) {
     const { error } = await supabase
@@ -312,6 +317,9 @@ function FormulariosPage() {
       {(creating || editing) && (
         <FormDialog
           initial={editing}
+          units={units}
+          defaultUnitId={defaultCreateUnitId}
+          mustChooseUnit={mustChooseUnit}
           onClose={() => {
             setCreating(false);
             setEditing(null);
@@ -329,10 +337,16 @@ function FormulariosPage() {
 
 function FormDialog({
   initial,
+  units,
+  defaultUnitId,
+  mustChooseUnit,
   onClose,
   onSaved,
 }: {
   initial: FormRow | null;
+  units: { id: string; name: string }[];
+  defaultUnitId: string | null;
+  mustChooseUnit: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -355,6 +369,7 @@ function FormDialog({
   const [msg2, setMsg2] = useState(initial?.widget_msg_2 ?? "");
   const [msg3, setMsg3] = useState(initial?.widget_msg_3 ?? "");
   const [avatarError, setAvatarError] = useState(false);
+  const [chosenUnit, setChosenUnit] = useState<string>(defaultUnitId ?? "");
 
   const [saving, setSaving] = useState(false);
 
@@ -380,6 +395,11 @@ function FormDialog({
       toast.error("Slug inválido (só letras minúsculas, números e hífen)");
       return;
     }
+    const unitId = chosenUnit || defaultUnitId;
+    if (!initial && !unitId) {
+      toast.error("Selecione a unidade");
+      return;
+    }
     setSaving(true);
     const delayNum = widgetDelay.trim() === "" ? null : Number(widgetDelay);
     const payload = {
@@ -401,9 +421,10 @@ function FormDialog({
     } else {
       ({ error } = await supabase.from("forms").insert({
         ...payload,
+        unit_id: unitId!,
         tenant_id: profile.tenant_id,
         created_by: profile.id,
-      }));
+      } as any));
     }
     setSaving(false);
     if (error) {
@@ -481,6 +502,19 @@ function FormDialog({
             <Label>Ativo</Label>
             <Switch checked={active} onCheckedChange={setActive} />
           </div>
+          {!initial && units.length > 1 && (
+            <div>
+              <Label>Unidade {mustChooseUnit ? "*" : ""}</Label>
+              <Select value={chosenUnit} onValueChange={setChosenUnit}>
+                <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                <SelectContent>
+                  {units.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <Separator />
           <h3 className="text-sm font-semibold text-slate-900">Widget flutuante</h3>

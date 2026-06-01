@@ -68,6 +68,7 @@ type VisitStatus = "agendada" | "realizada" | "no_show" | "remarcada" | "cancela
 type Opportunity = {
   id: string;
   client_id: string;
+  unit_id: string | null;
   celebrant_name: string | null;
   celebrant_age: number | null;
   desired_date: string | null;
@@ -788,6 +789,19 @@ function NewOpportunityDialog({
                 </SelectContent>
               </Select>
             </div>
+            {units.length > 1 && (
+              <div className="col-span-2">
+                <Label className="text-xs">Unidade {mustChooseUnit ? "*" : ""}</Label>
+                <Select value={chosenUnit} onValueChange={setChosenUnit}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                  <SelectContent>
+                    {units.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {error && <div className="text-sm text-red-600">{error}</div>}
@@ -862,6 +876,7 @@ function OpDetail({
     const scheduledAt = new Date(`${visitDate}T${visitTime}:00`).toISOString();
     const { error: ve } = await supabase.from("visits").insert({
       tenant_id: tenantId,
+      unit_id: op.unit_id,
       opportunity_id: op.id,
       scheduled_at: scheduledAt,
       status: "agendada",
