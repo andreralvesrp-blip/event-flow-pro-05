@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
   // a) Form
   const { data: form, error: fErr } = await admin
     .from("forms")
-    .select("id, tenant_id, source, utm_campaign, active")
+    .select("id, tenant_id, unit_id, source, utm_campaign, active")
     .eq("slug", form_slug)
     .maybeSingle();
   if (fErr) return json({ error: fErr.message }, 500);
