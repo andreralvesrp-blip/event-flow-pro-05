@@ -337,10 +337,16 @@ function FormulariosPage() {
 
 function FormDialog({
   initial,
+  units,
+  defaultUnitId,
+  mustChooseUnit,
   onClose,
   onSaved,
 }: {
   initial: FormRow | null;
+  units: { id: string; name: string }[];
+  defaultUnitId: string | null;
+  mustChooseUnit: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
