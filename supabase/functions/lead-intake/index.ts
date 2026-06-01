@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
   // a) Form
   const { data: form, error: fErr } = await admin
     .from("forms")
-    .select("id, tenant_id, source, utm_campaign, active")
+    .select("id, tenant_id, unit_id, source, utm_campaign, active")
     .eq("slug", form_slug)
     .maybeSingle();
   if (fErr) return json({ error: fErr.message }, 500);
@@ -144,6 +144,7 @@ Deno.serve(async (req) => {
       .from("clients")
       .insert({
         tenant_id: form.tenant_id,
+        unit_id: form.unit_id,
         full_name: parent_name,
         phone: parent_phone,
         status: "lead",
@@ -161,6 +162,7 @@ Deno.serve(async (req) => {
     .from("opportunities")
     .insert({
       tenant_id: form.tenant_id,
+      unit_id: form.unit_id,
       client_id: clientId,
       celebrant_name,
       celebrant_age,
