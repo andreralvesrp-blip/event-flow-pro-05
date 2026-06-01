@@ -1013,6 +1013,75 @@ export type Database = {
           },
         ]
       }
+      nps_responses: {
+        Row: {
+          classification: Database["public"]["Enums"]["nps_classification"]
+          comment: string | null
+          created_at: string
+          event_id: string | null
+          experience: Database["public"]["Enums"]["nps_experience"] | null
+          id: string
+          name: string | null
+          redirected_to_google: boolean
+          score: number
+          status: Database["public"]["Enums"]["nps_status"]
+          tenant_id: string
+          unit_id: string
+          updated_at: string
+          wants_google_review: boolean
+          whatsapp: string | null
+        }
+        Insert: {
+          classification: Database["public"]["Enums"]["nps_classification"]
+          comment?: string | null
+          created_at?: string
+          event_id?: string | null
+          experience?: Database["public"]["Enums"]["nps_experience"] | null
+          id?: string
+          name?: string | null
+          redirected_to_google?: boolean
+          score: number
+          status?: Database["public"]["Enums"]["nps_status"]
+          tenant_id?: string
+          unit_id: string
+          updated_at?: string
+          wants_google_review?: boolean
+          whatsapp?: string | null
+        }
+        Update: {
+          classification?: Database["public"]["Enums"]["nps_classification"]
+          comment?: string | null
+          created_at?: string
+          event_id?: string | null
+          experience?: Database["public"]["Enums"]["nps_experience"] | null
+          id?: string
+          name?: string | null
+          redirected_to_google?: boolean
+          score?: number
+          status?: Database["public"]["Enums"]["nps_status"]
+          tenant_id?: string
+          unit_id?: string
+          updated_at?: string
+          wants_google_review?: boolean
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nps_responses_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nps_responses_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunities: {
         Row: {
           celebrant_age: number | null
@@ -1035,6 +1104,7 @@ export type Database = {
             | Database["public"]["Enums"]["opportunity_stage"]
             | null
           notes: string | null
+          nps_response_id: string | null
           owner_id: string | null
           pre_reserva_at: string | null
           pre_reserva_expires_at: string | null
@@ -1069,6 +1139,7 @@ export type Database = {
             | Database["public"]["Enums"]["opportunity_stage"]
             | null
           notes?: string | null
+          nps_response_id?: string | null
           owner_id?: string | null
           pre_reserva_at?: string | null
           pre_reserva_expires_at?: string | null
@@ -1103,6 +1174,7 @@ export type Database = {
             | Database["public"]["Enums"]["opportunity_stage"]
             | null
           notes?: string | null
+          nps_response_id?: string | null
           owner_id?: string | null
           pre_reserva_at?: string | null
           pre_reserva_expires_at?: string | null
@@ -1136,6 +1208,13 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_nps_response_id_fkey"
+            columns: ["nps_response_id"]
+            isOneToOne: false
+            referencedRelation: "nps_responses"
             referencedColumns: ["id"]
           },
           {
@@ -1421,6 +1500,35 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_public_unit: {
+        Args: { _slug: string }
+        Returns: {
+          google_reviews_url: string
+          logo_url: string
+          name: string
+          unit_id: string
+        }[]
+      }
+      mark_nps_google_redirect: {
+        Args: { _response_id: string }
+        Returns: undefined
+      }
+      submit_nps_response: {
+        Args: {
+          _comment: string
+          _experience: string
+          _name: string
+          _score: number
+          _slug: string
+          _wants_budget: boolean
+          _wants_google_review: boolean
+          _whatsapp: string
+        }
+        Returns: {
+          classification: Database["public"]["Enums"]["nps_classification"]
+          response_id: string
+        }[]
+      }
     }
     Enums: {
       client_status: "lead" | "cliente"
@@ -1439,6 +1547,9 @@ export type Database = {
         | "fora_perfil"
         | "desistiu"
         | "outro"
+      nps_classification: "detrator" | "neutro" | "promotor"
+      nps_experience: "loved" | "ok" | "improve"
+      nps_status: "novo" | "visto" | "resolvido"
       opportunity_source:
         | "meta"
         | "ga"
@@ -1607,6 +1718,9 @@ export const Constants = {
         "desistiu",
         "outro",
       ],
+      nps_classification: ["detrator", "neutro", "promotor"],
+      nps_experience: ["loved", "ok", "improve"],
+      nps_status: ["novo", "visto", "resolvido"],
       opportunity_source: [
         "meta",
         "ga",
