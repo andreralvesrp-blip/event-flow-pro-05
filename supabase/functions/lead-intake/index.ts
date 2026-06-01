@@ -144,6 +144,7 @@ Deno.serve(async (req) => {
       .from("clients")
       .insert({
         tenant_id: form.tenant_id,
+        unit_id: form.unit_id,
         full_name: parent_name,
         phone: parent_phone,
         status: "lead",
