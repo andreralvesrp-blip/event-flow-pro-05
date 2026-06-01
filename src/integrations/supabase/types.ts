@@ -85,6 +85,7 @@ export type Database = {
           source: Database["public"]["Enums"]["opportunity_source"] | null
           status: Database["public"]["Enums"]["client_status"]
           tenant_id: string
+          unit_id: string | null
           updated_at: string
         }
         Insert: {
@@ -110,6 +111,7 @@ export type Database = {
           source?: Database["public"]["Enums"]["opportunity_source"] | null
           status?: Database["public"]["Enums"]["client_status"]
           tenant_id: string
+          unit_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -135,6 +137,7 @@ export type Database = {
           source?: Database["public"]["Enums"]["opportunity_source"] | null
           status?: Database["public"]["Enums"]["client_status"]
           tenant_id?: string
+          unit_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -150,6 +153,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -309,6 +319,7 @@ export type Database = {
           tasting_menu: string | null
           tenant_id: string
           total_value: number | null
+          unit_id: string | null
           updated_at: string
           webhook_received_at: string
         }
@@ -363,6 +374,7 @@ export type Database = {
           tasting_menu?: string | null
           tenant_id: string
           total_value?: number | null
+          unit_id?: string | null
           updated_at?: string
           webhook_received_at?: string
         }
@@ -417,6 +429,7 @@ export type Database = {
           tasting_menu?: string | null
           tenant_id?: string
           total_value?: number | null
+          unit_id?: string | null
           updated_at?: string
           webhook_received_at?: string
         }
@@ -456,6 +469,13 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contracts_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
         ]
       }
       forms: {
@@ -468,6 +488,7 @@ export type Database = {
           slug: string
           source: Database["public"]["Enums"]["opportunity_source"]
           tenant_id: string
+          unit_id: string | null
           updated_at: string
           utm_campaign: string | null
           welcome_message: string
@@ -486,6 +507,7 @@ export type Database = {
           slug: string
           source?: Database["public"]["Enums"]["opportunity_source"]
           tenant_id: string
+          unit_id?: string | null
           updated_at?: string
           utm_campaign?: string | null
           welcome_message?: string
@@ -504,6 +526,7 @@ export type Database = {
           slug?: string
           source?: Database["public"]["Enums"]["opportunity_source"]
           tenant_id?: string
+          unit_id?: string | null
           updated_at?: string
           utm_campaign?: string | null
           welcome_message?: string
@@ -519,6 +542,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forms_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -1012,6 +1042,7 @@ export type Database = {
           stage: Database["public"]["Enums"]["opportunity_stage"]
           stage_changed_at: string
           tenant_id: string
+          unit_id: string | null
           updated_at: string
           utm_campaign: string | null
           utm_medium: string | null
@@ -1045,6 +1076,7 @@ export type Database = {
           stage?: Database["public"]["Enums"]["opportunity_stage"]
           stage_changed_at?: string
           tenant_id: string
+          unit_id?: string | null
           updated_at?: string
           utm_campaign?: string | null
           utm_medium?: string | null
@@ -1078,6 +1110,7 @@ export type Database = {
           stage?: Database["public"]["Enums"]["opportunity_stage"]
           stage_changed_at?: string
           tenant_id?: string
+          unit_id?: string | null
           updated_at?: string
           utm_campaign?: string | null
           utm_medium?: string | null
@@ -1117,6 +1150,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -1189,6 +1229,80 @@ export type Database = {
         }
         Relationships: []
       }
+      units: {
+        Row: {
+          created_at: string
+          google_reviews_url: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          nps_dinner_end: string
+          nps_dinner_start: string
+          nps_lunch_end: string
+          nps_lunch_start: string
+          public_review_token: string
+          slug: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          google_reviews_url?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          nps_dinner_end?: string
+          nps_dinner_start?: string
+          nps_lunch_end?: string
+          nps_lunch_start?: string
+          public_review_token?: string
+          slug: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          google_reviews_url?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          nps_dinner_end?: string
+          nps_dinner_start?: string
+          nps_lunch_end?: string
+          nps_lunch_start?: string
+          public_review_token?: string
+          slug?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_units: {
+        Row: {
+          unit_id: string
+          user_id: string
+        }
+        Insert: {
+          unit_id: string
+          user_id: string
+        }
+        Update: {
+          unit_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           active: boolean
@@ -1198,6 +1312,7 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["user_role"]
           tenant_id: string
+          tenant_role: string
           updated_at: string
         }
         Insert: {
@@ -1208,6 +1323,7 @@ export type Database = {
           id: string
           role?: Database["public"]["Enums"]["user_role"]
           tenant_id: string
+          tenant_role?: string
           updated_at?: string
         }
         Update: {
@@ -1218,6 +1334,7 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
           tenant_id?: string
+          tenant_role?: string
           updated_at?: string
         }
         Relationships: [
@@ -1241,6 +1358,7 @@ export type Database = {
           scheduled_at: string
           status: Database["public"]["Enums"]["visit_status"]
           tenant_id: string
+          unit_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1253,6 +1371,7 @@ export type Database = {
           scheduled_at: string
           status?: Database["public"]["Enums"]["visit_status"]
           tenant_id: string
+          unit_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1265,6 +1384,7 @@ export type Database = {
           scheduled_at?: string
           status?: Database["public"]["Enums"]["visit_status"]
           tenant_id?: string
+          unit_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1280,6 +1400,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
