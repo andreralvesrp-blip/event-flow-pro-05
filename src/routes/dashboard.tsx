@@ -15,6 +15,7 @@ import {
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
+import { useUnit } from "@/contexts/UnitContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -130,6 +131,7 @@ function variation(current: number, prior: number): number | null {
 // ----------------- component -----------------
 function DashboardPage() {
   const [period, setPeriod] = useState<Period>(String(new Date().getFullYear()) as Period);
+  const { unitFilter } = useUnit();
   const [contracts, setContracts] = useState<ContractRow[] | null>(null);
   const [clients, setClients] = useState<ClientRow[] | null>(null);
   const [opps, setOpps] = useState<OppRow[] | null>(null);
@@ -137,16 +139,23 @@ function DashboardPage() {
 
   useEffect(() => {
     let alive = true;
+    setContracts(null);
+    setClients(null);
+    setOpps(null);
     (async () => {
       try {
-        const [c, cl, op] = await Promise.all([
-          supabase
-            .from("contracts")
-            .select("id,total_value,event_date,status,client_id")
-            .eq("status", "assinado"),
-          supabase.from("clients").select("id,source,cep"),
-          supabase.from("opportunities").select("stage,estimated_value"),
-        ]);
+        let contractsQ = supabase
+          .from("contracts")
+          .select("id,total_value,event_date,status,client_id")
+          .eq("status", "assinado");
+        let clientsQ = supabase.from("clients").select("id,source,cep");
+        let oppsQ = supabase.from("opportunities").select("stage,estimated_value");
+        if (unitFilter) {
+          contractsQ = contractsQ.eq("unit_id", unitFilter);
+          clientsQ = clientsQ.eq("unit_id", unitFilter);
+          oppsQ = oppsQ.eq("unit_id", unitFilter);
+        }
+        const [c, cl, op] = await Promise.all([contractsQ, clientsQ, oppsQ]);
         if (!alive) return;
         if (c.error) throw c.error;
         if (cl.error) throw cl.error;
@@ -161,7 +170,7 @@ function DashboardPage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [unitFilter]);
 
   const loading = !contracts || !clients || !opps;
 

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnit } from "@/contexts/UnitContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -176,6 +177,7 @@ function financialBadge(f: Festa) {
 // ---------- page ----------
 function FestasPage() {
   const { session, user } = useAuth();
+  const { unitFilter } = useUnit();
   const [festas, setFestas] = useState<Festa[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Festa | null>(null);
@@ -191,12 +193,14 @@ function FestasPage() {
   const [finF, setFinF] = useState<string>("todos");
 
   const loadAll = useCallback(async () => {
-    const { data: contracts, error } = await supabase
+    let q = supabase
       .from("contracts")
       .select(
         `*, client:clients(id, full_name, cpf, email, phone, address_full, cep, bairro, cidade, source, how_met, mother_name, father_name)`,
       )
       .order("created_at", { ascending: false });
+    if (unitFilter) q = q.eq("unit_id", unitFilter);
+    const { data: contracts, error } = await q;
     if (error) {
       setErr(error.message);
       return;
@@ -225,7 +229,7 @@ function FestasPage() {
     setFestas(result);
     // refresh selected snapshot
     setSelected((prev) => (prev ? result.find((x) => x.id === prev.id) ?? null : null));
-  }, []);
+  }, [unitFilter]);
 
   useEffect(() => {
     if (!session) return;

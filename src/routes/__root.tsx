@@ -10,6 +10,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/useAuth";
+import { UnitProvider } from "@/contexts/UnitContext";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -116,8 +117,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Outlet />
-        <Toaster />
+        <UnitProvider>
+          <Outlet />
+          <Toaster />
+        </UnitProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

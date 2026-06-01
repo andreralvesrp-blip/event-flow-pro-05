@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnit } from "@/contexts/UnitContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -196,6 +197,7 @@ export const Route = createFileRoute("/oportunidades")({
 
 function OportunidadesPage() {
   const { session, user, profile } = useAuth();
+  const { unitFilter, units, defaultCreateUnitId, mustChooseUnit, isOwner } = useUnit();
   const search = useSearch({ from: "/oportunidades" });
   const [ops, setOps] = useState<Opportunity[] | null>(null);
   const [visits, setVisits] = useState<Visit[]>([]);
@@ -204,10 +206,19 @@ function OportunidadesPage() {
   const [showNew, setShowNew] = useState(false);
 
   const loadAll = useCallback(async () => {
-    const { data, error } = await supabase
+    let oppsQ = supabase
       .from("opportunities")
       .select("*, client:clients(id, full_name, phone, email)")
       .order("created_at", { ascending: false });
+    let visitsQ = supabase
+      .from("visits")
+      .select("*")
+      .order("scheduled_at", { ascending: true });
+    if (unitFilter) {
+      oppsQ = oppsQ.eq("unit_id", unitFilter);
+      visitsQ = visitsQ.eq("unit_id", unitFilter);
+    }
+    const { data, error } = await oppsQ;
     if (error) {
       setErr(error.message);
       return;
@@ -219,12 +230,9 @@ function OportunidadesPage() {
     setOps(rows);
     setSelected((prev) => (prev ? rows.find((x) => x.id === prev.id) ?? null : null));
 
-    const { data: vs } = await supabase
-      .from("visits")
-      .select("*")
-      .order("scheduled_at", { ascending: true });
+    const { data: vs } = await visitsQ;
     setVisits((vs ?? []) as Visit[]);
-  }, []);
+  }, [unitFilter]);
 
   useEffect(() => {
     if (!session) return;
@@ -376,11 +384,17 @@ function OportunidadesPage() {
         onOpenChange={setShowNew}
         tenantId={profile?.tenant_id ?? null}
         userId={user?.id ?? null}
+        units={units}
+        defaultUnitId={defaultCreateUnitId}
+        mustChooseUnit={mustChooseUnit}
         onCreated={async () => {
           setShowNew(false);
           await loadAll();
         }}
       />
+
+      {/* Detail (visita usa mesmo unit) */}
+      <input type="hidden" data-unit={defaultCreateUnitId ?? ""} />
 
       {/* Detail */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
@@ -477,12 +491,18 @@ function NewOpportunityDialog({
   onOpenChange,
   tenantId,
   userId,
+  units,
+  defaultUnitId,
+  mustChooseUnit,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (b: boolean) => void;
   tenantId: string | null;
   userId: string | null;
+  units: { id: string; name: string }[];
+  defaultUnitId: string | null;
+  mustChooseUnit: boolean;
   onCreated: () => void;
 }) {
   const [mode, setMode] = useState<"search" | "create">("search");
@@ -503,8 +523,13 @@ function NewOpportunityDialog({
   const [guestEstimate, setGuestEstimate] = useState("");
   const [source, setSource] = useState<string>("");
   const [estimatedValue, setEstimatedValue] = useState("");
+  const [chosenUnit, setChosenUnit] = useState<string>(defaultUnitId ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setChosenUnit(defaultUnitId ?? "");
+  }, [defaultUnitId, open]);
 
   useEffect(() => {
     if (!open) {
@@ -555,6 +580,11 @@ function NewOpportunityDialog({
       setError("Selecione a origem.");
       return;
     }
+    const unitId = chosenUnit || defaultUnitId;
+    if (!unitId) {
+      setError("Selecione a unidade.");
+      return;
+    }
     setSaving(true);
     try {
       let clientId = selectedClient?.id ?? null;
@@ -568,6 +598,7 @@ function NewOpportunityDialog({
           .from("clients")
           .insert({
             tenant_id: tenantId,
+            unit_id: unitId,
             full_name: newName.trim(),
             phone: newPhone.trim(),
             email: newEmail.trim() || null,
@@ -588,6 +619,7 @@ function NewOpportunityDialog({
       const now = new Date().toISOString();
       const { error: oe } = await supabase.from("opportunities").insert({
         tenant_id: tenantId,
+        unit_id: unitId,
         client_id: clientId,
         celebrant_name: celebrantName.trim() || null,
         celebrant_age: celebrantAge ? Number(celebrantAge) : null,
