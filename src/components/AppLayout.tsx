@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, PartyPopper, LogOut, DollarSign, Settings, Target } from "lucide-react";
+import { Home, PartyPopper, LogOut, DollarSign, Settings, Target, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ const nav = [
   { to: "/dashboard", label: "Dashboard", icon: Home },
   { to: "/festas", label: "Festas", icon: PartyPopper },
   { to: "/oportunidades", label: "Oportunidades", icon: Target },
+  { to: "/nps", label: "NPS", icon: Star },
   { to: "/financeiro", label: "Financeiro", icon: DollarSign },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ];
