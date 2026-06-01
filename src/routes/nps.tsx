@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 
 export const Route = createFileRoute("/nps")({
+  ssr: false,
   component: NpsPage,
 });
 
