@@ -580,6 +580,11 @@ function NewOpportunityDialog({
       setError("Selecione a origem.");
       return;
     }
+    const unitId = chosenUnit || defaultUnitId;
+    if (!unitId) {
+      setError("Selecione a unidade.");
+      return;
+    }
     setSaving(true);
     try {
       let clientId = selectedClient?.id ?? null;
