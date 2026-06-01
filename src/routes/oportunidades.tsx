@@ -523,8 +523,13 @@ function NewOpportunityDialog({
   const [guestEstimate, setGuestEstimate] = useState("");
   const [source, setSource] = useState<string>("");
   const [estimatedValue, setEstimatedValue] = useState("");
+  const [chosenUnit, setChosenUnit] = useState<string>(defaultUnitId ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setChosenUnit(defaultUnitId ?? "");
+  }, [defaultUnitId, open]);
 
   useEffect(() => {
     if (!open) {
