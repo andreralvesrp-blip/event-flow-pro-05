@@ -15,6 +15,7 @@ import {
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
+import { useUnit } from "@/contexts/UnitContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
