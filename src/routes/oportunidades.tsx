@@ -788,6 +788,19 @@ function NewOpportunityDialog({
                 </SelectContent>
               </Select>
             </div>
+            {units.length > 1 && (
+              <div className="col-span-2">
+                <Label className="text-xs">Unidade {mustChooseUnit ? "*" : ""}</Label>
+                <Select value={chosenUnit} onValueChange={setChosenUnit}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                  <SelectContent>
+                    {units.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {error && <div className="text-sm text-red-600">{error}</div>}
