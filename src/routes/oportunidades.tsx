@@ -619,6 +619,7 @@ function NewOpportunityDialog({
       const now = new Date().toISOString();
       const { error: oe } = await supabase.from("opportunities").insert({
         tenant_id: tenantId,
+        unit_id: unitId,
         client_id: clientId,
         celebrant_name: celebrantName.trim() || null,
         celebrant_age: celebrantAge ? Number(celebrantAge) : null,
