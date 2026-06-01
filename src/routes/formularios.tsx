@@ -502,6 +502,19 @@ function FormDialog({
             <Label>Ativo</Label>
             <Switch checked={active} onCheckedChange={setActive} />
           </div>
+          {!initial && units.length > 1 && (
+            <div>
+              <Label>Unidade {mustChooseUnit ? "*" : ""}</Label>
+              <Select value={chosenUnit} onValueChange={setChosenUnit}>
+                <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                <SelectContent>
+                  {units.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <Separator />
           <h3 className="text-sm font-semibold text-slate-900">Widget flutuante</h3>
