@@ -229,7 +229,7 @@ function FestasPage() {
     setFestas(result);
     // refresh selected snapshot
     setSelected((prev) => (prev ? result.find((x) => x.id === prev.id) ?? null : null));
-  }, []);
+  }, [unitFilter]);
 
   useEffect(() => {
     if (!session) return;
