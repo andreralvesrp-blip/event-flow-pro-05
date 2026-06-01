@@ -8,6 +8,7 @@ type Profile = {
   email: string;
   full_name: string;
   role: "vendedor" | "gestor" | "admin";
+  tenant_role: "owner" | "member";
 };
 
 type AuthCtx = {
