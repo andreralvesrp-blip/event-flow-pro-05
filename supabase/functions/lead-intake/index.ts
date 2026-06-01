@@ -162,6 +162,7 @@ Deno.serve(async (req) => {
     .from("opportunities")
     .insert({
       tenant_id: form.tenant_id,
+      unit_id: form.unit_id,
       client_id: clientId,
       celebrant_name,
       celebrant_age,
