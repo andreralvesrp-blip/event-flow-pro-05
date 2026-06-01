@@ -384,11 +384,17 @@ function OportunidadesPage() {
         onOpenChange={setShowNew}
         tenantId={profile?.tenant_id ?? null}
         userId={user?.id ?? null}
+        units={units}
+        defaultUnitId={defaultCreateUnitId}
+        mustChooseUnit={mustChooseUnit}
         onCreated={async () => {
           setShowNew(false);
           await loadAll();
         }}
       />
+
+      {/* Detail (visita usa mesmo unit) */}
+      <input type="hidden" data-unit={defaultCreateUnitId ?? ""} />
 
       {/* Detail */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
