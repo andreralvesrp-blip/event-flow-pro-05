@@ -4,6 +4,7 @@ import { Home, PartyPopper, LogOut, DollarSign, Settings, Target } from "lucide-
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { Button } from "@/components/ui/button";
+import { UnitSelector } from "@/components/UnitSelector";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: Home },
