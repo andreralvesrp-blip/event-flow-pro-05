@@ -193,12 +193,14 @@ function FestasPage() {
   const [finF, setFinF] = useState<string>("todos");
 
   const loadAll = useCallback(async () => {
-    const { data: contracts, error } = await supabase
+    let q = supabase
       .from("contracts")
       .select(
         `*, client:clients(id, full_name, cpf, email, phone, address_full, cep, bairro, cidade, source, how_met, mother_name, father_name)`,
       )
       .order("created_at", { ascending: false });
+    if (unitFilter) q = q.eq("unit_id", unitFilter);
+    const { data: contracts, error } = await q;
     if (error) {
       setErr(error.message);
       return;
