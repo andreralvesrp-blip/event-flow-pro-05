@@ -876,6 +876,7 @@ function OpDetail({
     const scheduledAt = new Date(`${visitDate}T${visitTime}:00`).toISOString();
     const { error: ve } = await supabase.from("visits").insert({
       tenant_id: tenantId,
+      unit_id: op.unit_id,
       opportunity_id: op.id,
       scheduled_at: scheduledAt,
       status: "agendada",
