@@ -102,8 +102,9 @@ export function AppLayout({ title, children }: { title: string; children: ReactN
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 px-8 border-b border-slate-200 bg-white flex items-center">
+        <header className="h-16 px-8 border-b border-slate-200 bg-white flex items-center justify-between gap-4">
           <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+          <UnitSelector />
         </header>
         <div className="flex-1 p-8">{children}</div>
       </main>
