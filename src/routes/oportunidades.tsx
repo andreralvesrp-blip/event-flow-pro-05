@@ -68,6 +68,7 @@ type VisitStatus = "agendada" | "realizada" | "no_show" | "remarcada" | "cancela
 type Opportunity = {
   id: string;
   client_id: string;
+  unit_id: string | null;
   celebrant_name: string | null;
   celebrant_age: number | null;
   desired_date: string | null;
