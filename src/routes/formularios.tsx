@@ -369,6 +369,7 @@ function FormDialog({
   const [msg2, setMsg2] = useState(initial?.widget_msg_2 ?? "");
   const [msg3, setMsg3] = useState(initial?.widget_msg_3 ?? "");
   const [avatarError, setAvatarError] = useState(false);
+  const [chosenUnit, setChosenUnit] = useState<string>(defaultUnitId ?? "");
 
   const [saving, setSaving] = useState(false);
 
