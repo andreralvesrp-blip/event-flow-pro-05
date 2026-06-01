@@ -56,7 +56,7 @@ function PublicNps() {
     const { data, error } = await supabase.rpc("submit_nps_response", {
       _slug: slug,
       _score: score,
-      _experience: experience,
+      _experience: experience ?? "",
       _comment: comment,
       _name: name,
       _whatsapp: whatsapp,
