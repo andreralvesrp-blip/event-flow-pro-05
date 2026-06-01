@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as OportunidadesRouteImport } from './routes/oportunidades'
+import { Route as NpsRouteImport } from './routes/nps'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FormulariosRouteImport } from './routes/formularios'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
@@ -34,6 +35,11 @@ const WebhooksRoute = WebhooksRouteImport.update({
 const OportunidadesRoute = OportunidadesRouteImport.update({
   id: '/oportunidades',
   path: '/oportunidades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NpsRoute = NpsRouteImport.update({
+  id: '/nps',
+  path: '/nps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof FinanceiroRoute
   '/formularios': typeof FormulariosRoute
   '/login': typeof LoginRoute
+  '/nps': typeof NpsRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/avaliar/$slug': typeof AvaliarSlugRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/financeiro': typeof FinanceiroRoute
   '/formularios': typeof FormulariosRoute
   '/login': typeof LoginRoute
+  '/nps': typeof NpsRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/avaliar/$slug': typeof AvaliarSlugRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/financeiro': typeof FinanceiroRoute
   '/formularios': typeof FormulariosRoute
   '/login': typeof LoginRoute
+  '/nps': typeof NpsRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/avaliar/$slug': typeof AvaliarSlugRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/formularios'
     | '/login'
+    | '/nps'
     | '/oportunidades'
     | '/webhooks'
     | '/avaliar/$slug'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/formularios'
     | '/login'
+    | '/nps'
     | '/oportunidades'
     | '/webhooks'
     | '/avaliar/$slug'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/formularios'
     | '/login'
+    | '/nps'
     | '/oportunidades'
     | '/webhooks'
     | '/avaliar/$slug'
@@ -227,6 +239,7 @@ export interface RootRouteChildren {
   FinanceiroRoute: typeof FinanceiroRoute
   FormulariosRoute: typeof FormulariosRoute
   LoginRoute: typeof LoginRoute
+  NpsRoute: typeof NpsRoute
   OportunidadesRoute: typeof OportunidadesRoute
   WebhooksRoute: typeof WebhooksRoute
   AvaliarSlugRoute: typeof AvaliarSlugRoute
@@ -247,6 +260,13 @@ declare module '@tanstack/react-router' {
       path: '/oportunidades'
       fullPath: '/oportunidades'
       preLoaderRoute: typeof OportunidadesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nps': {
+      id: '/nps'
+      path: '/nps'
+      fullPath: '/nps'
+      preLoaderRoute: typeof NpsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -377,6 +397,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinanceiroRoute: FinanceiroRoute,
   FormulariosRoute: FormulariosRoute,
   LoginRoute: LoginRoute,
+  NpsRoute: NpsRoute,
   OportunidadesRoute: OportunidadesRoute,
   WebhooksRoute: WebhooksRoute,
   AvaliarSlugRoute: AvaliarSlugRoute,
