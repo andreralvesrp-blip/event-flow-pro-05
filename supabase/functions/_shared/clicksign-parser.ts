@@ -414,13 +414,49 @@ export async function processClicksignPayload(
   const totalValue = normMoney(exact(answers, ["Valor (R$)", "Valor fechado (R$)"]));
   const installmentCount = normInstallments(exact(answers, ["Parcelamento"]));
 
+  // Resolve unit_id explicitly:
+  // 1) if there's an opportunity for this client, use opportunity.unit_id and link it
+  // 2) otherwise fall back to the client's unit_id
+  let resolvedUnitId: string | null = null;
+  let resolvedOpportunityId: string | null = null;
+  let unitSource: "opportunity" | "client" | "none" = "none";
+  {
+    const { data: opp } = await admin.from("opportunities")
+      .select("id, unit_id")
+      .eq("tenant_id", tenantId)
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (opp && (opp as { unit_id: string | null }).unit_id) {
+      resolvedOpportunityId = (opp as { id: string }).id;
+      resolvedUnitId = (opp as { unit_id: string }).unit_id;
+      unitSource = "opportunity";
+    } else {
+      const { data: cli } = await admin.from("clients")
+        .select("unit_id").eq("id", clientId).maybeSingle();
+      if (cli && (cli as { unit_id: string | null }).unit_id) {
+        resolvedUnitId = (cli as { unit_id: string }).unit_id;
+        unitSource = "client";
+      }
+    }
+  }
+  if (!resolvedUnitId) {
+    warnings.push("Não foi possível resolver unit_id do contrato (sem opportunity nem client.unit_id).");
+  } else {
+    console.log(`[clicksign-parser] contract unit_id resolved from ${unitSource}: ${resolvedUnitId}`);
+  }
+
   const contractData: Json = {
     tenant_id: tenantId,
     client_id: clientId,
+    unit_id: resolvedUnitId,
+    opportunity_id: resolvedOpportunityId,
     clicksign_document_key: documentKey,
     clicksign_template_name: pick<string>(payload, "document.template.name", "template.name") ?? null,
     clicksign_signed_pdf_url: pick<string>(payload, "document.downloads.signed_file_url", "document.signed_file_url", "signed_file_url"),
     status: mapStatus(eventName, rawStatus),
+
 
     event_date: normDate(exact(answers, ["Data da festa"])),
     event_weekday_raw: exact(answers, ["Dia da semana"]),
