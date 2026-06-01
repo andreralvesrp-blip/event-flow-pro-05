@@ -491,12 +491,18 @@ function NewOpportunityDialog({
   onOpenChange,
   tenantId,
   userId,
+  units,
+  defaultUnitId,
+  mustChooseUnit,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (b: boolean) => void;
   tenantId: string | null;
   userId: string | null;
+  units: { id: string; name: string }[];
+  defaultUnitId: string | null;
+  mustChooseUnit: boolean;
   onCreated: () => void;
 }) {
   const [mode, setMode] = useState<"search" | "create">("search");
