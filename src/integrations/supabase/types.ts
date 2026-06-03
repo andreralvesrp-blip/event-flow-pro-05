@@ -1023,7 +1023,7 @@ export type Database = {
           id: string
           name: string | null
           redirected_to_google: boolean
-          score: number
+          score: number | null
           status: Database["public"]["Enums"]["nps_status"]
           tenant_id: string
           unit_id: string
@@ -1040,7 +1040,7 @@ export type Database = {
           id?: string
           name?: string | null
           redirected_to_google?: boolean
-          score: number
+          score?: number | null
           status?: Database["public"]["Enums"]["nps_status"]
           tenant_id?: string
           unit_id: string
@@ -1057,7 +1057,7 @@ export type Database = {
           id?: string
           name?: string | null
           redirected_to_google?: boolean
-          score?: number
+          score?: number | null
           status?: Database["public"]["Enums"]["nps_status"]
           tenant_id?: string
           unit_id?: string
