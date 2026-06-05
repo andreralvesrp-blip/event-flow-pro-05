@@ -863,7 +863,7 @@ function MarketingPage() {
                 <TableBody>
                   {campRows.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center text-sm text-slate-500 py-8">
+                      <TableCell colSpan={15} className="text-center text-sm text-slate-500 py-8">
                         Nenhum dado no período.
                       </TableCell>
                     </TableRow>
@@ -873,6 +873,7 @@ function MarketingPage() {
                       <TableCell className="text-sm">{r.source}</TableCell>
                       <TableCell className="text-sm">{r.medium}</TableCell>
                       <TableCell className="text-sm">{r.campaign}</TableCell>
+                      <TableCell className="text-right text-sm">{fmtInt(r.pageviews)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtInt(r.sessions)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtInt(r.formOpens)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtInt(r.leadsCreated)}</TableCell>
