@@ -356,6 +356,94 @@ function MarketingPage() {
           });
       }
 
+      // ----- First-party marketing_events (fallback / sempre p/ form opens) -----
+      try {
+        let mevQ = supabase
+          .from("marketing_events")
+          .select("event_name, session_id, created_at, utm_source, utm_medium, utm_campaign")
+          .gte("created_at", `${r.start}T00:00:00`)
+          .lte("created_at", `${r.end}T23:59:59`)
+          .limit(50000);
+        if (unitFilter) mevQ = mevQ.eq("unit_id", unitFilter);
+        const { data: mev } = await mevQ;
+        if (cancel) return;
+
+        const sessSet = new Set<string>();
+        const dailyMap = new Map<
+          string,
+          { date: string; sessions: number; formOpenCta: number; formOpenFloat: number; _sess: Set<string> }
+        >();
+        const campMap = new Map<
+          string,
+          { source: string; medium: string; campaign: string; sessions: number; formOpens: number; _sess: Set<string> }
+        >();
+        let openCta = 0, openFloat = 0;
+
+        const ensureDay = (d: string) => {
+          let row = dailyMap.get(d);
+          if (!row) {
+            row = { date: d, sessions: 0, formOpenCta: 0, formOpenFloat: 0, _sess: new Set() };
+            dailyMap.set(d, row);
+          }
+          return row;
+        };
+        const ensureCamp = (s: string, m: string, c: string) => {
+          const k = `${s}|${m}|${c}`;
+          let row = campMap.get(k);
+          if (!row) {
+            row = { source: s, medium: m, campaign: c, sessions: 0, formOpens: 0, _sess: new Set() };
+            campMap.set(k, row);
+          }
+          return row;
+        };
+
+        for (const e of mev ?? []) {
+          const date = (e.created_at as string).slice(0, 10);
+          const drow = ensureDay(date);
+          const src = e.utm_source || "(direct)";
+          const med = e.utm_medium || "(none)";
+          const camp = e.utm_campaign || "(not set)";
+          const crow = ensureCamp(src, med, camp);
+          const sk = e.session_id || `_${e.created_at}`;
+
+          if (e.event_name === "site_session") {
+            sessSet.add(sk);
+            if (!drow._sess.has(sk)) { drow._sess.add(sk); drow.sessions++; }
+            if (!crow._sess.has(sk)) { crow._sess.add(sk); crow.sessions++; }
+          } else if (e.event_name === "form_open_cta") {
+            openCta++;
+            drow.formOpenCta++;
+            crow.formOpens++;
+          } else if (e.event_name === "form_open_float") {
+            openFloat++;
+            drow.formOpenFloat++;
+            crow.formOpens++;
+          }
+        }
+
+        const daily = Array.from(dailyMap.values())
+          .map((d) => ({ date: d.date, sessions: d.sessions, formOpenCta: d.formOpenCta, formOpenFloat: d.formOpenFloat }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        const byCampaign = Array.from(campMap.values()).map((c) => ({
+          source: c.source, medium: c.medium, campaign: c.campaign,
+          sessions: c.sessions, formOpens: c.formOpens,
+        }));
+
+        if (!cancel) {
+          setFirstParty({
+            sessions: sessSet.size,
+            users: sessSet.size,
+            formOpens: openCta + openFloat,
+            formOpenCta: openCta,
+            formOpenFloat: openFloat,
+            daily,
+            byCampaign,
+          });
+        }
+      } catch (e) {
+        if (!cancel) setFirstParty(null);
+      }
+
       setLoading(false);
     }
     load();
@@ -363,6 +451,7 @@ function MarketingPage() {
       cancel = true;
     };
   }, [r.start, r.end, unitFilter, sourceFilter, mediumFilter, campaignFilter, fetchOverview]);
+
 
   // Derived
   const sessions = ga?.sessions ?? 0;
