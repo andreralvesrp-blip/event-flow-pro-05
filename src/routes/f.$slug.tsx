@@ -143,6 +143,7 @@ function PublicForm() {
         }
         setCfg(data);
         setStep("intro");
+        await pushBot("Olá, tudo bem? 👋");
         await pushBot(
           "Precisamos de algumas informações para te passar o orçamento, vai ser bem rápido!",
         );
@@ -152,6 +153,14 @@ function PublicForm() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  function closeWidget() {
+    try {
+      window.parent?.postMessage({ type: "kpw-close" }, "*");
+    } catch {
+      // noop
+    }
+  }
 
   async function startConversation() {
     pushUser("Vamos lá");
