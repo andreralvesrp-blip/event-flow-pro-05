@@ -680,39 +680,40 @@ function MarketingPage() {
 function Kpi({
   label,
   value,
-  sub,
-  highlight,
+  subtitle,
+  variant,
   loading,
   delta,
 }: {
   label: string;
   value: string;
-  sub?: string;
-  highlight?: boolean;
+  subtitle?: string;
+  variant?: "volume" | "conversion";
   loading?: boolean;
   delta?: { txt: string; up: boolean | null };
 }) {
+  const cardClass =
+    variant === "volume"
+      ? "bg-kpi-volume-bg border-kpi-volume-border"
+      : variant === "conversion"
+        ? "bg-kpi-conversion-bg border-kpi-conversion-border"
+        : "";
+
   return (
-    <Card className={highlight ? "border-emerald-300 bg-emerald-50/40" : ""}>
+    <Card className={cardClass}>
       <CardContent className="p-4">
         <div className="text-xs text-slate-500">{label}</div>
         {loading ? (
           <Skeleton className="h-7 w-20 mt-2" />
         ) : (
-          <div className={`text-2xl font-semibold mt-1 ${highlight ? "text-emerald-900" : "text-slate-900"}`}>
-            {value}
-          </div>
+          <div className="text-2xl font-semibold mt-1 text-slate-900 dark:text-slate-100">{value}</div>
+        )}
+        {subtitle && !loading && (
+          <div className="text-xs text-slate-600 dark:text-slate-300 mt-2">{subtitle}</div>
         )}
         {delta && !loading && (
-          <div
-            className={`text-[11px] mt-1 ${
-              delta.up === null ? "text-slate-400" : delta.up ? "text-emerald-600" : "text-rose-600"
-            }`}
-          >
-            {delta.txt} vs período anterior
-          </div>
+          <div className="text-[10px] text-slate-400 mt-2">{delta.txt} vs período anterior</div>
         )}
-        {sub && <div className="text-[11px] text-slate-500 mt-1">{sub}</div>}
       </CardContent>
     </Card>
   );
