@@ -87,6 +87,13 @@ function ddmmyyyyToISO(input: string): string {
   return `${y}-${mo}-${d}`;
 }
 
+function dateToDDMMYYYY(date: Date): string {
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
 const PAGE_BG = "linear-gradient(135deg, #FFF0F5 0%, #EFF9FF 100%)";
 const HEADER_BG = "#F97316";
 const AVATAR_BG = "#F97316";
