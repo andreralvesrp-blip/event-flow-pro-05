@@ -174,11 +174,21 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   document.body.appendChild(fc);
 
   var opened=false;var prevOverflow='';
-  function open(){fc.style.display='block';w.classList.add('kpw-hidden');prevOverflow=document.body.style.overflow;document.body.style.overflow='hidden';opened=true;}
+  var SLUG='${row.slug}';
+  function trackGaEvent(name,params){try{if(typeof window.gtag==='function'){window.gtag('event',name,params);}else{window.dataLayer=window.dataLayer||[];window.dataLayer.push(Object.assign({event:name},params));}}catch(e){}}
+  function open(source,triggerEl){
+    if(fc.style.display==='block')return;
+    fc.style.display='block';w.classList.add('kpw-hidden');
+    prevOverflow=document.body.style.overflow;document.body.style.overflow='hidden';opened=true;
+    if(source==='cta'){trackGaEvent('form_open_cta',{form_slug:SLUG,open_method:'cta',cta_text:triggerEl?((triggerEl.innerText||triggerEl.getAttribute&&triggerEl.getAttribute('aria-label')||'').toString().trim().slice(0,120)):'',page_location:window.location.href,page_path:window.location.pathname});}
+    else if(source==='float_button'){trackGaEvent('form_open_float',{form_slug:SLUG,open_method:'float_button',page_location:window.location.href,page_path:window.location.pathname});}
+    else if(source==='bubble'){trackGaEvent('form_open_float',{form_slug:SLUG,open_method:'bubble',page_location:window.location.href,page_path:window.location.pathname});}
+  }
   function close(){fc.style.display='none';w.classList.remove('kpw-hidden');document.body.style.overflow=prevOverflow||'';}
-  document.getElementById(id+'-btn').onclick=function(){fc.style.display==='block'?close():open();};
+  var btn=document.getElementById(id+'-btn');
+  btn.onclick=function(){if(fc.style.display==='block'){close();}else{open('float_button',btn);}};
   var bbl=document.getElementById(id+'-bbl');
-  if(bbl){bbl.onclick=open;}
+  if(bbl){bbl.onclick=function(){open('bubble',bbl);};}
   document.getElementById(id+'-cls').onclick=close;
   // Intercept clicks on links pointing to the form URL — keep the user on the host site.
   var Fpath=(function(){try{return new URL(F).pathname;}catch(e){return '';}})();
@@ -188,7 +198,7 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
     if(!a||!a.href)return;
     try{var u=new URL(a.href, window.location.href);
       if(a.href===F||u.href===F||(Fpath&&u.pathname===Fpath&&(u.origin===new URL(F).origin))){
-        ev.preventDefault();open();
+        ev.preventDefault();open('cta',a);
       }
     }catch(e){}
   },true);
@@ -197,7 +207,7 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
     if(formOrigin&&e.origin!==formOrigin)return;
     if(e&&e.data&&e.data.type==='kpw-close')close();
   });
-  if(D!==null&&typeof D==='number'&&D>=0){setTimeout(function(){if(!opened)open();},D*1000);}
+  if(D!==null&&typeof D==='number'&&D>=0){setTimeout(function(){if(!opened)open('auto_delay');},D*1000);}
 
 })();
 </script>`;
