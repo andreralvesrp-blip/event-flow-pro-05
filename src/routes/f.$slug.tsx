@@ -58,6 +58,32 @@ function isValidPhone(input: string): boolean {
   return true;
 }
 
+function formatDateInput(input: string): string {
+  const d = input.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+function isValidDateDDMMYYYY(input: string): boolean {
+  const m = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return false;
+  const day = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const year = parseInt(m[3], 10);
+  if (month < 1 || month > 12) return false;
+  if (year < 1900 || year > 2100) return false;
+  const dt = new Date(year, month - 1, day);
+  return dt.getFullYear() === year && dt.getMonth() === month - 1 && dt.getDate() === day;
+}
+
+function ddmmyyyyToISO(input: string): string {
+  const m = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return "";
+  const [d, mo, y] = [m[1], m[2], m[3]];
+  return `${y}-${mo}-${d}`;
+}
+
 const PAGE_BG = "linear-gradient(135deg, #FFF0F5 0%, #EFF9FF 100%)";
 const HEADER_BG = "#F97316";
 const AVATAR_BG = "#F97316";
