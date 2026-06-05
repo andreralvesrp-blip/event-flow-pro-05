@@ -93,15 +93,28 @@ function slugify(s: string) {
     .slice(0, 60);
 }
 
+const PUBLIC_APP_URL =
+  (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.replace(/\/$/, "") ||
+  "https://kids-point-hub.lovable.app";
+
 function publicOrigin(origin: string) {
+  // Para o widget embedável, sempre usamos a URL pública estável do app.
+  // Origins de preview (id-preview--*.lovable.app) e do editor (*.lovableproject.com)
+  // exigem login Lovable e não funcionam em sites de terceiros.
   try {
     const u = new URL(origin);
-    // Preview URLs (id-preview--<id>.lovable.app) exigem login Lovable.
-    // Trocamos pelo domínio público estável project--<id>.lovable.app.
-    u.hostname = u.hostname.replace(/^id-preview--/, "project--");
+    const host = u.hostname;
+    if (
+      host.endsWith(".lovableproject.com") ||
+      host.startsWith("id-preview--") ||
+      host.endsWith(".lovable.dev") ||
+      host === "lovable.dev"
+    ) {
+      return PUBLIC_APP_URL;
+    }
     return u.origin;
   } catch {
-    return origin;
+    return PUBLIC_APP_URL;
   }
 }
 
@@ -120,16 +133,18 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   var MS=['${m1}','${m2}','${m3}'].filter(function(m){return m.trim()!=='';});
   var id='kpw'+Math.random().toString(36).substr(2,5);
   var s=document.createElement('style');
-  s.textContent='#'+id+'-w{position:fixed;bottom:20px;right:20px;z-index:99998;display:flex;align-items:flex-end;gap:10px;flex-direction:row-reverse}'
+  s.textContent='#'+id+'-w{position:fixed;bottom:20px;right:20px;z-index:99998;display:flex;align-items:flex-end;gap:10px;flex-direction:row-reverse;transition:opacity .2s}'
+    +'#'+id+'-w.kpw-hidden{opacity:0;pointer-events:none}'
     +'#'+id+'-btn{position:relative;width:60px;height:60px;border-radius:50%;overflow:visible;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.22);border:3px solid #fff;flex-shrink:0;background:#e5e7eb}'
     +'#'+id+'-btn img{width:100%;height:100%;object-fit:cover;border-radius:50%}'
     +'#'+id+'-dot{position:absolute;bottom:1px;right:1px;width:16px;height:16px;border-radius:50%;background:#25d366;border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.05);animation:'+id+'-pulse 2s infinite}'
     +'@keyframes '+id+'-pulse{0%,100%{box-shadow:0 0 0 0 rgba(37,211,102,.55)}50%{box-shadow:0 0 0 6px rgba(37,211,102,0)}}'
     +'#'+id+'-bbl{background:#fff;border-radius:16px 16px 4px 16px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:14px;color:#1a1a2e;line-height:1.45;max-width:220px;cursor:pointer;transition:opacity .3s;font-family:-apple-system,sans-serif}'
-    +'#'+id+'-frm{position:fixed;bottom:90px;right:20px;z-index:99999;width:380px;height:600px;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.2);display:none}'
-    +'#'+id+'-frm iframe{width:100%;height:100%;border:none}'
+    +'#'+id+'-frm{position:fixed;bottom:90px;right:20px;z-index:99999;width:380px;height:600px;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.2);display:none;background:#fff}'
+    +'#'+id+'-frm iframe{width:100%;height:100%;border:none;display:block}'
     +'#'+id+'-cls{position:absolute;top:10px;right:12px;background:rgba(0,0,0,.35);color:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1}'
-    +'@media(max-width:480px){#'+id+'-frm{width:calc(100vw - 16px);right:8px;bottom:84px;height:72vh;border-radius:16px 16px 0 0}}';
+    +'@media(max-width:640px){#'+id+'-frm{top:0;left:0;right:0;bottom:0;width:100vw;width:100dvw;height:100vh;height:100dvh;max-width:none;max-height:none;border-radius:0}'
+    +'#'+id+'-cls{display:none}}';
   document.head.appendChild(s);
   var av=AV?'<img src="'+AV+'" alt="">':'';
   var w=document.createElement('div'); w.id=id+'-w';
@@ -139,21 +154,38 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   document.body.appendChild(w);
 
   var fc=document.createElement('div'); fc.id=id+'-frm';
-  fc.innerHTML='<button id="'+id+'-cls">\u2715</button><iframe src="'+F+'"></iframe>';
+  fc.innerHTML='<button id="'+id+'-cls" aria-label="Fechar">\u2715</button><iframe src="'+F+'" allow="clipboard-write"></iframe>';
   document.body.appendChild(fc);
-  var opened=false;
-  function open(){fc.style.display='block';opened=true;}
-  function close(){fc.style.display='none';}
+  var opened=false;var prevOverflow='';
+  function open(){fc.style.display='block';w.classList.add('kpw-hidden');prevOverflow=document.body.style.overflow;document.body.style.overflow='hidden';opened=true;}
+  function close(){fc.style.display='none';w.classList.remove('kpw-hidden');document.body.style.overflow=prevOverflow||'';}
   document.getElementById(id+'-btn').onclick=function(){fc.style.display==='block'?close():open();};
   var bbl=document.getElementById(id+'-bbl');
   if(bbl){bbl.onclick=open;}
   document.getElementById(id+'-cls').onclick=close;
-  window.addEventListener('message',function(e){if(e&&e.data&&e.data.type==='kpw-close')close();});
+  // Intercept clicks on links pointing to the form URL — keep the user on the host site.
+  var Fpath=(function(){try{return new URL(F).pathname;}catch(e){return '';}})();
+  document.addEventListener('click',function(ev){
+    var t=ev.target;if(!t)return;
+    var a=t.closest?t.closest('a'):null;
+    if(!a||!a.href)return;
+    try{var u=new URL(a.href, window.location.href);
+      if(a.href===F||u.href===F||(Fpath&&u.pathname===Fpath&&(u.origin===new URL(F).origin))){
+        ev.preventDefault();open();
+      }
+    }catch(e){}
+  },true);
+  var formOrigin=(function(){try{return new URL(F).origin;}catch(e){return '';}})();
+  window.addEventListener('message',function(e){
+    if(formOrigin&&e.origin!==formOrigin)return;
+    if(e&&e.data&&e.data.type==='kpw-close')close();
+  });
   if(D!==null&&typeof D==='number'&&D>=0){setTimeout(function(){if(!opened)open();},D*1000);}
 
 })();
 </script>`;
 }
+
 
 function FormulariosPage() {
   const { profile } = useAuth();
