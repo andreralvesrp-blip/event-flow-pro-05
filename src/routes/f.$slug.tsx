@@ -196,7 +196,7 @@ function PublicForm() {
           form_slug: slug,
           celebrant_name: celebrantName,
           celebrant_age: parseInt(celebrantAge, 10),
-          desired_date: desiredDate,
+          desired_date: ddmmyyyyToISO(desiredDate),
           parent_name: parentName,
           parent_phone: parentPhone,
           utm_source,
