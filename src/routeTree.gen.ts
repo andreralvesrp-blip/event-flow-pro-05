@@ -28,6 +28,7 @@ import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/c
 import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.equipe'
 import { Route as AvaliarSlugRouteImport } from './routes/avaliar.$slug'
 import { Route as ApiPublicMarketingEventRouteImport } from './routes/api/public/marketing-event'
+import { Route as ApiPublicGa4OauthCallbackRouteImport } from './routes/api/public/ga4-oauth.callback'
 
 const WebhooksRoute = WebhooksRouteImport.update({
   id: '/webhooks',
@@ -125,6 +126,12 @@ const ApiPublicMarketingEventRoute = ApiPublicMarketingEventRouteImport.update({
   path: '/api/public/marketing-event',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicGa4OauthCallbackRoute =
+  ApiPublicGa4OauthCallbackRouteImport.update({
+    id: '/api/public/ga4-oauth/callback',
+    path: '/api/public/ga4-oauth/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
+  '/api/public/ga4-oauth/callback': typeof ApiPublicGa4OauthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -166,6 +174,7 @@ export interface FileRoutesByTo {
   '/f/$slug': typeof FSlugRoute
   '/configuracoes': typeof ConfiguracoesIndexRoute
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
+  '/api/public/ga4-oauth/callback': typeof ApiPublicGa4OauthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,6 +197,7 @@ export interface FileRoutesById {
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
+  '/api/public/ga4-oauth/callback': typeof ApiPublicGa4OauthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/configuracoes/'
     | '/api/public/marketing-event'
+    | '/api/public/ga4-oauth/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/configuracoes'
     | '/api/public/marketing-event'
+    | '/api/public/ga4-oauth/callback'
   id:
     | '__root__'
     | '/'
@@ -252,6 +264,7 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/configuracoes/'
     | '/api/public/marketing-event'
+    | '/api/public/ga4-oauth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -270,6 +283,7 @@ export interface RootRouteChildren {
   AvaliarSlugRoute: typeof AvaliarSlugRoute
   FSlugRoute: typeof FSlugRoute
   ApiPublicMarketingEventRoute: typeof ApiPublicMarketingEventRoute
+  ApiPublicGa4OauthCallbackRoute: typeof ApiPublicGa4OauthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -407,6 +421,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMarketingEventRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ga4-oauth/callback': {
+      id: '/api/public/ga4-oauth/callback'
+      path: '/api/public/ga4-oauth/callback'
+      fullPath: '/api/public/ga4-oauth/callback'
+      preLoaderRoute: typeof ApiPublicGa4OauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -444,6 +465,7 @@ const rootRouteChildren: RootRouteChildren = {
   AvaliarSlugRoute: AvaliarSlugRoute,
   FSlugRoute: FSlugRoute,
   ApiPublicMarketingEventRoute: ApiPublicMarketingEventRoute,
+  ApiPublicGa4OauthCallbackRoute: ApiPublicGa4OauthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
