@@ -75,6 +75,10 @@ type FormRow = {
   widget_msg_1: string | null;
   widget_msg_2: string | null;
   widget_msg_3: string | null;
+  attendant_name: string | null;
+  attendant_avatar_url: string | null;
+  attendant_online: boolean | null;
+  privacy_policy_url: string | null;
 };
 
 function slugify(s: string) {
