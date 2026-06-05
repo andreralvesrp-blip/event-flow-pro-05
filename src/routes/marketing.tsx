@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { useUnit } from "@/contexts/UnitContext";
+import { useAuth } from "@/hooks/useAuth";
 import {
   getMarketingOverview,
   type MarketingOverview,
