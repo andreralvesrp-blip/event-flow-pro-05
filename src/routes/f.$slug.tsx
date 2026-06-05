@@ -722,7 +722,17 @@ function PublicForm() {
   );
 }
 
-function Bubble({ from, children }: { from: "bot" | "user"; children: React.ReactNode }) {
+function Bubble({
+  from,
+  children,
+  avatarUrl,
+  initials,
+}: {
+  from: "bot" | "user";
+  children: React.ReactNode;
+  avatarUrl?: string;
+  initials?: string;
+}) {
   if (from === "bot") {
     return (
       <div className="flex items-end gap-2 bubble-bot">
@@ -739,16 +749,26 @@ function Bubble({ from, children }: { from: "bot" | "user"; children: React.Reac
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            overflow: "hidden",
           }}
         >
-          KP
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            initials || "KP"
+          )}
         </div>
         <div
           style={{
-            background: "var(--color-background-secondary)",
+            background: "#F1F5F9",
             borderRadius: "18px 18px 18px 4px",
             padding: "10px 14px",
-            fontSize: 14.5,
+            fontSize: 15,
             lineHeight: 1.55,
             color: "#1a1a2e",
             maxWidth: "80%",
