@@ -59,7 +59,10 @@ export const Route = createFileRoute("/api/public/marketing-event")({
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders() }),
       POST: async ({ request }) => {
         try {
-          const raw = await request.json().catch(() => null);
+          // Accept any Content-Type (sendBeacon may send text/plain or application/json)
+          const text = await request.text().catch(() => "");
+          let raw: unknown = null;
+          try { raw = text ? JSON.parse(text) : null; } catch { raw = null; }
           const parsed = Body.safeParse(raw);
           if (!parsed.success) {
             return new Response(JSON.stringify({ error: "invalid_body" }), {
