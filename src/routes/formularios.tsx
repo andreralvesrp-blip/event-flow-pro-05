@@ -89,7 +89,20 @@ function slugify(s: string) {
     .slice(0, 60);
 }
 
-function buildWidgetScript(row: FormRow, origin: string) {
+function publicOrigin(origin: string) {
+  try {
+    const u = new URL(origin);
+    // Preview URLs (id-preview--<id>.lovable.app) exigem login Lovable.
+    // Trocamos pelo domínio público estável project--<id>.lovable.app.
+    u.hostname = u.hostname.replace(/^id-preview--/, "project--");
+    return u.origin;
+  } catch {
+    return origin;
+  }
+}
+
+function buildWidgetScript(row: FormRow, rawOrigin: string) {
+  const origin = publicOrigin(rawOrigin);
   const formUrl = `${origin}/f/${row.slug}`;
   const delay = row.widget_delay ?? "null";
   const av = (row.widget_avatar_url ?? "").replace(/'/g, "\\'");
@@ -104,8 +117,10 @@ function buildWidgetScript(row: FormRow, origin: string) {
   var id='kpw'+Math.random().toString(36).substr(2,5);
   var s=document.createElement('style');
   s.textContent='#'+id+'-w{position:fixed;bottom:20px;right:20px;z-index:99998;display:flex;align-items:flex-end;gap:10px;flex-direction:row-reverse}'
-    +'#'+id+'-btn{width:60px;height:60px;border-radius:50%;overflow:hidden;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.22);border:3px solid #fff;flex-shrink:0;background:#e5e7eb}'
-    +'#'+id+'-btn img{width:100%;height:100%;object-fit:cover}'
+    +'#'+id+'-btn{position:relative;width:60px;height:60px;border-radius:50%;overflow:visible;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.22);border:3px solid #fff;flex-shrink:0;background:#e5e7eb}'
+    +'#'+id+'-btn img{width:100%;height:100%;object-fit:cover;border-radius:50%}'
+    +'#'+id+'-dot{position:absolute;bottom:1px;right:1px;width:16px;height:16px;border-radius:50%;background:#25d366;border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.05);animation:'+id+'-pulse 2s infinite}'
+    +'@keyframes '+id+'-pulse{0%,100%{box-shadow:0 0 0 0 rgba(37,211,102,.55)}50%{box-shadow:0 0 0 6px rgba(37,211,102,0)}}'
     +'#'+id+'-bbl{background:#fff;border-radius:16px 16px 4px 16px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:14px;color:#1a1a2e;line-height:1.45;max-width:220px;cursor:pointer;transition:opacity .3s;font-family:-apple-system,sans-serif}'
     +'#'+id+'-frm{position:fixed;bottom:90px;right:20px;z-index:99999;width:380px;height:600px;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.2);display:none}'
     +'#'+id+'-frm iframe{width:100%;height:100%;border:none}'
@@ -114,8 +129,9 @@ function buildWidgetScript(row: FormRow, origin: string) {
   document.head.appendChild(s);
   var av=AV?'<img src="'+AV+'" alt="">':'';
   var w=document.createElement('div'); w.id=id+'-w';
-  w.innerHTML='<div id="'+id+'-btn">'+av+'</div>'+(MS.length?'<div id="'+id+'-bbl">'+MS[0]+'</div>':'');
+  w.innerHTML='<div id="'+id+'-btn">'+av+'<span id="'+id+'-dot"></span></div>'+(MS.length?'<div id="'+id+'-bbl">'+MS[0]+'</div>':'');
   document.body.appendChild(w);
+
   var fc=document.createElement('div'); fc.id=id+'-frm';
   fc.innerHTML='<button id="'+id+'-cls">\u2715</button><iframe src="'+F+'"></iframe>';
   document.body.appendChild(fc);
