@@ -456,15 +456,21 @@ function PublicForm() {
                     />
                     <input
                       type="tel"
+                      inputMode="numeric"
                       className="f-input"
-                      placeholder="WhatsApp (ex: 11 91234-5678)"
+                      placeholder="WhatsApp (ex: (11) 91234-5678)"
                       value={parentPhone}
-                      onChange={(e) => setParentPhone(e.target.value)}
+                      onChange={(e) => setParentPhone(formatPhone(e.target.value))}
                     />
+                    {parentPhone && !isValidPhone(parentPhone) && (
+                      <div style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4 }}>
+                        Informe um WhatsApp válido com DDD.
+                      </div>
+                    )}
                     <button
                       type="submit"
                       className="f-btn-primary f-btn-green"
-                      disabled={typing || !parentName.trim() || !parentPhone.trim()}
+                      disabled={typing || !parentName.trim() || !isValidPhone(parentPhone)}
                     >
                       Verificar disponibilidade →
                     </button>
