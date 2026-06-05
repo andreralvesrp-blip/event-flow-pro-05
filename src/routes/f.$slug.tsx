@@ -523,12 +523,17 @@ function PublicForm() {
               {/* MESSAGES */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5 space-y-3">
                 {messages.map((m, i) => (
-                  <Bubble key={i} from={m.from}>
+                  <Bubble
+                    key={i}
+                    from={m.from}
+                    avatarUrl={attendantAvatar}
+                    initials={attendantInitials || "KP"}
+                  >
                     {m.text}
                   </Bubble>
                 ))}
                 {typing && (
-                  <Bubble from="bot">
+                  <Bubble from="bot" avatarUrl={attendantAvatar} initials={attendantInitials || "KP"}>
                     <span className="inline-flex gap-1.5 items-center py-1">
                       <span className="fdot" />
                       <span className="fdot" />
@@ -544,13 +549,37 @@ function PublicForm() {
                 style={{ borderTop: "1px solid #F1F5F9", background: "white" }}
               >
                 {step === "intro" && (
-                  <button
-                    className="f-btn-primary f-btn-orange"
-                    onClick={startConversation}
-                    disabled={typing}
-                  >
-                    Vamos lá
-                  </button>
+                  <>
+                    <button
+                      className="f-btn-primary f-btn-orange"
+                      onClick={startConversation}
+                      disabled={typing}
+                    >
+                      Vamos lá
+                    </button>
+                    {privacyUrl && (
+                      <p
+                        style={{
+                          fontSize: 11,
+                          color: "#94A3B8",
+                          textAlign: "center",
+                          marginTop: 8,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        Clicando acima você aceita nossas{" "}
+                        <a
+                          href={privacyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "#F97316", textDecoration: "underline" }}
+                        >
+                          Políticas de privacidade
+                        </a>
+                        .
+                      </p>
+                    )}
+                  </>
                 )}
                 {step === "name" && (
                   <form onSubmit={submitName} className="flex gap-2">
