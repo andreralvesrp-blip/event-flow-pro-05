@@ -154,8 +154,25 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   document.body.appendChild(w);
 
   var fc=document.createElement('div'); fc.id=id+'-frm';
-  fc.innerHTML='<button id="'+id+'-cls" aria-label="Fechar">\u2715</button><iframe src="'+F+'" allow="clipboard-write"></iframe>';
+  // Build iframe URL with UTMs + landing page + referrer captured from the host page
+  function buildSrc(){
+    try{
+      var hostUrl=new URL(window.location.href);
+      var hostParams=hostUrl.searchParams;
+      var keep=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','fbclid'];
+      var u=new URL(F);
+      for(var i=0;i<keep.length;i++){
+        var k=keep[i];var v=hostParams.get(k);
+        if(v) u.searchParams.set(k,v);
+      }
+      u.searchParams.set('kp_landing', hostUrl.origin+hostUrl.pathname);
+      if(document.referrer) u.searchParams.set('kp_ref', document.referrer);
+      return u.toString();
+    }catch(e){return F;}
+  }
+  fc.innerHTML='<button id="'+id+'-cls" aria-label="Fechar">\u2715</button><iframe src="'+buildSrc()+'" allow="clipboard-write"></iframe>';
   document.body.appendChild(fc);
+
   var opened=false;var prevOverflow='';
   function open(){fc.style.display='block';w.classList.add('kpw-hidden');prevOverflow=document.body.style.overflow;document.body.style.overflow='hidden';opened=true;}
   function close(){fc.style.display='none';w.classList.remove('kpw-hidden');document.body.style.overflow=prevOverflow||'';}
