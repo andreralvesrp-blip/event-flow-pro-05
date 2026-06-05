@@ -151,16 +151,17 @@ function MarketingPage() {
     let cancel = false;
     async function load() {
       setLoading(true);
-      // ----- Supabase: opportunities (lead cohort), visits, contracts -----
+
+      // ----- Supabase queries (período = data do evento) -----
+      // 1) Leads (opps criadas no período) -> attribution from opp.utm
       let oppQ = supabase
         .from("opportunities")
-        .select(
-          "id, created_at, stage, utm_source, utm_medium, utm_campaign, contract_id",
-        )
+        .select("id, created_at, utm_source, utm_medium, utm_campaign")
         .gte("created_at", `${r.start}T00:00:00`)
         .lte("created_at", `${r.end}T23:59:59`);
       if (unitFilter) oppQ = oppQ.eq("unit_id", unitFilter);
 
+      // 2) Visitas com created_at no período -> attribution via opportunity_id
       let visitsQ = supabase
         .from("visits")
         .select("id, opportunity_id, scheduled_at, status, created_at")
@@ -168,6 +169,7 @@ function MarketingPage() {
         .lte("created_at", `${r.end}T23:59:59`);
       if (unitFilter) visitsQ = visitsQ.eq("unit_id", unitFilter);
 
+      // 3) Contratos assinados (finalized_at no período)
       let contractsQ = supabase
         .from("contracts")
         .select("id, status, total_value, finalized_at, opportunity_id")
@@ -176,77 +178,86 @@ function MarketingPage() {
         .lte("finalized_at", `${r.end}T23:59:59`);
       if (unitFilter) contractsQ = contractsQ.eq("unit_id", unitFilter);
 
-      const [{ data: opps }, { data: visits }, { data: contracts }] = await Promise.all([
-        oppQ,
-        visitsQ,
-        contractsQ,
-      ]);
-
-      if (cancel) return;
-
-      const a = emptyAgg();
-      const oppById = new Map<string, any>();
-
-      for (const o of opps ?? []) {
-        oppById.set(o.id, o);
-        a.leadsCreated++;
-        const d = (o.created_at as string).slice(0, 10);
-        incDaily(a.dailyLeads, d);
-
-        const key = `${o.utm_source ?? "(direct)"}|${o.utm_medium ?? "(none)"}|${o.utm_campaign ?? "(not set)"}`;
-        let row = a.byCampaign.get(key);
-        if (!row) {
-          row = {
-            source: o.utm_source ?? "(direct)",
-            medium: o.utm_medium ?? "(none)",
-            campaign: o.utm_campaign ?? "(not set)",
-            leadsCreated: 0,
-            visitsScheduled: 0,
-            visitsCompleted: 0,
-            preReserves: 0,
-            wonContracts: 0,
-            soldRevenue: 0,
-          };
-          a.byCampaign.set(key, row);
-        }
-        row.leadsCreated++;
-
-        // Use opp stage as fallback for funnel position
-        if (
-          o.stage === "visita_agendada" ||
-          o.stage === "visita_realizada" ||
-          o.stage === "pre_reserva" ||
-          o.stage === "ganho"
-        ) {
-          row.visitsScheduled++;
-        }
-        if (o.stage === "visita_realizada" || o.stage === "pre_reserva" || o.stage === "ganho") {
-          row.visitsCompleted++;
-        }
-        if (o.stage === "pre_reserva" || o.stage === "ganho") {
-          row.preReserves++;
-        }
-      }
-
-      // Pré-reservas (período pela pre_reserva_at, dentro do recorte): captura indep. do cohort acima
+      // 4) Pré-reservas (pre_reserva_at no período)
       let preQ = supabase
         .from("opportunities")
-        .select("id")
+        .select("id, utm_source, utm_medium, utm_campaign")
         .not("pre_reserva_at", "is", null)
         .gte("pre_reserva_at", `${r.start}T00:00:00`)
         .lte("pre_reserva_at", `${r.end}T23:59:59`);
       if (unitFilter) preQ = preQ.eq("unit_id", unitFilter);
-      const { data: preList } = await preQ;
-      a.preReserves = preList?.length ?? 0;
 
+      const [
+        { data: opps },
+        { data: visits },
+        { data: contracts },
+        { data: preList },
+      ] = await Promise.all([oppQ, visitsQ, contractsQ, preQ]);
+
+      if (cancel) return;
+
+      // Map opp_id -> utm. Buscar opps referenciadas que não estão no cohort.
+      type OppUtm = { utm_source: string | null; utm_medium: string | null; utm_campaign: string | null };
+      const oppById = new Map<string, OppUtm>();
+      for (const o of opps ?? []) oppById.set(o.id, o);
+
+      const missingOppIds = new Set<string>();
       for (const v of visits ?? []) {
+        if (v.opportunity_id && !oppById.has(v.opportunity_id)) missingOppIds.add(v.opportunity_id);
+      }
+      for (const c of contracts ?? []) {
+        if (c.opportunity_id && !oppById.has(c.opportunity_id)) missingOppIds.add(c.opportunity_id);
+      }
+      if (missingOppIds.size > 0) {
+        const { data: extra } = await supabase
+          .from("opportunities")
+          .select("id, utm_source, utm_medium, utm_campaign")
+          .in("id", Array.from(missingOppIds));
+        for (const o of extra ?? []) oppById.set(o.id, o);
+      }
+
+      const NORM = (v: string | null | undefined, fallback: string) =>
+        v && v.trim() !== "" ? v : fallback;
+      const attrFor = (o?: OppUtm | null) => ({
+        source: NORM(o?.utm_source, "(direct)"),
+        medium: NORM(o?.utm_medium, "(none)"),
+        campaign: NORM(o?.utm_campaign, "(not set)"),
+      });
+
+      const a = emptyAgg();
+      const ensureCamp = (s: string, m: string, c: string) => {
+        const key = `${s}|${m}|${c}`;
+        let row = a.byCampaign.get(key);
+        if (!row) {
+          row = {
+            source: s, medium: m, campaign: c,
+            leadsCreated: 0, visitsScheduled: 0, visitsCompleted: 0,
+            preReserves: 0, wonContracts: 0, soldRevenue: 0,
+          };
+          a.byCampaign.set(key, row);
+        }
+        return row;
+      };
+
+      // Leads
+      for (const o of opps ?? []) {
+        const { source, medium, campaign } = attrFor(o);
+        ensureCamp(source, medium, campaign).leadsCreated++;
+        incDaily(a.dailyLeads, (o.created_at as string).slice(0, 10));
+      }
+
+      // Visitas
+      for (const v of visits ?? []) {
+        const opp = v.opportunity_id ? oppById.get(v.opportunity_id) : null;
+        const { source, medium, campaign } = attrFor(opp);
+        const row = ensureCamp(source, medium, campaign);
         const d = (v.scheduled_at as string | null)?.slice(0, 10) ?? (v.created_at as string).slice(0, 10);
         if (v.status === "agendada" || v.status === "realizada" || v.status === "remarcada") {
-          a.visitsScheduled++;
+          row.visitsScheduled++;
           incDaily(a.dailyVisitsScheduled, d);
         }
         if (v.status === "realizada") {
-          a.visitsCompleted++;
+          row.visitsCompleted++;
           incDaily(a.dailyVisitsCompleted, d);
         }
         if (v.status === "no_show") {
@@ -254,23 +265,55 @@ function MarketingPage() {
         }
       }
 
+      // Pré-reservas
+      for (const o of preList ?? []) {
+        const { source, medium, campaign } = attrFor(o);
+        ensureCamp(source, medium, campaign).preReserves++;
+      }
+
+      // Contratos ganhos
       for (const c of contracts ?? []) {
-        a.wonContracts++;
-        a.soldRevenue += Number(c.total_value || 0);
+        const opp = c.opportunity_id ? oppById.get(c.opportunity_id) : null;
+        const { source, medium, campaign } = attrFor(opp);
+        const row = ensureCamp(source, medium, campaign);
+        row.wonContracts++;
+        row.soldRevenue += Number(c.total_value || 0);
         if (c.finalized_at) {
-          const d = (c.finalized_at as string).slice(0, 10);
-          incDaily(a.dailyContracts, d);
+          incDaily(a.dailyContracts, (c.finalized_at as string).slice(0, 10));
         }
-        if (c.opportunity_id) {
-          const o = oppById.get(c.opportunity_id);
-          if (o) {
-            const key = `${o.utm_source ?? "(direct)"}|${o.utm_medium ?? "(none)"}|${o.utm_campaign ?? "(not set)"}`;
-            const row = a.byCampaign.get(key);
-            if (row) {
-              row.wonContracts++;
-              row.soldRevenue += Number(c.total_value || 0);
-            }
-          }
+      }
+
+      // KPIs = soma da tabela por origem/campanha (consistência garantida)
+      let leadsTotal = 0, vAg = 0, vReal = 0, pre = 0, won = 0, rev = 0;
+      for (const row of a.byCampaign.values()) {
+        leadsTotal += row.leadsCreated;
+        vAg += row.visitsScheduled;
+        vReal += row.visitsCompleted;
+        pre += row.preReserves;
+        won += row.wonContracts;
+        rev += row.soldRevenue;
+      }
+      a.leadsCreated = leadsTotal;
+      a.visitsScheduled = vAg;
+      a.visitsCompleted = vReal;
+      a.preReserves = pre;
+      a.wonContracts = won;
+      a.soldRevenue = rev;
+
+      // Dev-time consistency check
+      if (import.meta.env.DEV) {
+        const rows = Array.from(a.byCampaign.values());
+        const sum = (k: "leadsCreated" | "visitsScheduled" | "visitsCompleted" | "wonContracts" | "soldRevenue") =>
+          rows.reduce((acc, row) => acc + row[k], 0);
+        const checks: Array<[string, number, number]> = [
+          ["leadsCreated", sum("leadsCreated"), a.leadsCreated],
+          ["visitsScheduled", sum("visitsScheduled"), a.visitsScheduled],
+          ["visitsCompleted", sum("visitsCompleted"), a.visitsCompleted],
+          ["wonContracts", sum("wonContracts"), a.wonContracts],
+          ["soldRevenue", sum("soldRevenue"), a.soldRevenue],
+        ];
+        for (const [name, s, k] of checks) {
+          if (s !== k) console.warn(`[marketing] inconsistência ${name}: sum(byCampaign)=${s} kpi=${k}`);
         }
       }
 
@@ -490,8 +533,13 @@ function MarketingPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="ml-auto text-xs text-slate-500">
+          <div className="ml-auto text-xs text-slate-500 text-right">
             {r.start} → {r.end}
+            <div className="text-[10px] text-slate-400 max-w-[280px]">
+              Cada métrica é contada pela data do evento no período
+              (lead = criação, visita = registro, contrato = assinatura).
+              Atribuição UTM herdada da oportunidade; sem UTM → (direct)/(none)/(not set).
+            </div>
           </div>
         </div>
 
