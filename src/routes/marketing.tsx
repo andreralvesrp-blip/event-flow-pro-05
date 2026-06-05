@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { useUnit } from "@/contexts/UnitContext";
+import { useAuth } from "@/hooks/useAuth";
 import {
   getMarketingOverview,
   type MarketingOverview,
@@ -135,6 +136,8 @@ function incDaily(map: Map<string, number>, key: string, by = 1) {
 
 function MarketingPage() {
   const { unitFilter } = useUnit();
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin" || profile?.tenant_role === "owner";
   const [range, setRange] = useState<RangeKey>("30d");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [mediumFilter, setMediumFilter] = useState<string>("all");
@@ -150,6 +153,24 @@ function MarketingPage() {
     formOpenFloat: number;
     daily: { date: string; sessions: number; formOpenCta: number; formOpenFloat: number }[];
     byCampaign: { source: string; medium: string; campaign: string; sessions: number; formOpens: number }[];
+  } | null>(null);
+  type MevRow = {
+    created_at: string;
+    event_name: string;
+    form_slug: string | null;
+    tenant_id: string | null;
+    unit_id: string | null;
+    session_id: string | null;
+    utm_source: string | null;
+    utm_medium: string | null;
+    utm_campaign: string | null;
+  };
+  const [mevDebug, setMevDebug] = useState<{
+    total: number;
+    byEvent: Record<string, number>;
+    rows: MevRow[];
+    error: string | null;
+    period: { start: string; end: string };
   } | null>(null);
 
   const fetchOverview = useServerFn(getMarketingOverview);
@@ -372,15 +393,24 @@ function MarketingPage() {
         const { data: mev, error: mevErr } = await mevQ;
         if (cancel) return;
 
+        const byEventCount: Record<string, number> = {};
+        for (const e of mev ?? []) byEventCount[e.event_name] = (byEventCount[e.event_name] ?? 0) + 1;
+        if (!cancel) {
+          setMevDebug({
+            total: (mev ?? []).length,
+            byEvent: byEventCount,
+            rows: (mev ?? []).slice(0, 20) as MevRow[],
+            error: mevErr?.message ?? null,
+            period: { start: startIso, end: endIso },
+          });
+        }
         if (import.meta.env.DEV) {
-          const byEvent: Record<string, number> = {};
-          for (const e of mev ?? []) byEvent[e.event_name] = (byEvent[e.event_name] ?? 0) + 1;
           console.info("[marketing] marketing_events debug", {
             period: { start: startIso, end: endIso },
             unitFilter,
             error: mevErr?.message ?? null,
             total: (mev ?? []).length,
-            byEvent,
+            byEvent: byEventCount,
             last20: (mev ?? []).slice(0, 20),
           });
         }
@@ -845,6 +875,75 @@ function MarketingPage() {
             </div>
           </CardContent>
         </Card>
+        {/* Debug admin: marketing_events */}
+        {isAdmin && mevDebug && (
+          <Card className="border-amber-200 bg-amber-50/30">
+            <CardHeader>
+              <CardTitle className="text-base">
+                Debug · marketing_events{" "}
+                <span className="text-xs font-normal text-slate-500">
+                  ({mevDebug.period.start} → {mevDebug.period.end}
+                  {unitFilter ? ` · unit=${unitFilter.slice(0, 8)}…` : " · todas as unidades"})
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs">
+              <div className="flex flex-wrap gap-4">
+                <div>
+                  <span className="text-slate-500">Total no período:</span>{" "}
+                  <strong>{fmtInt(mevDebug.total)}</strong>
+                </div>
+                {Object.entries(mevDebug.byEvent).map(([k, v]) => (
+                  <div key={k}>
+                    <span className="text-slate-500">{k}:</span> <strong>{fmtInt(v)}</strong>
+                  </div>
+                ))}
+                {mevDebug.error && (
+                  <div className="text-red-700">
+                    Erro: <code>{mevDebug.error}</code>
+                  </div>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>created_at</TableHead>
+                      <TableHead>event_name</TableHead>
+                      <TableHead>form_slug</TableHead>
+                      <TableHead>unit_id</TableHead>
+                      <TableHead>session_id</TableHead>
+                      <TableHead>utm_source</TableHead>
+                      <TableHead>utm_medium</TableHead>
+                      <TableHead>utm_campaign</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mevDebug.rows.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-slate-500 py-4">
+                          Nenhum evento.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {mevDebug.rows.map((r, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-mono">{r.created_at.slice(0, 19).replace("T", " ")}</TableCell>
+                        <TableCell>{r.event_name}</TableCell>
+                        <TableCell>{r.form_slug ?? "—"}</TableCell>
+                        <TableCell className="font-mono">{r.unit_id ? r.unit_id.slice(0, 8) + "…" : "—"}</TableCell>
+                        <TableCell className="font-mono">{r.session_id ? r.session_id.slice(0, 16) : "—"}</TableCell>
+                        <TableCell>{r.utm_source ?? "—"}</TableCell>
+                        <TableCell>{r.utm_medium ?? "—"}</TableCell>
+                        <TableCell>{r.utm_campaign ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppLayout>
   );
