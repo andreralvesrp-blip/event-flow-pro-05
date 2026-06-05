@@ -7,7 +7,12 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
 import { createHash } from "crypto";
 
-const ALLOWED_EVENTS = new Set(["site_session", "form_open_cta", "form_open_float"]);
+const ALLOWED_EVENTS = new Set([
+  "site_session",
+  "page_view",
+  "form_open_cta",
+  "form_open_float",
+]);
 
 const Body = z.object({
   event_name: z.string().min(1).max(64),
@@ -25,6 +30,7 @@ const Body = z.object({
   gclid: z.string().max(512).nullish(),
   fbclid: z.string().max(512).nullish(),
   session_id: z.string().max(128).nullish(),
+  visitor_id: z.string().max(128).nullish(),
 });
 
 // best-effort rate limit (per worker instance)
