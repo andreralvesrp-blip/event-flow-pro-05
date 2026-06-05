@@ -453,10 +453,14 @@ function MarketingPage() {
   }, [r.start, r.end, unitFilter, sourceFilter, mediumFilter, campaignFilter, fetchOverview]);
 
 
-  // Derived
-  const sessions = ga?.sessions ?? 0;
-  const users = ga?.users ?? 0;
-  const formOpens = ga?.formOpens ?? 0;
+  // Derived — usa GA4 quando configurado, senão fallback first-party (marketing_events)
+  const useGa = !!ga?.gaConfigured;
+  const siteSource = useGa ? ga : firstParty;
+  const sessions = siteSource?.sessions ?? 0;
+  const users = siteSource?.users ?? 0;
+  const formOpens = siteSource?.formOpens ?? 0;
+  const formOpenCtaTotal = siteSource?.formOpenCta ?? 0;
+  const formOpenFloatTotal = siteSource?.formOpenFloat ?? 0;
 
   const leadConvRate = formOpens > 0 ? agg.leadsCreated / formOpens : 0;
   const visitSchedRate = agg.leadsCreated > 0 ? agg.visitsScheduled / agg.leadsCreated : 0;
@@ -465,6 +469,7 @@ function MarketingPage() {
   const siteToVisit = sessions > 0 ? agg.visitsCompleted / sessions : 0;
   const siteToSale = sessions > 0 ? agg.wonContracts / sessions : 0;
   const formOpenRate = sessions > 0 ? formOpens / sessions : 0;
+
 
   // Build daily series
   const dailyMap = new Map<
