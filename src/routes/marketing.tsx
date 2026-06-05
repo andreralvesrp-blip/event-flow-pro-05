@@ -669,7 +669,7 @@ function MarketingPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
           <Kpi label="Usuários do site" value={fmtInt(users)} loading={loading} />
           <Kpi label="Sessões" value={fmtInt(sessions)} loading={loading} />
-          <Kpi label="Aberturas do form" value={fmtInt(formOpens)} sub={`CTA ${fmtInt(ga?.formOpenCta ?? 0)} · Float ${fmtInt(ga?.formOpenFloat ?? 0)}`} loading={loading} />
+          <Kpi label="Aberturas do form" value={fmtInt(formOpens)} sub={`CTA ${fmtInt(formOpenCtaTotal)} · Float ${fmtInt(formOpenFloatTotal)}`} loading={loading} />
           <Kpi label="Leads criados" value={fmtInt(agg.leadsCreated)} loading={loading} />
           <Kpi label="Visitas agendadas" value={fmtInt(agg.visitsScheduled)} loading={loading} />
           <Kpi
@@ -819,11 +819,11 @@ function MarketingPage() {
           <CardContent className="grid grid-cols-2 gap-4">
             <div className="rounded-lg border p-4">
               <div className="text-xs text-slate-500">CTA do site (form_open_cta)</div>
-              <div className="text-2xl font-semibold">{fmtInt(ga?.formOpenCta ?? 0)}</div>
+              <div className="text-2xl font-semibold">{fmtInt(formOpenCtaTotal)}</div>
             </div>
             <div className="rounded-lg border p-4">
               <div className="text-xs text-slate-500">Botão flutuante (form_open_float)</div>
-              <div className="text-2xl font-semibold">{fmtInt(ga?.formOpenFloat ?? 0)}</div>
+              <div className="text-2xl font-semibold">{fmtInt(formOpenFloatTotal)}</div>
             </div>
           </CardContent>
         </Card>
