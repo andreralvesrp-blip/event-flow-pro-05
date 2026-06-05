@@ -846,6 +846,7 @@ function MarketingPage() {
                     <TableHead>Source</TableHead>
                     <TableHead>Medium</TableHead>
                     <TableHead>Campaign</TableHead>
+                    <TableHead className="text-right">Pageviews</TableHead>
                     <TableHead className="text-right">Sessões</TableHead>
                     <TableHead className="text-right">Aberturas</TableHead>
                     <TableHead className="text-right">Leads</TableHead>
