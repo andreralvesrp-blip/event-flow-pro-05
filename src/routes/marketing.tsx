@@ -142,8 +142,18 @@ function MarketingPage() {
   const [loading, setLoading] = useState(true);
   const [agg, setAgg] = useState<SbAgg>(emptyAgg());
   const [ga, setGa] = useState<MarketingOverview | null>(null);
+  const [firstParty, setFirstParty] = useState<{
+    sessions: number;
+    users: number;
+    formOpens: number;
+    formOpenCta: number;
+    formOpenFloat: number;
+    daily: { date: string; sessions: number; formOpenCta: number; formOpenFloat: number }[];
+    byCampaign: { source: string; medium: string; campaign: string; sessions: number; formOpens: number }[];
+  } | null>(null);
 
   const fetchOverview = useServerFn(getMarketingOverview);
+
 
   const r = useMemo(() => rangeFor(range), [range]);
 
