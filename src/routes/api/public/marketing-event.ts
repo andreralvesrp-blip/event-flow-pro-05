@@ -61,21 +61,26 @@ export const Route = createFileRoute("/api/public/marketing-event")({
         try {
           // Accept any Content-Type (sendBeacon may send text/plain or application/json)
           const text = await request.text().catch(() => "");
+          console.log("[marketing-event] received", {
+            content_type: request.headers.get("content-type"),
+            length: text.length,
+          });
           let raw: unknown = null;
           try { raw = text ? JSON.parse(text) : null; } catch { raw = null; }
           const parsed = Body.safeParse(raw);
           if (!parsed.success) {
-            return new Response(JSON.stringify({ error: "invalid_body" }), {
-              status: 400,
-              headers: { "Content-Type": "application/json", ...corsHeaders() },
-            });
+            console.log("[marketing-event] invalid_body", parsed.error.message);
+            return new Response(
+              JSON.stringify({ ok: false, inserted: false, error: "invalid_body", detail: parsed.error.message }),
+              { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+            );
           }
           const b = parsed.data;
           if (!ALLOWED_EVENTS.has(b.event_name)) {
-            return new Response(JSON.stringify({ error: "invalid_event" }), {
-              status: 400,
-              headers: { "Content-Type": "application/json", ...corsHeaders() },
-            });
+            return new Response(
+              JSON.stringify({ ok: false, inserted: false, event_name: b.event_name, error: "invalid_event" }),
+              { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+            );
           }
 
           const ip =
@@ -84,10 +89,10 @@ export const Route = createFileRoute("/api/public/marketing-event")({
             "0.0.0.0";
           const rlKey = `${b.session_id || ip}:${b.event_name}`;
           if (rateLimited(rlKey)) {
-            return new Response(JSON.stringify({ error: "rate_limited" }), {
-              status: 429,
-              headers: { "Content-Type": "application/json", ...corsHeaders() },
-            });
+            return new Response(
+              JSON.stringify({ ok: false, inserted: false, event_name: b.event_name, error: "rate_limited" }),
+              { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+            );
           }
 
           // Resolve form -> tenant/unit
@@ -96,11 +101,26 @@ export const Route = createFileRoute("/api/public/marketing-event")({
             .select("id, tenant_id, unit_id, active")
             .eq("slug", b.form_slug)
             .maybeSingle();
+          console.log("[marketing-event] resolved form", {
+            form_slug: b.form_slug,
+            found: !!form,
+            active: form?.active ?? null,
+            tenant_id: form?.tenant_id ?? null,
+            unit_id: form?.unit_id ?? null,
+            err: formErr?.message ?? null,
+          });
           if (formErr || !form || !form.active) {
-            return new Response(JSON.stringify({ error: "unknown_form" }), {
-              status: 404,
-              headers: { "Content-Type": "application/json", ...corsHeaders() },
-            });
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                inserted: false,
+                event_name: b.event_name,
+                form_slug: b.form_slug,
+                error: "unknown_form",
+                detail: formErr?.message ?? null,
+              }),
+              { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+            );
           }
 
           const ipHash = createHash("sha256")
@@ -110,55 +130,85 @@ export const Route = createFileRoute("/api/public/marketing-event")({
 
           const ua = request.headers.get("user-agent")?.slice(0, 512) ?? null;
 
-          const { error: insErr } = await supabaseAdmin.from("marketing_events").insert({
-            tenant_id: form.tenant_id,
-            unit_id: form.unit_id,
-            event_name: b.event_name,
-            form_slug: b.form_slug,
-            open_method: b.open_method ?? null,
-            page_location: b.page_location ?? null,
-            page_path: b.page_path ?? null,
-            referrer: b.referrer ?? null,
-            landing_page: b.landing_page ?? null,
-            utm_source: b.utm_source ?? null,
-            utm_medium: b.utm_medium ?? null,
-            utm_campaign: b.utm_campaign ?? null,
-            utm_content: b.utm_content ?? null,
-            utm_term: b.utm_term ?? null,
-            gclid: b.gclid ?? null,
-            fbclid: b.fbclid ?? null,
-            session_id: b.session_id ?? null,
-            user_agent: ua,
-            ip_hash: ipHash,
-          });
-
-          console.log("[marketing-event]", {
-            event_name: b.event_name,
-            form_slug: b.form_slug,
-            tenant_id: form.tenant_id,
-            unit_id: form.unit_id,
-            session_id: b.session_id ?? null,
-            ok: !insErr,
-            error: insErr?.message ?? null,
-          });
+          const { data: inserted, error: insErr } = await supabaseAdmin
+            .from("marketing_events")
+            .insert({
+              tenant_id: form.tenant_id,
+              unit_id: form.unit_id,
+              event_name: b.event_name,
+              form_slug: b.form_slug,
+              open_method: b.open_method ?? null,
+              page_location: b.page_location ?? null,
+              page_path: b.page_path ?? null,
+              referrer: b.referrer ?? null,
+              landing_page: b.landing_page ?? null,
+              utm_source: b.utm_source ?? null,
+              utm_medium: b.utm_medium ?? null,
+              utm_campaign: b.utm_campaign ?? null,
+              utm_content: b.utm_content ?? null,
+              utm_term: b.utm_term ?? null,
+              gclid: b.gclid ?? null,
+              fbclid: b.fbclid ?? null,
+              session_id: b.session_id ?? null,
+              user_agent: ua,
+              ip_hash: ipHash,
+            })
+            .select("id")
+            .maybeSingle();
 
           if (insErr) {
-            return new Response(JSON.stringify({ error: "insert_failed", detail: insErr.message }), {
-              status: 500,
-              headers: { "Content-Type": "application/json", ...corsHeaders() },
+            console.error("[marketing-event] insert error", {
+              event_name: b.event_name,
+              form_slug: b.form_slug,
+              tenant_id: form.tenant_id,
+              unit_id: form.unit_id,
+              session_id: b.session_id ?? null,
+              error: insErr.message,
             });
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                inserted: false,
+                event_name: b.event_name,
+                form_slug: b.form_slug,
+                tenant_id: form.tenant_id,
+                unit_id: form.unit_id,
+                session_id: b.session_id ?? null,
+                error: "insert_failed",
+                detail: insErr.message,
+              }),
+              { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+            );
           }
 
-          return new Response(JSON.stringify({ ok: true }), {
-            status: 200,
-            headers: { "Content-Type": "application/json", ...corsHeaders() },
+          console.log("[marketing-event] inserted", {
+            id: inserted?.id ?? null,
+            event_name: b.event_name,
+            form_slug: b.form_slug,
+            tenant_id: form.tenant_id,
+            unit_id: form.unit_id,
+            session_id: b.session_id ?? null,
           });
+
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              inserted: true,
+              id: inserted?.id ?? null,
+              event_name: b.event_name,
+              form_slug: b.form_slug,
+              tenant_id: form.tenant_id,
+              unit_id: form.unit_id,
+              session_id: b.session_id ?? null,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+          );
         } catch (err) {
-          console.error("marketing-event error", err);
-          return new Response(JSON.stringify({ error: "server_error" }), {
-            status: 500,
-            headers: { "Content-Type": "application/json", ...corsHeaders() },
-          });
+          console.error("[marketing-event] server_error", err);
+          return new Response(
+            JSON.stringify({ ok: false, inserted: false, error: "server_error", detail: (err as Error).message }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+          );
         }
       },
     },
