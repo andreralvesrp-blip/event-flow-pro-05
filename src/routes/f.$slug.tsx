@@ -1,5 +1,8 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/f/$slug")({
   component: PublicForm,
@@ -84,6 +87,13 @@ function ddmmyyyyToISO(input: string): string {
   return `${y}-${mo}-${d}`;
 }
 
+function dateToDDMMYYYY(date: Date): string {
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
 const PAGE_BG = "linear-gradient(135deg, #FFF0F5 0%, #EFF9FF 100%)";
 const HEADER_BG = "#F97316";
 const AVATAR_BG = "#F97316";
@@ -96,6 +106,7 @@ function PublicForm() {
   const [celebrantName, setCelebrantName] = useState("");
   const [celebrantAge, setCelebrantAge] = useState("");
   const [desiredDate, setDesiredDate] = useState("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -474,16 +485,47 @@ function PublicForm() {
                 {step === "date" && (
                   <form onSubmit={submitDate}>
                     <div className="flex gap-2">
-                      <input
-                        autoFocus
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={10}
-                        className="f-input"
-                        placeholder="DD/MM/AAAA"
-                        value={desiredDate}
-                        onChange={(e) => setDesiredDate(formatDateInput(e.target.value))}
-                      />
+                      <div className="flex-1 flex gap-2">
+                        <input
+                          autoFocus
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={10}
+                          className="f-input flex-1"
+                          placeholder="DD/MM/AAAA"
+                          value={desiredDate}
+                          onChange={(e) => setDesiredDate(formatDateInput(e.target.value))}
+                        />
+                        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="f-btn-inline"
+                              style={{ padding: "0 12px", minWidth: 44, display: "flex", alignItems: "center", justifyContent: "center" }}
+                              aria-label="Abrir calendário"
+                            >
+                              <CalendarIcon className="w-5 h-5" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 pointer-events-auto" align="end">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                isValidDateDDMMYYYY(desiredDate)
+                                  ? new Date(ddmmyyyyToISO(desiredDate) + "T00:00:00")
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  setDesiredDate(dateToDDMMYYYY(date));
+                                  setDatePickerOpen(false);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                       <button
                         type="submit"
                         className="f-btn-inline"
