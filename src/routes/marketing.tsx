@@ -287,7 +287,8 @@ function MarketingPage() {
   const convOpenLead = formOpens > 0 ? leadsCount / formOpens : 0;
   const convOpenLeadPrev = formOpensPrev > 0 ? prevLeadsCount / formOpensPrev : 0;
   const abandono = formOpens > 0 ? 1 - leadsCount / formOpens : 0;
-  const convUserLead = users > 0 ? leadsCount / users : 0;
+  const convUserOpen = users > 0 ? formOpens / users : 0;
+  const convUserOpenPrev = usersPrev > 0 ? formOpensPrev / usersPrev : 0;
 
   // Daily series (users/aperturas/leads)
   const leadsByDate = new Map<string, number>();
