@@ -650,9 +650,10 @@ function MarketingPage() {
 
         {/* GA4 status banner */}
         {ga && !ga.gaConfigured && (
-          <Card className="border-amber-200 bg-amber-50">
-            <CardContent className="p-4 text-sm text-amber-900">
-              <strong>GA4 não configurado.</strong> Os KPIs de site (sessões, usuários, aberturas do formulário) ficarão zerados até que sejam adicionados os secrets <code>GA4_PROPERTY_ID</code>, <code>GOOGLE_CLIENT_EMAIL</code> e <code>GOOGLE_PRIVATE_KEY</code> (service account com acesso de leitura à propriedade GA4).
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4 text-sm text-blue-900">
+              <strong>Modo first-party ativo.</strong> GA4 não está configurado — sessões e aberturas do formulário vêm da tabela <code>marketing_events</code>, alimentada pelo widget do site. Para complementar com dados de GA4 (incluindo sessões orgânicas e usuários únicos), adicione os secrets <code>GA4_PROPERTY_ID</code>, <code>GOOGLE_CLIENT_EMAIL</code> e <code>GOOGLE_PRIVATE_KEY</code>.
+
             </CardContent>
           </Card>
         )}
