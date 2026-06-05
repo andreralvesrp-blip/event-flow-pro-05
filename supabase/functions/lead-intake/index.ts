@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     if (!slug) return json({ error: "missing_slug" }, 400);
     const { data, error } = await admin
       .from("forms")
-      .select("name, welcome_message, active")
+      .select("name, welcome_message, active, attendant_name, attendant_avatar_url, attendant_online, privacy_policy_url")
       .eq("slug", slug)
       .maybeSingle();
     if (error) return json({ error: error.message }, 500);
