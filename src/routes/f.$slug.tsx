@@ -472,24 +472,31 @@ function PublicForm() {
                   </form>
                 )}
                 {step === "date" && (
-                  <form onSubmit={submitDate} className="flex gap-2">
-                    <input
-                      autoFocus
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={10}
-                      className="f-input"
-                      placeholder="DD/MM/AAAA"
-                      value={desiredDate}
-                      onChange={(e) => setDesiredDate(formatDateInput(e.target.value))}
-                    />
-                    <button
-                      type="submit"
-                      className="f-btn-inline"
-                      disabled={typing || !isValidDateDDMMYYYY(desiredDate)}
-                    >
-                      Enviar
-                    </button>
+                  <form onSubmit={submitDate}>
+                    <div className="flex gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={10}
+                        className="f-input"
+                        placeholder="DD/MM/AAAA"
+                        value={desiredDate}
+                        onChange={(e) => setDesiredDate(formatDateInput(e.target.value))}
+                      />
+                      <button
+                        type="submit"
+                        className="f-btn-inline"
+                        disabled={typing || !isValidDateDDMMYYYY(desiredDate)}
+                      >
+                        Enviar
+                      </button>
+                    </div>
+                    {desiredDate && !isValidDateDDMMYYYY(desiredDate) && (
+                      <div style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4, marginTop: 6 }}>
+                        Informe uma data válida no formato DD/MM/AAAA.
+                      </div>
+                    )}
                   </form>
                 )}
                 {step === "contact" && (
