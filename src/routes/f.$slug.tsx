@@ -38,6 +38,26 @@ function useTypingMessages() {
   return { messages, typing, pushBot, pushUser };
 }
 
+function formatPhone(input: string): string {
+  const d = input.replace(/\D/g, "").slice(0, 11);
+  if (d.length === 0) return "";
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10)
+    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+function isValidPhone(input: string): boolean {
+  const d = input.replace(/\D/g, "");
+  if (d.length !== 10 && d.length !== 11) return false;
+  const ddd = parseInt(d.slice(0, 2), 10);
+  if (ddd < 11 || ddd > 99) return false;
+  if (d.length === 11 && d[2] !== "9") return false;
+  if (/^(\d)\1+$/.test(d)) return false;
+  return true;
+}
+
 const PAGE_BG = "linear-gradient(135deg, #FFF0F5 0%, #EFF9FF 100%)";
 const HEADER_BG = "#F97316";
 const AVATAR_BG = "#F97316";
@@ -78,7 +98,9 @@ function PublicForm() {
         }
         setCfg(data);
         setStep("intro");
-        await pushBot("Oi! Vamos verificar a disponibilidade para a festa?");
+        await pushBot(
+          "Precisamos de algumas informações para te passar o orçamento, vai ser bem rápido!",
+        );
       } catch {
         setStep("unavailable");
       }
@@ -89,7 +111,7 @@ function PublicForm() {
   async function startConversation() {
     pushUser("Vamos lá");
     setStep("name");
-    await pushBot("Nome do aniversariante?");
+    await pushBot("Qual o nome do(a) aniversariante?");
   }
 
   async function submitName(e: React.FormEvent) {
@@ -97,7 +119,10 @@ function PublicForm() {
     if (!celebrantName.trim()) return;
     pushUser(celebrantName);
     setStep("age");
-    await pushBot(`Quantos anos o(a) ${celebrantName} vai fazer?`);
+    const first = celebrantName.trim().split(/\s+/)[0];
+    const last = first.slice(-1).toLowerCase();
+    const article = last === "a" ? "a " : last === "o" ? "o " : "";
+    await pushBot(`Quantos anos ${article}${first} vai fazer?`);
   }
 
   async function submitAge(e: React.FormEvent) {
@@ -106,7 +131,7 @@ function PublicForm() {
     if (!n || n < 1 || n > 17) return;
     pushUser(`${n} aninhos`);
     setStep("date");
-    await pushBot("Qual data você tem em mente?");
+    await pushBot("E qual a data para a festa?");
   }
 
   async function submitDate(e: React.FormEvent) {
@@ -116,13 +141,14 @@ function PublicForm() {
     pushUser(`${d}/${m}/${y}`);
     setStep("contact");
     await pushBot(
-      "Me passa seu nome e WhatsApp que eu verifico a disponibilidade pra você.",
+      "Pra finalizar, me diz seu nome e WhatsApp para te enviarmos o orçamento.",
     );
   }
 
   async function submitContact(e: React.FormEvent) {
     e.preventDefault();
-    if (!parentName.trim() || !parentPhone.trim()) return;
+    if (!parentName.trim()) return;
+    if (!isValidPhone(parentPhone)) return;
     pushUser(`${parentName} · ${parentPhone}`);
     setStep("submitting");
     await pushBot("Verificando...");
@@ -450,15 +476,21 @@ function PublicForm() {
                     />
                     <input
                       type="tel"
+                      inputMode="numeric"
                       className="f-input"
-                      placeholder="WhatsApp (ex: 11 91234-5678)"
+                      placeholder="WhatsApp (ex: (11) 91234-5678)"
                       value={parentPhone}
-                      onChange={(e) => setParentPhone(e.target.value)}
+                      onChange={(e) => setParentPhone(formatPhone(e.target.value))}
                     />
+                    {parentPhone && !isValidPhone(parentPhone) && (
+                      <div style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4 }}>
+                        Informe um WhatsApp válido com DDD.
+                      </div>
+                    )}
                     <button
                       type="submit"
                       className="f-btn-primary f-btn-green"
-                      disabled={typing || !parentName.trim() || !parentPhone.trim()}
+                      disabled={typing || !parentName.trim() || !isValidPhone(parentPhone)}
                     >
                       Verificar disponibilidade →
                     </button>
