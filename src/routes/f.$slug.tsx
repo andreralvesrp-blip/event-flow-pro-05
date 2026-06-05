@@ -263,9 +263,19 @@ function PublicForm() {
   const progress = progressByStep[step];
 
   const headerName = cfg?.name || "Kids Point";
+  const attendantName = cfg?.attendant_name?.trim() || headerName;
+  const attendantAvatar = cfg?.attendant_avatar_url?.trim() || "";
+  const attendantOnline = cfg?.attendant_online ?? true;
+  const privacyUrl = cfg?.privacy_policy_url?.trim() || "";
+  const attendantInitials = attendantName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
 
   return (
-    <div style={{ background: PAGE_BG, minHeight: "100vh" }} className="flex flex-col">
+    <div style={{ background: PAGE_BG, minHeight: "100vh" }} className="kp-page flex flex-col">
       <style>{`
         @keyframes popIn {
           from { opacity: 0; transform: scale(0.9) translateY(10px); }
@@ -285,12 +295,17 @@ function PublicForm() {
           50%       { box-shadow: 0 0 0 16px rgba(37, 211, 102, 0); }
         }
         .wa-icon { animation: wapulse 2s infinite; }
+        @keyframes dotpulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); }
+          50%       { box-shadow: 0 0 0 6px rgba(37, 211, 102, 0); }
+        }
+        .online-dot { animation: dotpulse 2s infinite; }
         .f-input {
           width: 100%;
           border: 2px solid #E5E7EB;
           border-radius: 14px;
-          padding: 12px 16px;
-          font-size: 15px;
+          padding: 14px 16px;
+          font-size: 16px;
           font-family: inherit;
           outline: none;
           transition: border-color 0.2s ease;
@@ -299,7 +314,7 @@ function PublicForm() {
         .f-input:focus { border-color: #F97316; }
         .f-btn-primary {
           width: 100%;
-          height: 52px;
+          height: 54px;
           border-radius: 16px;
           font-size: 16px;
           font-weight: 600;
@@ -315,18 +330,31 @@ function PublicForm() {
         .f-btn-green { background: linear-gradient(135deg, #10B981, #059669); box-shadow: 0 4px 20px rgba(16,185,129,0.35); }
         .f-btn-green:not(:disabled):hover { box-shadow: 0 6px 24px rgba(16,185,129,0.5); }
         .f-btn-inline {
-          height: 48px; padding: 0 18px; border-radius: 14px; font-size: 15px; font-weight: 600;
+          height: 50px; padding: 0 18px; border-radius: 14px; font-size: 15px; font-weight: 600;
           color: white; border: none; cursor: pointer; background: linear-gradient(135deg, #F97316, #EC4899);
           box-shadow: 0 4px 14px rgba(249,115,22,0.3);
           transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
         .f-btn-inline:disabled { opacity: 0.6; cursor: not-allowed; }
         .f-btn-inline:not(:disabled):hover { transform: translateY(-1px); }
+
+        @media (max-width: 640px) {
+          .kp-page { background: white !important; }
+          .kp-shell-wrap { padding: 0 !important; align-items: stretch !important; }
+          .kp-shell {
+            max-width: none !important;
+            width: 100% !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+          }
+        }
       `}</style>
 
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="flex-1 flex items-center justify-center p-4 kp-shell-wrap">
         <div
-          className="w-full max-w-[480px] flex flex-col bg-white rounded-3xl overflow-hidden"
+          className="kp-shell w-full max-w-[480px] flex flex-col bg-white rounded-3xl overflow-hidden"
           style={{
             boxShadow: "0 20px 60px -10px rgba(236, 72, 153, 0.25), 0 8px 24px -8px rgba(0,0,0,0.1)",
             height: "min(720px, calc(100vh - 32px))",
@@ -335,32 +363,95 @@ function PublicForm() {
           {/* HEADER */}
           <div style={{ background: HEADER_BG, padding: "14px 16px 12px" }}>
             <div className="flex items-center gap-3">
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  background: "rgba(255,255,255,0.2)",
-                  borderRadius: 10,
-                }}
-                className="flex items-center justify-center text-white text-[18px]"
-              >
-                🎂
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    background: "rgba(255,255,255,0.25)",
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    border: "2px solid rgba(255,255,255,0.6)",
+                  }}
+                  className="flex items-center justify-center text-white font-semibold"
+                >
+                  {attendantAvatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={attendantAvatar}
+                      alt={attendantName}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 14 }}>{attendantInitials || "KP"}</span>
+                  )}
+                </div>
+                {attendantOnline && (
+                  <span
+                    className="online-dot"
+                    style={{
+                      position: "absolute",
+                      right: -1,
+                      bottom: -1,
+                      width: 13,
+                      height: 13,
+                      background: "#25D366",
+                      borderRadius: "50%",
+                      border: "2px solid #fff",
+                    }}
+                  />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div style={{ fontSize: 15, fontWeight: 600, color: "white", lineHeight: 1.2 }}>
-                  {headerName}
+                  {attendantName}
                 </div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", lineHeight: 1.3 }}>
-                  Buffet infantil
+                <div
+                  style={{ fontSize: 12, color: "rgba(255,255,255,0.9)", lineHeight: 1.3 }}
+                  className="flex items-center gap-1.5 mt-0.5"
+                >
+                  {attendantOnline && (
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        background: "#25D366",
+                        borderRadius: "50%",
+                        display: "inline-block",
+                      }}
+                    />
+                  )}
+                  {attendantOnline ? "Online agora" : headerName}
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={closeWidget}
+                aria-label="Fechar"
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "rgba(0,0,0,0.18)",
+                  color: "white",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
             </div>
             <div className="flex gap-1.5 mt-3">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
                   style={{
-                    width: 28,
+                    flex: 1,
                     height: 4,
                     borderRadius: 2,
                     background:
@@ -371,6 +462,7 @@ function PublicForm() {
               ))}
             </div>
           </div>
+
 
           {/* BODY */}
           {step === "loading" ? (
