@@ -445,25 +445,57 @@ function MarketingPage() {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
-          <Kpi label="Usuários" value={fmtInt(users)} delta={deltaPct(users, usersPrev)} loading={loading} />
-          <Kpi label="Sessões" value={fmtInt(sessions)} delta={deltaPct(sessions, sessionsPrev)} loading={loading} />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* Volume do funil */}
+          <Kpi
+            label="Usuários"
+            value={fmtInt(users)}
+            subtitle="Base do funil"
+            variant="volume"
+            delta={deltaPct(users, usersPrev)}
+            loading={loading}
+          />
           <Kpi
             label="Aberturas do form"
             value={fmtInt(formOpens)}
-            sub={`CTA ${fmtInt(formOpenCta)} · Float ${fmtInt(formOpenFloat)}`}
+            subtitle={users > 0 ? `${fmtPct(formOpens, users)} dos usuários abriram o form` : "—"}
+            variant="volume"
             delta={deltaPct(formOpens, formOpensPrev)}
             loading={loading}
           />
-          <Kpi label="Leads" value={fmtInt(leadsCount)} delta={deltaPct(leadsCount, prevLeadsCount)} loading={loading} highlight />
+          <Kpi
+            label="Leads"
+            value={fmtInt(leadsCount)}
+            subtitle={formOpens > 0 ? `${fmtPct(leadsCount, formOpens)} das aberturas viraram lead` : "—"}
+            variant="volume"
+            delta={deltaPct(leadsCount, prevLeadsCount)}
+            loading={loading}
+          />
+          {/* Eficiência do funil */}
+          <Kpi
+            label="Conv. usuário → abertura"
+            value={fmtPct(formOpens, users)}
+            subtitle="Aberturas / usuários"
+            variant="conversion"
+            delta={deltaPct(convUserOpen * 1000, convUserOpenPrev * 1000)}
+            loading={loading}
+          />
           <Kpi
             label="Conv. abertura → lead"
             value={fmtPct(leadsCount, formOpens)}
+            subtitle="Leads / aberturas"
+            variant="conversion"
             delta={deltaPct(convOpenLead * 1000, convOpenLeadPrev * 1000)}
             loading={loading}
           />
-          <Kpi label="Abandono do form" value={formOpens > 0 ? `${(abandono * 100).toFixed(1)}%` : "—"} loading={loading} />
-          <Kpi label="Conv. usuário → lead" value={fmtPct(leadsCount, users)} loading={loading} />
+          <Kpi
+            label="Abandono do form"
+            value={formOpens > 0 ? `${(abandono * 100).toFixed(1)}%` : "—"}
+            subtitle="Aberturas sem lead"
+            variant="conversion"
+            delta={deltaPct(abandono * 1000, formOpensPrev > 0 ? (1 - prevLeadsCount / formOpensPrev) * 1000 : 0)}
+            loading={loading}
+          />
         </div>
 
         {/* Série diária */}
