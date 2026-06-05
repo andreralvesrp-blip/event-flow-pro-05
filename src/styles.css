@@ -99,6 +99,10 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+  --kpi-volume-bg: oklch(0.97 0.015 245);
+  --kpi-volume-border: oklch(0.82 0.04 245);
+  --kpi-conversion-bg: oklch(0.97 0.015 150);
+  --kpi-conversion-border: oklch(0.82 0.04 150);
 }
 
 .dark {
