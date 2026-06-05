@@ -39,7 +39,7 @@ function ConfiguracoesIndex() {
       { to: "/configuracoes/equipe", title: "Equipe", desc: "Defina quais unidades cada pessoa acessa.", icon: Users, enabled: true, group: "Administração" },
     ] : []),
     { to: "#", title: "Dados da empresa", desc: "Nome do buffet, CNPJ e informações da contratada.", icon: Building2, enabled: false, group: "Administração" },
-    { to: "#", title: "Integrações", desc: "Clicksign, WhatsApp e outras integrações.", icon: Plug, enabled: false, group: "Administração" },
+    { to: "/configuracoes/integracoes", title: "Integrações", desc: "Conecte o Google Analytics e outras integrações.", icon: Plug, enabled: true, group: "Administração" },
   ];
 
   const captura = cards.filter((c) => c.group === "Captura de leads");
