@@ -875,6 +875,75 @@ function MarketingPage() {
             </div>
           </CardContent>
         </Card>
+        {/* Debug admin: marketing_events */}
+        {isAdmin && mevDebug && (
+          <Card className="border-amber-200 bg-amber-50/30">
+            <CardHeader>
+              <CardTitle className="text-base">
+                Debug · marketing_events{" "}
+                <span className="text-xs font-normal text-slate-500">
+                  ({mevDebug.period.start} → {mevDebug.period.end}
+                  {unitFilter ? ` · unit=${unitFilter.slice(0, 8)}…` : " · todas as unidades"})
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs">
+              <div className="flex flex-wrap gap-4">
+                <div>
+                  <span className="text-slate-500">Total no período:</span>{" "}
+                  <strong>{fmtInt(mevDebug.total)}</strong>
+                </div>
+                {Object.entries(mevDebug.byEvent).map(([k, v]) => (
+                  <div key={k}>
+                    <span className="text-slate-500">{k}:</span> <strong>{fmtInt(v)}</strong>
+                  </div>
+                ))}
+                {mevDebug.error && (
+                  <div className="text-red-700">
+                    Erro: <code>{mevDebug.error}</code>
+                  </div>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>created_at</TableHead>
+                      <TableHead>event_name</TableHead>
+                      <TableHead>form_slug</TableHead>
+                      <TableHead>unit_id</TableHead>
+                      <TableHead>session_id</TableHead>
+                      <TableHead>utm_source</TableHead>
+                      <TableHead>utm_medium</TableHead>
+                      <TableHead>utm_campaign</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mevDebug.rows.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-slate-500 py-4">
+                          Nenhum evento.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {mevDebug.rows.map((r, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-mono">{r.created_at.slice(0, 19).replace("T", " ")}</TableCell>
+                        <TableCell>{r.event_name}</TableCell>
+                        <TableCell>{r.form_slug ?? "—"}</TableCell>
+                        <TableCell className="font-mono">{r.unit_id ? r.unit_id.slice(0, 8) + "…" : "—"}</TableCell>
+                        <TableCell className="font-mono">{r.session_id ? r.session_id.slice(0, 16) : "—"}</TableCell>
+                        <TableCell>{r.utm_source ?? "—"}</TableCell>
+                        <TableCell>{r.utm_medium ?? "—"}</TableCell>
+                        <TableCell>{r.utm_campaign ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppLayout>
   );
