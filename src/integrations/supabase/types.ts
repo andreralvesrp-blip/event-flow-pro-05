@@ -1025,6 +1025,93 @@ export type Database = {
           },
         ]
       }
+      marketing_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          fbclid: string | null
+          form_slug: string | null
+          gclid: string | null
+          id: string
+          ip_hash: string | null
+          landing_page: string | null
+          open_method: string | null
+          page_location: string | null
+          page_path: string | null
+          referrer: string | null
+          session_id: string | null
+          tenant_id: string
+          unit_id: string | null
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          fbclid?: string | null
+          form_slug?: string | null
+          gclid?: string | null
+          id?: string
+          ip_hash?: string | null
+          landing_page?: string | null
+          open_method?: string | null
+          page_location?: string | null
+          page_path?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          tenant_id: string
+          unit_id?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          fbclid?: string | null
+          form_slug?: string | null
+          gclid?: string | null
+          id?: string
+          ip_hash?: string | null
+          landing_page?: string | null
+          open_method?: string | null
+          page_location?: string | null
+          page_path?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          tenant_id?: string
+          unit_id?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_events_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nps_responses: {
         Row: {
           classification: Database["public"]["Enums"]["nps_classification"]

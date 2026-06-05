@@ -142,8 +142,18 @@ function MarketingPage() {
   const [loading, setLoading] = useState(true);
   const [agg, setAgg] = useState<SbAgg>(emptyAgg());
   const [ga, setGa] = useState<MarketingOverview | null>(null);
+  const [firstParty, setFirstParty] = useState<{
+    sessions: number;
+    users: number;
+    formOpens: number;
+    formOpenCta: number;
+    formOpenFloat: number;
+    daily: { date: string; sessions: number; formOpenCta: number; formOpenFloat: number }[];
+    byCampaign: { source: string; medium: string; campaign: string; sessions: number; formOpens: number }[];
+  } | null>(null);
 
   const fetchOverview = useServerFn(getMarketingOverview);
+
 
   const r = useMemo(() => rangeFor(range), [range]);
 
@@ -346,6 +356,94 @@ function MarketingPage() {
           });
       }
 
+      // ----- First-party marketing_events (fallback / sempre p/ form opens) -----
+      try {
+        let mevQ = supabase
+          .from("marketing_events")
+          .select("event_name, session_id, created_at, utm_source, utm_medium, utm_campaign")
+          .gte("created_at", `${r.start}T00:00:00`)
+          .lte("created_at", `${r.end}T23:59:59`)
+          .limit(50000);
+        if (unitFilter) mevQ = mevQ.eq("unit_id", unitFilter);
+        const { data: mev } = await mevQ;
+        if (cancel) return;
+
+        const sessSet = new Set<string>();
+        const dailyMap = new Map<
+          string,
+          { date: string; sessions: number; formOpenCta: number; formOpenFloat: number; _sess: Set<string> }
+        >();
+        const campMap = new Map<
+          string,
+          { source: string; medium: string; campaign: string; sessions: number; formOpens: number; _sess: Set<string> }
+        >();
+        let openCta = 0, openFloat = 0;
+
+        const ensureDay = (d: string) => {
+          let row = dailyMap.get(d);
+          if (!row) {
+            row = { date: d, sessions: 0, formOpenCta: 0, formOpenFloat: 0, _sess: new Set() };
+            dailyMap.set(d, row);
+          }
+          return row;
+        };
+        const ensureCamp = (s: string, m: string, c: string) => {
+          const k = `${s}|${m}|${c}`;
+          let row = campMap.get(k);
+          if (!row) {
+            row = { source: s, medium: m, campaign: c, sessions: 0, formOpens: 0, _sess: new Set() };
+            campMap.set(k, row);
+          }
+          return row;
+        };
+
+        for (const e of mev ?? []) {
+          const date = (e.created_at as string).slice(0, 10);
+          const drow = ensureDay(date);
+          const src = e.utm_source || "(direct)";
+          const med = e.utm_medium || "(none)";
+          const camp = e.utm_campaign || "(not set)";
+          const crow = ensureCamp(src, med, camp);
+          const sk = e.session_id || `_${e.created_at}`;
+
+          if (e.event_name === "site_session") {
+            sessSet.add(sk);
+            if (!drow._sess.has(sk)) { drow._sess.add(sk); drow.sessions++; }
+            if (!crow._sess.has(sk)) { crow._sess.add(sk); crow.sessions++; }
+          } else if (e.event_name === "form_open_cta") {
+            openCta++;
+            drow.formOpenCta++;
+            crow.formOpens++;
+          } else if (e.event_name === "form_open_float") {
+            openFloat++;
+            drow.formOpenFloat++;
+            crow.formOpens++;
+          }
+        }
+
+        const daily = Array.from(dailyMap.values())
+          .map((d) => ({ date: d.date, sessions: d.sessions, formOpenCta: d.formOpenCta, formOpenFloat: d.formOpenFloat }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        const byCampaign = Array.from(campMap.values()).map((c) => ({
+          source: c.source, medium: c.medium, campaign: c.campaign,
+          sessions: c.sessions, formOpens: c.formOpens,
+        }));
+
+        if (!cancel) {
+          setFirstParty({
+            sessions: sessSet.size,
+            users: sessSet.size,
+            formOpens: openCta + openFloat,
+            formOpenCta: openCta,
+            formOpenFloat: openFloat,
+            daily,
+            byCampaign,
+          });
+        }
+      } catch (e) {
+        if (!cancel) setFirstParty(null);
+      }
+
       setLoading(false);
     }
     load();
@@ -354,10 +452,15 @@ function MarketingPage() {
     };
   }, [r.start, r.end, unitFilter, sourceFilter, mediumFilter, campaignFilter, fetchOverview]);
 
-  // Derived
-  const sessions = ga?.sessions ?? 0;
-  const users = ga?.users ?? 0;
-  const formOpens = ga?.formOpens ?? 0;
+
+  // Derived — usa GA4 quando configurado, senão fallback first-party (marketing_events)
+  const useGa = !!ga?.gaConfigured;
+  const siteSource = useGa ? ga : firstParty;
+  const sessions = siteSource?.sessions ?? 0;
+  const users = siteSource?.users ?? 0;
+  const formOpens = siteSource?.formOpens ?? 0;
+  const formOpenCtaTotal = siteSource?.formOpenCta ?? 0;
+  const formOpenFloatTotal = siteSource?.formOpenFloat ?? 0;
 
   const leadConvRate = formOpens > 0 ? agg.leadsCreated / formOpens : 0;
   const visitSchedRate = agg.leadsCreated > 0 ? agg.visitsScheduled / agg.leadsCreated : 0;
@@ -366,6 +469,7 @@ function MarketingPage() {
   const siteToVisit = sessions > 0 ? agg.visitsCompleted / sessions : 0;
   const siteToSale = sessions > 0 ? agg.wonContracts / sessions : 0;
   const formOpenRate = sessions > 0 ? formOpens / sessions : 0;
+
 
   // Build daily series
   const dailyMap = new Map<
@@ -396,7 +500,7 @@ function MarketingPage() {
     }
     return row;
   }
-  (ga?.daily ?? []).forEach((g) => {
+  (siteSource?.daily ?? []).forEach((g) => {
     const row = ensureDay(g.date);
     row.sessions = g.sessions;
     row.formOpens = g.formOpenCta + g.formOpenFloat;
@@ -409,7 +513,7 @@ function MarketingPage() {
     a.date.localeCompare(b.date),
   );
 
-  // Merge campaign tables (GA4 sessions/formOpens + Supabase conversions)
+  // Merge campaign tables (site sessions/formOpens + Supabase conversions)
   const campTable = new Map<
     string,
     {
@@ -447,11 +551,12 @@ function MarketingPage() {
     }
     return row;
   }
-  (ga?.byCampaign ?? []).forEach((g) => {
+  (siteSource?.byCampaign ?? []).forEach((g) => {
     const r = getCamp(g.source, g.medium, g.campaign);
     r.sessions = g.sessions;
     r.formOpens = g.formOpens;
   });
+
   agg.byCampaign.forEach((g) => {
     const r = getCamp(g.source, g.medium, g.campaign);
     r.leadsCreated = g.leadsCreated;
@@ -545,9 +650,10 @@ function MarketingPage() {
 
         {/* GA4 status banner */}
         {ga && !ga.gaConfigured && (
-          <Card className="border-amber-200 bg-amber-50">
-            <CardContent className="p-4 text-sm text-amber-900">
-              <strong>GA4 não configurado.</strong> Os KPIs de site (sessões, usuários, aberturas do formulário) ficarão zerados até que sejam adicionados os secrets <code>GA4_PROPERTY_ID</code>, <code>GOOGLE_CLIENT_EMAIL</code> e <code>GOOGLE_PRIVATE_KEY</code> (service account com acesso de leitura à propriedade GA4).
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4 text-sm text-blue-900">
+              <strong>Modo first-party ativo.</strong> GA4 não está configurado — sessões e aberturas do formulário vêm da tabela <code>marketing_events</code>, alimentada pelo widget do site. Para complementar com dados de GA4 (incluindo sessões orgânicas e usuários únicos), adicione os secrets <code>GA4_PROPERTY_ID</code>, <code>GOOGLE_CLIENT_EMAIL</code> e <code>GOOGLE_PRIVATE_KEY</code>.
+
             </CardContent>
           </Card>
         )}
@@ -563,7 +669,7 @@ function MarketingPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
           <Kpi label="Usuários do site" value={fmtInt(users)} loading={loading} />
           <Kpi label="Sessões" value={fmtInt(sessions)} loading={loading} />
-          <Kpi label="Aberturas do form" value={fmtInt(formOpens)} sub={`CTA ${fmtInt(ga?.formOpenCta ?? 0)} · Float ${fmtInt(ga?.formOpenFloat ?? 0)}`} loading={loading} />
+          <Kpi label="Aberturas do form" value={fmtInt(formOpens)} sub={`CTA ${fmtInt(formOpenCtaTotal)} · Float ${fmtInt(formOpenFloatTotal)}`} loading={loading} />
           <Kpi label="Leads criados" value={fmtInt(agg.leadsCreated)} loading={loading} />
           <Kpi label="Visitas agendadas" value={fmtInt(agg.visitsScheduled)} loading={loading} />
           <Kpi
@@ -713,11 +819,11 @@ function MarketingPage() {
           <CardContent className="grid grid-cols-2 gap-4">
             <div className="rounded-lg border p-4">
               <div className="text-xs text-slate-500">CTA do site (form_open_cta)</div>
-              <div className="text-2xl font-semibold">{fmtInt(ga?.formOpenCta ?? 0)}</div>
+              <div className="text-2xl font-semibold">{fmtInt(formOpenCtaTotal)}</div>
             </div>
             <div className="rounded-lg border p-4">
               <div className="text-xs text-slate-500">Botão flutuante (form_open_float)</div>
-              <div className="text-2xl font-semibold">{fmtInt(ga?.formOpenFloat ?? 0)}</div>
+              <div className="text-2xl font-semibold">{fmtInt(formOpenFloatTotal)}</div>
             </div>
           </CardContent>
         </Card>

@@ -121,6 +121,7 @@ function publicOrigin(origin: string) {
 function buildWidgetScript(row: FormRow, rawOrigin: string) {
   const origin = publicOrigin(rawOrigin);
   const formUrl = `${origin}/f/${row.slug}`;
+  const eventEndpoint = `${origin}/api/public/marketing-event`;
   const delay = row.widget_delay ?? "null";
   const av = (row.widget_avatar_url ?? "").replace(/'/g, "\\'");
   const m1 = (row.widget_msg_1 ?? "").replace(/'/g, "\\'");
@@ -129,7 +130,7 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
 
   return `<script>
 (function(){
-  var F='${formUrl}',D=${delay},AV='${av}';
+  var F='${formUrl}',EP='${eventEndpoint}',D=${delay},AV='${av}',SLUG='${row.slug}';
   var MS=['${m1}','${m2}','${m3}'].filter(function(m){return m.trim()!=='';});
   var id='kpw'+Math.random().toString(36).substr(2,5);
   var s=document.createElement('style');
@@ -146,15 +147,40 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
     +'@media(max-width:640px){#'+id+'-frm{top:0;left:0;right:0;bottom:0;width:100vw;width:100dvw;height:100vh;height:100dvh;max-width:none;max-height:none;border-radius:0}'
     +'#'+id+'-cls{display:none}}';
   document.head.appendChild(s);
-  var av=AV?'<img src="'+AV+'" alt="">':'';
+  var avh=AV?'<img src="'+AV+'" alt="">':'';
   var w=document.createElement('div'); w.id=id+'-w';
   var mi=0;
   if(MS.length>1){try{var k='kpwmi_'+F;var raw=sessionStorage.getItem(k);if(raw===null){var st=localStorage.getItem(k);mi=st?(parseInt(st,10)||0)%MS.length:0;sessionStorage.setItem(k,String(mi));localStorage.setItem(k,String((mi+1)%MS.length));}else{mi=(parseInt(raw,10)||0)%MS.length;}}catch(e){mi=0;}}
-  w.innerHTML='<div id="'+id+'-btn">'+av+'<span id="'+id+'-dot"></span></div>'+(MS.length?'<div id="'+id+'-bbl">'+MS[mi]+'</div>':'');
+  w.innerHTML='<div id="'+id+'-btn">'+avh+'<span id="'+id+'-dot"></span></div>'+(MS.length?'<div id="'+id+'-bbl">'+MS[mi]+'</div>':'');
   document.body.appendChild(w);
 
+  // ---- session_id + UTMs (host-page) ----------------------------------------
+  function sid(){try{var K='kpw_sid';var v=sessionStorage.getItem(K);if(!v){v='s_'+Date.now().toString(36)+Math.random().toString(36).substr(2,8);sessionStorage.setItem(K,v);}return v;}catch(e){return '';}}
+  function hostCtx(){
+    var ctx={utm_source:null,utm_medium:null,utm_campaign:null,utm_content:null,utm_term:null,gclid:null,fbclid:null,page_location:null,page_path:null,landing_page:null,referrer:null};
+    try{
+      var u=new URL(window.location.href);var p=u.searchParams;
+      ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','fbclid'].forEach(function(kk){var vv=p.get(kk);if(vv) ctx[kk]=vv;});
+      ctx.page_location=window.location.href;
+      ctx.page_path=window.location.pathname;
+      ctx.landing_page=u.origin+u.pathname;
+      ctx.referrer=document.referrer||null;
+    }catch(e){}
+    return ctx;
+  }
+  function postEvent(name,extra){
+    try{
+      var ctx=hostCtx();
+      var body=Object.assign({event_name:name,form_slug:SLUG,session_id:sid()},ctx,extra||{});
+      var json=JSON.stringify(body);
+      if(navigator.sendBeacon){var blob=new Blob([json],{type:'application/json'});navigator.sendBeacon(EP,blob);}
+      else{fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:json,keepalive:true}).catch(function(){});}
+    }catch(e){}
+  }
+  // site_session: once per browser session
+  try{var SK='kpw_ses_'+SLUG;if(!sessionStorage.getItem(SK)){sessionStorage.setItem(SK,'1');postEvent('site_session');}}catch(e){postEvent('site_session');}
+
   var fc=document.createElement('div'); fc.id=id+'-frm';
-  // Build iframe URL with UTMs + landing page + referrer captured from the host page
   function buildSrc(){
     try{
       var hostUrl=new URL(window.location.href);
@@ -162,8 +188,8 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
       var keep=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','fbclid'];
       var u=new URL(F);
       for(var i=0;i<keep.length;i++){
-        var k=keep[i];var v=hostParams.get(k);
-        if(v) u.searchParams.set(k,v);
+        var kk=keep[i];var v=hostParams.get(kk);
+        if(v) u.searchParams.set(kk,v);
       }
       u.searchParams.set('kp_landing', hostUrl.origin+hostUrl.pathname);
       if(document.referrer) u.searchParams.set('kp_ref', document.referrer);
@@ -174,15 +200,23 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   document.body.appendChild(fc);
 
   var opened=false;var prevOverflow='';
-  var SLUG='${row.slug}';
   function trackGaEvent(name,params){try{if(typeof window.gtag==='function'){window.gtag('event',name,params);}else{window.dataLayer=window.dataLayer||[];window.dataLayer.push(Object.assign({event:name},params));}}catch(e){}}
   function open(source,triggerEl){
     if(fc.style.display==='block')return;
     fc.style.display='block';w.classList.add('kpw-hidden');
     prevOverflow=document.body.style.overflow;document.body.style.overflow='hidden';opened=true;
-    if(source==='cta'){trackGaEvent('form_open_cta',{form_slug:SLUG,open_method:'cta',cta_text:triggerEl?((triggerEl.innerText||triggerEl.getAttribute&&triggerEl.getAttribute('aria-label')||'').toString().trim().slice(0,120)):'',page_location:window.location.href,page_path:window.location.pathname});}
-    else if(source==='float_button'){trackGaEvent('form_open_float',{form_slug:SLUG,open_method:'float_button',page_location:window.location.href,page_path:window.location.pathname});}
-    else if(source==='bubble'){trackGaEvent('form_open_float',{form_slug:SLUG,open_method:'bubble',page_location:window.location.href,page_path:window.location.pathname});}
+    if(source==='cta'){
+      var ctaText=triggerEl?((triggerEl.innerText||triggerEl.getAttribute&&triggerEl.getAttribute('aria-label')||'').toString().trim().slice(0,120)):'';
+      trackGaEvent('form_open_cta',{form_slug:SLUG,open_method:'cta',cta_text:ctaText,page_location:window.location.href,page_path:window.location.pathname});
+      postEvent('form_open_cta',{open_method:'cta'});
+    } else if(source==='float_button'){
+      trackGaEvent('form_open_float',{form_slug:SLUG,open_method:'float_button',page_location:window.location.href,page_path:window.location.pathname});
+      postEvent('form_open_float',{open_method:'float_button'});
+    } else if(source==='bubble'){
+      trackGaEvent('form_open_float',{form_slug:SLUG,open_method:'bubble',page_location:window.location.href,page_path:window.location.pathname});
+      postEvent('form_open_float',{open_method:'bubble'});
+    }
+    // 'auto_delay' is silent (no GA4 / no first-party event)
   }
   function close(){fc.style.display='none';w.classList.remove('kpw-hidden');document.body.style.overflow=prevOverflow||'';}
   var btn=document.getElementById(id+'-btn');
@@ -190,7 +224,6 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   var bbl=document.getElementById(id+'-bbl');
   if(bbl){bbl.onclick=function(){open('bubble',bbl);};}
   document.getElementById(id+'-cls').onclick=close;
-  // Intercept clicks on links pointing to the form URL — keep the user on the host site.
   var Fpath=(function(){try{return new URL(F).pathname;}catch(e){return '';}})();
   document.addEventListener('click',function(ev){
     var t=ev.target;if(!t)return;
@@ -212,6 +245,7 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
 })();
 </script>`;
 }
+
 
 
 function FormulariosPage() {
