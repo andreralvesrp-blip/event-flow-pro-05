@@ -159,7 +159,7 @@ export const Route = createFileRoute("/api/public/marketing-event")({
               visitor_id: b.visitor_id ?? null,
               user_agent: ua,
               ip_hash: ipHash,
-            })
+            } as never)
             .select("id")
             .maybeSingle();
 
