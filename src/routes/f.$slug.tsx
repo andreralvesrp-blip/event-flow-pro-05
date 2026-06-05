@@ -519,7 +519,7 @@ function PublicForm() {
                       className="f-btn-primary f-btn-green"
                       disabled={typing || !parentName.trim() || !isValidPhone(parentPhone)}
                     >
-                      Verificar disponibilidade →
+                      Receber orçamento
                     </button>
                   </form>
                 )}
