@@ -500,7 +500,7 @@ function MarketingPage() {
     }
     return row;
   }
-  (ga?.daily ?? []).forEach((g) => {
+  (siteSource?.daily ?? []).forEach((g) => {
     const row = ensureDay(g.date);
     row.sessions = g.sessions;
     row.formOpens = g.formOpenCta + g.formOpenFloat;
@@ -513,7 +513,7 @@ function MarketingPage() {
     a.date.localeCompare(b.date),
   );
 
-  // Merge campaign tables (GA4 sessions/formOpens + Supabase conversions)
+  // Merge campaign tables (site sessions/formOpens + Supabase conversions)
   const campTable = new Map<
     string,
     {
@@ -551,11 +551,12 @@ function MarketingPage() {
     }
     return row;
   }
-  (ga?.byCampaign ?? []).forEach((g) => {
+  (siteSource?.byCampaign ?? []).forEach((g) => {
     const r = getCamp(g.source, g.medium, g.campaign);
     r.sessions = g.sessions;
     r.formOpens = g.formOpens;
   });
+
   agg.byCampaign.forEach((g) => {
     const r = getCamp(g.source, g.medium, g.campaign);
     r.leadsCreated = g.leadsCreated;
