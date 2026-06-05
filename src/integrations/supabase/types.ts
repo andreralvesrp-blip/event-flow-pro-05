@@ -481,10 +481,14 @@ export type Database = {
       forms: {
         Row: {
           active: boolean
+          attendant_avatar_url: string | null
+          attendant_name: string | null
+          attendant_online: boolean
           created_at: string
           created_by: string | null
           id: string
           name: string
+          privacy_policy_url: string | null
           slug: string
           source: Database["public"]["Enums"]["opportunity_source"]
           tenant_id: string
@@ -500,10 +504,14 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          attendant_avatar_url?: string | null
+          attendant_name?: string | null
+          attendant_online?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
           name: string
+          privacy_policy_url?: string | null
           slug: string
           source?: Database["public"]["Enums"]["opportunity_source"]
           tenant_id: string
@@ -519,10 +527,14 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          attendant_avatar_url?: string | null
+          attendant_name?: string | null
+          attendant_online?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
           name?: string
+          privacy_policy_url?: string | null
           slug?: string
           source?: Database["public"]["Enums"]["opportunity_source"]
           tenant_id?: string
