@@ -393,6 +393,11 @@ function FormDialog({
   const [avatarError, setAvatarError] = useState(false);
   const [chosenUnit, setChosenUnit] = useState<string>(defaultUnitId ?? "");
 
+  const [attendantName, setAttendantName] = useState(initial?.attendant_name ?? "");
+  const [attendantAvatar, setAttendantAvatar] = useState(initial?.attendant_avatar_url ?? "");
+  const [attendantOnline, setAttendantOnline] = useState<boolean>(initial?.attendant_online ?? true);
+  const [privacyUrl, setPrivacyUrl] = useState(initial?.privacy_policy_url ?? "");
+
   const [saving, setSaving] = useState(false);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
