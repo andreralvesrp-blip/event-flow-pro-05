@@ -24,6 +24,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as ConfiguracoesUnidadesRouteImport } from './routes/configuracoes.unidades'
+import { Route as ConfiguracoesIntegracoesRouteImport } from './routes/configuracoes.integracoes'
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.equipe'
 import { Route as AvaliarSlugRouteImport } from './routes/avaliar.$slug'
@@ -105,6 +106,12 @@ const ConfiguracoesUnidadesRoute = ConfiguracoesUnidadesRouteImport.update({
   path: '/unidades',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
+const ConfiguracoesIntegracoesRoute =
+  ConfiguracoesIntegracoesRouteImport.update({
+    id: '/integracoes',
+    path: '/integracoes',
+    getParentRoute: () => ConfiguracoesRoute,
+  } as any)
 const ConfiguracoesImportacaoHistoricaRoute =
   ConfiguracoesImportacaoHistoricaRouteImport.update({
     id: '/importacao-historica',
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
@@ -170,6 +178,7 @@ export interface FileRoutesByTo {
   '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes': typeof ConfiguracoesIndexRoute
@@ -193,6 +202,7 @@ export interface FileRoutesById {
   '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/avaliar/$slug'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
+    | '/configuracoes/integracoes'
     | '/configuracoes/unidades'
     | '/f/$slug'
     | '/configuracoes/'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/avaliar/$slug'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
+    | '/configuracoes/integracoes'
     | '/configuracoes/unidades'
     | '/f/$slug'
     | '/configuracoes'
@@ -260,6 +272,7 @@ export interface FileRouteTypes {
     | '/avaliar/$slug'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
+    | '/configuracoes/integracoes'
     | '/configuracoes/unidades'
     | '/f/$slug'
     | '/configuracoes/'
@@ -393,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesUnidadesRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
+    '/configuracoes/integracoes': {
+      id: '/configuracoes/integracoes'
+      path: '/integracoes'
+      fullPath: '/configuracoes/integracoes'
+      preLoaderRoute: typeof ConfiguracoesIntegracoesRouteImport
+      parentRoute: typeof ConfiguracoesRoute
+    }
     '/configuracoes/importacao-historica': {
       id: '/configuracoes/importacao-historica'
       path: '/importacao-historica'
@@ -434,6 +454,7 @@ declare module '@tanstack/react-router' {
 interface ConfiguracoesRouteChildren {
   ConfiguracoesEquipeRoute: typeof ConfiguracoesEquipeRoute
   ConfiguracoesImportacaoHistoricaRoute: typeof ConfiguracoesImportacaoHistoricaRoute
+  ConfiguracoesIntegracoesRoute: typeof ConfiguracoesIntegracoesRoute
   ConfiguracoesUnidadesRoute: typeof ConfiguracoesUnidadesRoute
   ConfiguracoesIndexRoute: typeof ConfiguracoesIndexRoute
 }
@@ -441,6 +462,7 @@ interface ConfiguracoesRouteChildren {
 const ConfiguracoesRouteChildren: ConfiguracoesRouteChildren = {
   ConfiguracoesEquipeRoute: ConfiguracoesEquipeRoute,
   ConfiguracoesImportacaoHistoricaRoute: ConfiguracoesImportacaoHistoricaRoute,
+  ConfiguracoesIntegracoesRoute: ConfiguracoesIntegracoesRoute,
   ConfiguracoesUnidadesRoute: ConfiguracoesUnidadesRoute,
   ConfiguracoesIndexRoute: ConfiguracoesIndexRoute,
 }
@@ -470,3 +492,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
