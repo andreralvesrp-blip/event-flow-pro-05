@@ -548,7 +548,41 @@ function FormDialog({
           )}
 
           <Separator />
+          <h3 className="text-sm font-semibold text-slate-900">Atendente (cabeçalho do formulário)</h3>
+          <div>
+            <Label>Nome do atendente</Label>
+            <Input
+              value={attendantName}
+              onChange={(e) => setAttendantName(e.target.value)}
+              placeholder="Ex: Ana da Kids Point"
+            />
+          </div>
+          <div>
+            <Label>Foto do atendente (URL)</Label>
+            <Input
+              type="url"
+              value={attendantAvatar}
+              onChange={(e) => setAttendantAvatar(e.target.value)}
+              placeholder="https://..."
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Mostrar "Online agora"</Label>
+            <Switch checked={attendantOnline} onCheckedChange={setAttendantOnline} />
+          </div>
+          <div>
+            <Label>Link da Política de privacidade (opcional)</Label>
+            <Input
+              type="url"
+              value={privacyUrl}
+              onChange={(e) => setPrivacyUrl(e.target.value)}
+              placeholder="https://seusite.com/privacidade"
+            />
+          </div>
+
+          <Separator />
           <h3 className="text-sm font-semibold text-slate-900">Widget flutuante</h3>
+
 
           <div>
             <Label>Foto de perfil</Label>
