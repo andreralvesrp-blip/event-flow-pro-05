@@ -83,10 +83,16 @@ function isValidDateDDMMYYYY(input: string): boolean {
   const month = parseInt(m[2], 10);
   const year = parseInt(m[3], 10);
   if (month < 1 || month > 12) return false;
-  if (year < 1900 || year > 2100) return false;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  if (year < currentYear || year > currentYear + 5) return false;
   const dt = new Date(year, month - 1, day);
-  return dt.getFullYear() === year && dt.getMonth() === month - 1 && dt.getDate() === day;
+  if (dt.getFullYear() !== year || dt.getMonth() !== month - 1 || dt.getDate() !== day) return false;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (dt < today) return false;
+  return true;
 }
+
 
 function ddmmyyyyToISO(input: string): string {
   const m = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -234,14 +240,21 @@ function PublicForm() {
       });
       if (!res.ok) {
         const t = await res.text();
-        throw new Error(t || "submit_failed");
+        let friendly = "Não foi possível enviar agora. Tente novamente em instantes.";
+        if (/desired_date|check constraint|opp_desired_date/i.test(t)) {
+          friendly = "A data informada é inválida. Escolha uma data futura para a festa.";
+        }
+        setErrorMsg(friendly);
+        setStep("error");
+        return;
       }
       setStep("done");
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erro");
+    } catch {
+      setErrorMsg("Sem conexão. Verifique sua internet e tente novamente.");
       setStep("error");
     }
   }
+
 
   function retry() {
     setStep("contact");
