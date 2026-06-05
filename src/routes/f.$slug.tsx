@@ -475,16 +475,18 @@ function PublicForm() {
                   <form onSubmit={submitDate} className="flex gap-2">
                     <input
                       autoFocus
-                      type="date"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={10}
                       className="f-input"
-                      min={new Date().toISOString().slice(0, 10)}
+                      placeholder="DD/MM/AAAA"
                       value={desiredDate}
-                      onChange={(e) => setDesiredDate(e.target.value)}
+                      onChange={(e) => setDesiredDate(formatDateInput(e.target.value))}
                     />
                     <button
                       type="submit"
                       className="f-btn-inline"
-                      disabled={typing || !desiredDate}
+                      disabled={typing || !isValidDateDDMMYYYY(desiredDate)}
                     >
                       Enviar
                     </button>
