@@ -58,6 +58,32 @@ function isValidPhone(input: string): boolean {
   return true;
 }
 
+function formatDateInput(input: string): string {
+  const d = input.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+function isValidDateDDMMYYYY(input: string): boolean {
+  const m = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return false;
+  const day = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const year = parseInt(m[3], 10);
+  if (month < 1 || month > 12) return false;
+  if (year < 1900 || year > 2100) return false;
+  const dt = new Date(year, month - 1, day);
+  return dt.getFullYear() === year && dt.getMonth() === month - 1 && dt.getDate() === day;
+}
+
+function ddmmyyyyToISO(input: string): string {
+  const m = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return "";
+  const [d, mo, y] = [m[1], m[2], m[3]];
+  return `${y}-${mo}-${d}`;
+}
+
 const PAGE_BG = "linear-gradient(135deg, #FFF0F5 0%, #EFF9FF 100%)";
 const HEADER_BG = "#F97316";
 const AVATAR_BG = "#F97316";
@@ -136,9 +162,8 @@ function PublicForm() {
 
   async function submitDate(e: React.FormEvent) {
     e.preventDefault();
-    if (!desiredDate) return;
-    const [y, m, d] = desiredDate.split("-");
-    pushUser(`${d}/${m}/${y}`);
+    if (!isValidDateDDMMYYYY(desiredDate)) return;
+    pushUser(desiredDate);
     setStep("contact");
     await pushBot(
       "Pra finalizar, me diz seu nome e WhatsApp para te enviarmos o orçamento.",
@@ -171,7 +196,7 @@ function PublicForm() {
           form_slug: slug,
           celebrant_name: celebrantName,
           celebrant_age: parseInt(celebrantAge, 10),
-          desired_date: desiredDate,
+          desired_date: ddmmyyyyToISO(desiredDate),
           parent_name: parentName,
           parent_phone: parentPhone,
           utm_source,
@@ -447,22 +472,31 @@ function PublicForm() {
                   </form>
                 )}
                 {step === "date" && (
-                  <form onSubmit={submitDate} className="flex gap-2">
-                    <input
-                      autoFocus
-                      type="date"
-                      className="f-input"
-                      min={new Date().toISOString().slice(0, 10)}
-                      value={desiredDate}
-                      onChange={(e) => setDesiredDate(e.target.value)}
-                    />
-                    <button
-                      type="submit"
-                      className="f-btn-inline"
-                      disabled={typing || !desiredDate}
-                    >
-                      Enviar
-                    </button>
+                  <form onSubmit={submitDate}>
+                    <div className="flex gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={10}
+                        className="f-input"
+                        placeholder="DD/MM/AAAA"
+                        value={desiredDate}
+                        onChange={(e) => setDesiredDate(formatDateInput(e.target.value))}
+                      />
+                      <button
+                        type="submit"
+                        className="f-btn-inline"
+                        disabled={typing || !isValidDateDDMMYYYY(desiredDate)}
+                      >
+                        Enviar
+                      </button>
+                    </div>
+                    {desiredDate && !isValidDateDDMMYYYY(desiredDate) && (
+                      <div style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4, marginTop: 6 }}>
+                        Informe uma data válida no formato DD/MM/AAAA.
+                      </div>
+                    )}
                   </form>
                 )}
                 {step === "contact" && (
@@ -492,7 +526,7 @@ function PublicForm() {
                       className="f-btn-primary f-btn-green"
                       disabled={typing || !parentName.trim() || !isValidPhone(parentPhone)}
                     >
-                      Verificar disponibilidade →
+                      Receber orçamento
                     </button>
                   </form>
                 )}
