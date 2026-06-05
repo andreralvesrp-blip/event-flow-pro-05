@@ -75,6 +75,10 @@ type FormRow = {
   widget_msg_1: string | null;
   widget_msg_2: string | null;
   widget_msg_3: string | null;
+  attendant_name: string | null;
+  attendant_avatar_url: string | null;
+  attendant_online: boolean | null;
+  privacy_policy_url: string | null;
 };
 
 function slugify(s: string) {
@@ -144,6 +148,7 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   var bbl=document.getElementById(id+'-bbl');
   if(bbl){bbl.onclick=open;}
   document.getElementById(id+'-cls').onclick=close;
+  window.addEventListener('message',function(e){if(e&&e.data&&e.data.type==='kpw-close')close();});
   if(D!==null&&typeof D==='number'&&D>=0){setTimeout(function(){if(!opened)open();},D*1000);}
 
 })();
@@ -389,6 +394,11 @@ function FormDialog({
   const [avatarError, setAvatarError] = useState(false);
   const [chosenUnit, setChosenUnit] = useState<string>(defaultUnitId ?? "");
 
+  const [attendantName, setAttendantName] = useState(initial?.attendant_name ?? "");
+  const [attendantAvatar, setAttendantAvatar] = useState(initial?.attendant_avatar_url ?? "");
+  const [attendantOnline, setAttendantOnline] = useState<boolean>(initial?.attendant_online ?? true);
+  const [privacyUrl, setPrivacyUrl] = useState(initial?.privacy_policy_url ?? "");
+
   const [saving, setSaving] = useState(false);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -432,6 +442,10 @@ function FormDialog({
       widget_msg_1: msg1.trim() || null,
       widget_msg_2: msg2.trim() || null,
       widget_msg_3: msg3.trim() || null,
+      attendant_name: attendantName.trim() || null,
+      attendant_avatar_url: attendantAvatar.trim() || null,
+      attendant_online: attendantOnline,
+      privacy_policy_url: privacyUrl.trim() || null,
     };
     let error;
     if (initial) {
@@ -535,7 +549,41 @@ function FormDialog({
           )}
 
           <Separator />
+          <h3 className="text-sm font-semibold text-slate-900">Atendente (cabeçalho do formulário)</h3>
+          <div>
+            <Label>Nome do atendente</Label>
+            <Input
+              value={attendantName}
+              onChange={(e) => setAttendantName(e.target.value)}
+              placeholder="Ex: Ana da Kids Point"
+            />
+          </div>
+          <div>
+            <Label>Foto do atendente (URL)</Label>
+            <Input
+              type="url"
+              value={attendantAvatar}
+              onChange={(e) => setAttendantAvatar(e.target.value)}
+              placeholder="https://..."
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Mostrar "Online agora"</Label>
+            <Switch checked={attendantOnline} onCheckedChange={setAttendantOnline} />
+          </div>
+          <div>
+            <Label>Link da Política de privacidade (opcional)</Label>
+            <Input
+              type="url"
+              value={privacyUrl}
+              onChange={(e) => setPrivacyUrl(e.target.value)}
+              placeholder="https://seusite.com/privacidade"
+            />
+          </div>
+
+          <Separator />
           <h3 className="text-sm font-semibold text-slate-900">Widget flutuante</h3>
+
 
           <div>
             <Label>Foto de perfil</Label>
