@@ -533,8 +533,13 @@ function MarketingPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="ml-auto text-xs text-slate-500">
+          <div className="ml-auto text-xs text-slate-500 text-right">
             {r.start} → {r.end}
+            <div className="text-[10px] text-slate-400 max-w-[280px]">
+              Cada métrica é contada pela data do evento no período
+              (lead = criação, visita = registro, contrato = assinatura).
+              Atribuição UTM herdada da oportunidade; sem UTM → (direct)/(none)/(not set).
+            </div>
           </div>
         </div>
 
