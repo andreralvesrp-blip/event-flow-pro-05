@@ -595,6 +595,7 @@ function MarketingPage() {
       source: string;
       medium: string;
       campaign: string;
+      pageviews: number;
       sessions: number;
       formOpens: number;
       leadsCreated: number;
@@ -613,6 +614,7 @@ function MarketingPage() {
         source: s,
         medium: m,
         campaign: c,
+        pageviews: 0,
         sessions: 0,
         formOpens: 0,
         leadsCreated: 0,
@@ -630,6 +632,8 @@ function MarketingPage() {
     const r = getCamp(g.source, g.medium, g.campaign);
     r.sessions = g.sessions;
     r.formOpens = g.formOpens;
+    // pageviews is only available from first-party source
+    if ("pageviews" in g) r.pageviews = (g as { pageviews: number }).pageviews;
   });
 
   agg.byCampaign.forEach((g) => {
