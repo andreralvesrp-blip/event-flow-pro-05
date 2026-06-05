@@ -136,6 +136,8 @@ function incDaily(map: Map<string, number>, key: string, by = 1) {
 
 function MarketingPage() {
   const { unitFilter } = useUnit();
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin" || profile?.tenant_role === "owner";
   const [range, setRange] = useState<RangeKey>("30d");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [mediumFilter, setMediumFilter] = useState<string>("all");
@@ -151,6 +153,24 @@ function MarketingPage() {
     formOpenFloat: number;
     daily: { date: string; sessions: number; formOpenCta: number; formOpenFloat: number }[];
     byCampaign: { source: string; medium: string; campaign: string; sessions: number; formOpens: number }[];
+  } | null>(null);
+  type MevRow = {
+    created_at: string;
+    event_name: string;
+    form_slug: string | null;
+    tenant_id: string | null;
+    unit_id: string | null;
+    session_id: string | null;
+    utm_source: string | null;
+    utm_medium: string | null;
+    utm_campaign: string | null;
+  };
+  const [mevDebug, setMevDebug] = useState<{
+    total: number;
+    byEvent: Record<string, number>;
+    rows: MevRow[];
+    error: string | null;
+    period: { start: string; end: string };
   } | null>(null);
 
   const fetchOverview = useServerFn(getMarketingOverview);
