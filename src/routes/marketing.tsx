@@ -532,6 +532,7 @@ function MarketingPage() {
   const siteSource = useGa ? ga : firstParty;
   const sessions = siteSource?.sessions ?? 0;
   const users = siteSource?.users ?? 0;
+  const pageviews = firstParty?.pageviews ?? 0;
   const formOpens = siteSource?.formOpens ?? 0;
   const formOpenCtaTotal = siteSource?.formOpenCta ?? 0;
   const formOpenFloatTotal = siteSource?.formOpenFloat ?? 0;
