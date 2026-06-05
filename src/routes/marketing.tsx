@@ -146,13 +146,14 @@ function MarketingPage() {
   const [agg, setAgg] = useState<SbAgg>(emptyAgg());
   const [ga, setGa] = useState<MarketingOverview | null>(null);
   const [firstParty, setFirstParty] = useState<{
+    pageviews: number;
     sessions: number;
     users: number;
     formOpens: number;
     formOpenCta: number;
     formOpenFloat: number;
-    daily: { date: string; sessions: number; formOpenCta: number; formOpenFloat: number }[];
-    byCampaign: { source: string; medium: string; campaign: string; sessions: number; formOpens: number }[];
+    daily: { date: string; pageviews: number; sessions: number; formOpenCta: number; formOpenFloat: number }[];
+    byCampaign: { source: string; medium: string; campaign: string; pageviews: number; sessions: number; users: number; formOpens: number }[];
   } | null>(null);
   type MevRow = {
     created_at: string;
@@ -161,6 +162,7 @@ function MarketingPage() {
     tenant_id: string | null;
     unit_id: string | null;
     session_id: string | null;
+    visitor_id: string | null;
     utm_source: string | null;
     utm_medium: string | null;
     utm_campaign: string | null;
@@ -384,7 +386,7 @@ function MarketingPage() {
         const endIso = `${r.end}T23:59:59.999-03:00`;
         let mevQ = supabase
           .from("marketing_events")
-          .select("event_name, session_id, created_at, utm_source, utm_medium, utm_campaign, form_slug, tenant_id, unit_id")
+          .select("event_name, session_id, visitor_id, created_at, utm_source, utm_medium, utm_campaign, form_slug, tenant_id, unit_id")
           .gte("created_at", startIso)
           .lte("created_at", endIso)
           .order("created_at", { ascending: false })
@@ -393,13 +395,14 @@ function MarketingPage() {
         const { data: mev, error: mevErr } = await mevQ;
         if (cancel) return;
 
+        const mevRows = (mev ?? []) as unknown as MevRow[];
         const byEventCount: Record<string, number> = {};
-        for (const e of mev ?? []) byEventCount[e.event_name] = (byEventCount[e.event_name] ?? 0) + 1;
+        for (const e of mevRows) byEventCount[e.event_name] = (byEventCount[e.event_name] ?? 0) + 1;
         if (!cancel) {
           setMevDebug({
-            total: (mev ?? []).length,
+            total: mevRows.length,
             byEvent: byEventCount,
-            rows: (mev ?? []).slice(0, 20) as MevRow[],
+            rows: mevRows.slice(0, 20),
             error: mevErr?.message ?? null,
             period: { start: startIso, end: endIso },
           });
@@ -409,27 +412,32 @@ function MarketingPage() {
             period: { start: startIso, end: endIso },
             unitFilter,
             error: mevErr?.message ?? null,
-            total: (mev ?? []).length,
+            total: mevRows.length,
             byEvent: byEventCount,
-            last20: (mev ?? []).slice(0, 20),
+            last20: mevRows.slice(0, 20),
           });
         }
 
-        const sessSet = new Set<string>();
+        const sessSet = new Set<string>();   // distinct session_id where event=site_session
+        const visitorSet = new Set<string>(); // distinct visitor_id (any event)
         const dailyMap = new Map<
           string,
-          { date: string; sessions: number; formOpenCta: number; formOpenFloat: number; _sess: Set<string> }
+          { date: string; pageviews: number; sessions: number; formOpenCta: number; formOpenFloat: number; _sess: Set<string> }
         >();
         const campMap = new Map<
           string,
-          { source: string; medium: string; campaign: string; sessions: number; formOpens: number; _sess: Set<string> }
+          {
+            source: string; medium: string; campaign: string;
+            pageviews: number; sessions: number; users: number; formOpens: number;
+            _sess: Set<string>; _vis: Set<string>;
+          }
         >();
-        let openCta = 0, openFloat = 0;
+        let openCta = 0, openFloat = 0, pageviews = 0;
 
         const ensureDay = (d: string) => {
           let row = dailyMap.get(d);
           if (!row) {
-            row = { date: d, sessions: 0, formOpenCta: 0, formOpenFloat: 0, _sess: new Set() };
+            row = { date: d, pageviews: 0, sessions: 0, formOpenCta: 0, formOpenFloat: 0, _sess: new Set() };
             dailyMap.set(d, row);
           }
           return row;
@@ -438,13 +446,17 @@ function MarketingPage() {
           const k = `${s}|${m}|${c}`;
           let row = campMap.get(k);
           if (!row) {
-            row = { source: s, medium: m, campaign: c, sessions: 0, formOpens: 0, _sess: new Set() };
+            row = {
+              source: s, medium: m, campaign: c,
+              pageviews: 0, sessions: 0, users: 0, formOpens: 0,
+              _sess: new Set(), _vis: new Set(),
+            };
             campMap.set(k, row);
           }
           return row;
         };
 
-        for (const e of mev ?? []) {
+        for (const e of mevRows) {
           const date = (e.created_at as string).slice(0, 10);
           const drow = ensureDay(date);
           const src = e.utm_source || "(direct)";
@@ -452,8 +464,18 @@ function MarketingPage() {
           const camp = e.utm_campaign || "(not set)";
           const crow = ensureCamp(src, med, camp);
           const sk = e.session_id || `_${e.created_at}`;
+          const vk = e.visitor_id || "";
 
-          if (e.event_name === "site_session") {
+          if (vk) {
+            visitorSet.add(vk);
+            if (!crow._vis.has(vk)) { crow._vis.add(vk); crow.users++; }
+          }
+
+          if (e.event_name === "page_view") {
+            pageviews++;
+            drow.pageviews++;
+            crow.pageviews++;
+          } else if (e.event_name === "site_session") {
             sessSet.add(sk);
             if (!drow._sess.has(sk)) { drow._sess.add(sk); drow.sessions++; }
             if (!crow._sess.has(sk)) { crow._sess.add(sk); crow.sessions++; }
@@ -469,17 +491,21 @@ function MarketingPage() {
         }
 
         const daily = Array.from(dailyMap.values())
-          .map((d) => ({ date: d.date, sessions: d.sessions, formOpenCta: d.formOpenCta, formOpenFloat: d.formOpenFloat }))
+          .map((d) => ({
+            date: d.date, pageviews: d.pageviews, sessions: d.sessions,
+            formOpenCta: d.formOpenCta, formOpenFloat: d.formOpenFloat,
+          }))
           .sort((a, b) => a.date.localeCompare(b.date));
         const byCampaign = Array.from(campMap.values()).map((c) => ({
           source: c.source, medium: c.medium, campaign: c.campaign,
-          sessions: c.sessions, formOpens: c.formOpens,
+          pageviews: c.pageviews, sessions: c.sessions, users: c.users, formOpens: c.formOpens,
         }));
 
         if (!cancel) {
           setFirstParty({
+            pageviews,
             sessions: sessSet.size,
-            users: sessSet.size,
+            users: visitorSet.size || sessSet.size,
             formOpens: openCta + openFloat,
             formOpenCta: openCta,
             formOpenFloat: openFloat,
@@ -506,6 +532,7 @@ function MarketingPage() {
   const siteSource = useGa ? ga : firstParty;
   const sessions = siteSource?.sessions ?? 0;
   const users = siteSource?.users ?? 0;
+  const pageviews = firstParty?.pageviews ?? 0;
   const formOpens = siteSource?.formOpens ?? 0;
   const formOpenCtaTotal = siteSource?.formOpenCta ?? 0;
   const formOpenFloatTotal = siteSource?.formOpenFloat ?? 0;
@@ -568,6 +595,7 @@ function MarketingPage() {
       source: string;
       medium: string;
       campaign: string;
+      pageviews: number;
       sessions: number;
       formOpens: number;
       leadsCreated: number;
@@ -586,6 +614,7 @@ function MarketingPage() {
         source: s,
         medium: m,
         campaign: c,
+        pageviews: 0,
         sessions: 0,
         formOpens: 0,
         leadsCreated: 0,
@@ -603,6 +632,8 @@ function MarketingPage() {
     const r = getCamp(g.source, g.medium, g.campaign);
     r.sessions = g.sessions;
     r.formOpens = g.formOpens;
+    // pageviews is only available from first-party source
+    if ("pageviews" in g) r.pageviews = (g as { pageviews: number }).pageviews;
   });
 
   agg.byCampaign.forEach((g) => {
@@ -715,8 +746,9 @@ function MarketingPage() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
-          <Kpi label="Usuários do site" value={fmtInt(users)} loading={loading} />
-          <Kpi label="Sessões" value={fmtInt(sessions)} loading={loading} />
+          <Kpi label="Pageviews" value={fmtInt(pageviews)} sub="event_name=page_view" loading={loading} />
+          <Kpi label="Usuários (visitantes)" value={fmtInt(users)} loading={loading} />
+          <Kpi label="Sessões" value={fmtInt(sessions)} sub="≥30min inativo → nova sessão" loading={loading} />
           <Kpi label="Aberturas do form" value={fmtInt(formOpens)} sub={`CTA ${fmtInt(formOpenCtaTotal)} · Float ${fmtInt(formOpenFloatTotal)}`} loading={loading} />
           <Kpi label="Leads criados" value={fmtInt(agg.leadsCreated)} loading={loading} />
           <Kpi label="Visitas agendadas" value={fmtInt(agg.visitsScheduled)} loading={loading} />
@@ -814,6 +846,7 @@ function MarketingPage() {
                     <TableHead>Source</TableHead>
                     <TableHead>Medium</TableHead>
                     <TableHead>Campaign</TableHead>
+                    <TableHead className="text-right">Pageviews</TableHead>
                     <TableHead className="text-right">Sessões</TableHead>
                     <TableHead className="text-right">Aberturas</TableHead>
                     <TableHead className="text-right">Leads</TableHead>
@@ -830,7 +863,7 @@ function MarketingPage() {
                 <TableBody>
                   {campRows.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center text-sm text-slate-500 py-8">
+                      <TableCell colSpan={15} className="text-center text-sm text-slate-500 py-8">
                         Nenhum dado no período.
                       </TableCell>
                     </TableRow>
@@ -840,6 +873,7 @@ function MarketingPage() {
                       <TableCell className="text-sm">{r.source}</TableCell>
                       <TableCell className="text-sm">{r.medium}</TableCell>
                       <TableCell className="text-sm">{r.campaign}</TableCell>
+                      <TableCell className="text-right text-sm">{fmtInt(r.pageviews)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtInt(r.sessions)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtInt(r.formOpens)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtInt(r.leadsCreated)}</TableCell>

@@ -154,8 +154,20 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   w.innerHTML='<div id="'+id+'-btn">'+avh+'<span id="'+id+'-dot"></span></div>'+(MS.length?'<div id="'+id+'-bbl">'+MS[mi]+'</div>':'');
   document.body.appendChild(w);
 
-  // ---- session_id + UTMs (host-page) ----------------------------------------
-  function sid(){try{var K='kpw_sid';var v=sessionStorage.getItem(K);if(!v){v='s_'+Date.now().toString(36)+Math.random().toString(36).substr(2,8);sessionStorage.setItem(K,v);}return v;}catch(e){return '';}}
+  // ---- visitor_id + session_id (30min idle) + UTMs (host-page) --------------
+  function uid(p){return p+'_'+Date.now().toString(36)+Math.random().toString(36).substr(2,8);}
+  function vid(){try{var K='kpw_vid';var v=localStorage.getItem(K);if(!v){v=uid('v');localStorage.setItem(K,v);}return v;}catch(e){return '';}}
+  // Returns { id, isNew } for the current marketing session (30 min inactivity window)
+  function ses(){
+    var WIN=30*60*1000;var SK='kpw_sid';var TK='kpw_sid_last';var now=Date.now();
+    try{
+      var cur=localStorage.getItem(SK);var last=parseInt(localStorage.getItem(TK)||'0',10)||0;
+      var isNew=false;
+      if(!cur||(now-last)>WIN){cur=uid('s');isNew=true;localStorage.setItem(SK,cur);}
+      localStorage.setItem(TK,String(now));
+      return {id:cur,isNew:isNew};
+    }catch(e){return {id:'',isNew:false};}
+  }
   function hostCtx(){
     var ctx={utm_source:null,utm_medium:null,utm_campaign:null,utm_content:null,utm_term:null,gclid:null,fbclid:null,page_location:null,page_path:null,landing_page:null,referrer:null};
     try{
@@ -168,17 +180,24 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
     }catch(e){}
     return ctx;
   }
-  function postEvent(name,extra){
+  var VID=vid();
+  function postEvent(name,extra,sessionIdOverride){
     try{
       var ctx=hostCtx();
-      var body=Object.assign({event_name:name,form_slug:SLUG,session_id:sid()},ctx,extra||{});
+      var body=Object.assign({event_name:name,form_slug:SLUG,session_id:sessionIdOverride||SES.id,visitor_id:VID},ctx,extra||{});
       var json=JSON.stringify(body);
       if(navigator.sendBeacon){var blob=new Blob([json],{type:'application/json'});navigator.sendBeacon(EP,blob);}
       else{fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:json,keepalive:true}).catch(function(){});}
     }catch(e){}
   }
-  // site_session: once per browser session
-  try{var SK='kpw_ses_'+SLUG;if(!sessionStorage.getItem(SK)){sessionStorage.setItem(SK,'1');postEvent('site_session');}}catch(e){postEvent('site_session');}
+  // Resolve session (creates new one if idle > 30min) and emit events
+  var SES=ses();
+  // page_view: every page load
+  postEvent('page_view');
+  // site_session: only when a brand-new marketing session was created
+  if(SES.isNew){postEvent('site_session');}
+  // Helper to keep sid() name working (used by sid() reference, but we use SES.id everywhere now)
+  function sid(){return SES.id;}
 
   var fc=document.createElement('div'); fc.id=id+'-frm';
   function buildSrc(){
