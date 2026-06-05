@@ -441,6 +441,10 @@ function FormDialog({
       widget_msg_1: msg1.trim() || null,
       widget_msg_2: msg2.trim() || null,
       widget_msg_3: msg3.trim() || null,
+      attendant_name: attendantName.trim() || null,
+      attendant_avatar_url: attendantAvatar.trim() || null,
+      attendant_online: attendantOnline,
+      privacy_policy_url: privacyUrl.trim() || null,
     };
     let error;
     if (initial) {
