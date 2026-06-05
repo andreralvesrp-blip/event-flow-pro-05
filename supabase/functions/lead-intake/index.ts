@@ -114,11 +114,18 @@ Deno.serve(async (req) => {
     utm_source,
     utm_medium,
     utm_campaign,
+    utm_content,
+    utm_term,
+    gclid,
+    fbclid,
+    landing_page,
+    referrer,
   } = body || {};
 
   if (!form_slug || !celebrant_name || !celebrant_age || !desired_date || !parent_name || !parent_phone) {
     return json({ error: "missing_fields" }, 400);
   }
+
 
   // a) Form
   const { data: form, error: fErr } = await admin
@@ -174,12 +181,19 @@ Deno.serve(async (req) => {
       utm_source: utm_source || null,
       utm_medium: utm_medium || null,
       utm_campaign: finalCampaign,
+      utm_content: utm_content || null,
+      utm_term: utm_term || null,
+      gclid: gclid || null,
+      fbclid: fbclid || null,
+      landing_page: landing_page || null,
+      referrer: referrer || null,
       first_response_at: new Date().toISOString(),
       stage_changed_at: new Date().toISOString(),
     })
     .select("id")
     .single();
   if (oErr) return json({ error: oErr.message }, 500);
+
 
   // d) Date check
   const { data: confirmed } = await admin

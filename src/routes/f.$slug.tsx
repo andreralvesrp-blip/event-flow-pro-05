@@ -213,9 +213,16 @@ function PublicForm() {
     await pushBot("Preparando seu orçamento...");
 
     const url = new URL(window.location.href);
-    const utm_source = url.searchParams.get("utm_source") || undefined;
-    const utm_medium = url.searchParams.get("utm_medium") || undefined;
-    const utm_campaign = url.searchParams.get("utm_campaign") || undefined;
+    const qp = (k: string) => url.searchParams.get(k) || undefined;
+    const utm_source = qp("utm_source");
+    const utm_medium = qp("utm_medium");
+    const utm_campaign = qp("utm_campaign");
+    const utm_content = qp("utm_content");
+    const utm_term = qp("utm_term");
+    const gclid = qp("gclid");
+    const fbclid = qp("fbclid");
+    const landing_page = qp("kp_landing") || undefined;
+    const referrer = qp("kp_ref") || undefined;
 
     try {
       await new Promise((r) => setTimeout(r, 2000));
@@ -236,8 +243,15 @@ function PublicForm() {
           utm_source,
           utm_medium,
           utm_campaign,
+          utm_content,
+          utm_term,
+          gclid,
+          fbclid,
+          landing_page,
+          referrer,
         }),
       });
+
       if (!res.ok) {
         const t = await res.text();
         let friendly = "Não foi possível enviar agora. Tente novamente em instantes.";
