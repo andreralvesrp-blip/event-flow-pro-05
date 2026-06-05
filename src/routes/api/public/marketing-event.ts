@@ -132,9 +132,18 @@ export const Route = createFileRoute("/api/public/marketing-event")({
             ip_hash: ipHash,
           });
 
+          console.log("[marketing-event]", {
+            event_name: b.event_name,
+            form_slug: b.form_slug,
+            tenant_id: form.tenant_id,
+            unit_id: form.unit_id,
+            session_id: b.session_id ?? null,
+            ok: !insErr,
+            error: insErr?.message ?? null,
+          });
+
           if (insErr) {
-            console.error("marketing-event insert failed", insErr);
-            return new Response(JSON.stringify({ error: "insert_failed" }), {
+            return new Response(JSON.stringify({ error: "insert_failed", detail: insErr.message }), {
               status: 500,
               headers: { "Content-Type": "application/json", ...corsHeaders() },
             });
