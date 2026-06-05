@@ -27,6 +27,7 @@ import { Route as ConfiguracoesUnidadesRouteImport } from './routes/configuracoe
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.equipe'
 import { Route as AvaliarSlugRouteImport } from './routes/avaliar.$slug'
+import { Route as ApiPublicMarketingEventRouteImport } from './routes/api/public/marketing-event'
 
 const WebhooksRoute = WebhooksRouteImport.update({
   id: '/webhooks',
@@ -119,6 +120,11 @@ const AvaliarSlugRoute = AvaliarSlugRouteImport.update({
   path: '/avaliar/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMarketingEventRoute = ApiPublicMarketingEventRouteImport.update({
+  id: '/api/public/marketing-event',
+  path: '/api/public/marketing-event',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
+  '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes': typeof ConfiguracoesIndexRoute
+  '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
+  '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/configuracoes/unidades'
     | '/f/$slug'
     | '/configuracoes/'
+    | '/api/public/marketing-event'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/configuracoes/unidades'
     | '/f/$slug'
     | '/configuracoes'
+    | '/api/public/marketing-event'
   id:
     | '__root__'
     | '/'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/configuracoes/unidades'
     | '/f/$slug'
     | '/configuracoes/'
+    | '/api/public/marketing-event'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -257,6 +269,7 @@ export interface RootRouteChildren {
   WebhooksRoute: typeof WebhooksRoute
   AvaliarSlugRoute: typeof AvaliarSlugRoute
   FSlugRoute: typeof FSlugRoute
+  ApiPublicMarketingEventRoute: typeof ApiPublicMarketingEventRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -387,6 +400,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AvaliarSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/marketing-event': {
+      id: '/api/public/marketing-event'
+      path: '/api/public/marketing-event'
+      fullPath: '/api/public/marketing-event'
+      preLoaderRoute: typeof ApiPublicMarketingEventRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -423,6 +443,7 @@ const rootRouteChildren: RootRouteChildren = {
   WebhooksRoute: WebhooksRoute,
   AvaliarSlugRoute: AvaliarSlugRoute,
   FSlugRoute: FSlugRoute,
+  ApiPublicMarketingEventRoute: ApiPublicMarketingEventRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
