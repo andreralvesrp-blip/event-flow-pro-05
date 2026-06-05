@@ -746,8 +746,9 @@ function MarketingPage() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
-          <Kpi label="Usuários do site" value={fmtInt(users)} loading={loading} />
-          <Kpi label="Sessões" value={fmtInt(sessions)} loading={loading} />
+          <Kpi label="Pageviews" value={fmtInt(pageviews)} sub="event_name=page_view" loading={loading} />
+          <Kpi label="Usuários (visitantes)" value={fmtInt(users)} loading={loading} />
+          <Kpi label="Sessões" value={fmtInt(sessions)} sub="≥30min inativo → nova sessão" loading={loading} />
           <Kpi label="Aberturas do form" value={fmtInt(formOpens)} sub={`CTA ${fmtInt(formOpenCtaTotal)} · Float ${fmtInt(formOpenFloatTotal)}`} loading={loading} />
           <Kpi label="Leads criados" value={fmtInt(agg.leadsCreated)} loading={loading} />
           <Kpi label="Visitas agendadas" value={fmtInt(agg.visitsScheduled)} loading={loading} />
