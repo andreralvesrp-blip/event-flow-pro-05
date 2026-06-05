@@ -157,7 +157,7 @@ function FormulariosPage() {
   const [editing, setEditing] = useState<FormRow | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin = publicOrigin(typeof window !== "undefined" ? window.location.origin : "");
 
   async function load() {
     setLoading(true);
