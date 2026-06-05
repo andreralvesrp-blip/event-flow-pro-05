@@ -187,7 +187,7 @@ function PublicForm() {
     if (!isValidPhone(parentPhone)) return;
     pushUser(`${parentName} · ${parentPhone}`);
     setStep("submitting");
-    await pushBot("Verificando...");
+    await pushBot("Preparando seu orçamento...");
 
     const url = new URL(window.location.href);
     const utm_source = url.searchParams.get("utm_source") || undefined;
@@ -388,12 +388,12 @@ function PublicForm() {
                 <div
                   style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", marginBottom: 12 }}
                 >
-                  Feito, {parentName}!
+                  Orçamento a caminho, {parentName}!
                 </div>
                 <div style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65 }}>
-                  Em instantes você recebe uma mensagem no WhatsApp com o resultado.
+                  Em instantes você recebe no WhatsApp as opções e valores para a data escolhida.
                   <br />
-                  Fique de olho.
+                  Fique de olho!
                 </div>
               </div>
             </div>
