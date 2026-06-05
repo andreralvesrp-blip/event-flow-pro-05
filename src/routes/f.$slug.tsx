@@ -99,6 +99,7 @@ function PublicForm() {
   const [celebrantName, setCelebrantName] = useState("");
   const [celebrantAge, setCelebrantAge] = useState("");
   const [desiredDate, setDesiredDate] = useState("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
