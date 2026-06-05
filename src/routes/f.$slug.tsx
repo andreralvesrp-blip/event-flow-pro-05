@@ -11,7 +11,15 @@ export const Route = createFileRoute("/f/$slug")({
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lead-intake`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
-type FormCfg = { name: string; welcome_message: string; active: boolean };
+type FormCfg = {
+  name: string;
+  welcome_message: string;
+  active: boolean;
+  attendant_name?: string | null;
+  attendant_avatar_url?: string | null;
+  attendant_online?: boolean | null;
+  privacy_policy_url?: string | null;
+};
 type Msg = { from: "bot" | "user"; text: string };
 type Step =
   | "loading"
