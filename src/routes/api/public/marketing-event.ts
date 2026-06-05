@@ -156,6 +156,7 @@ export const Route = createFileRoute("/api/public/marketing-event")({
               gclid: b.gclid ?? null,
               fbclid: b.fbclid ?? null,
               session_id: b.session_id ?? null,
+              visitor_id: b.visitor_id ?? null,
               user_agent: ua,
               ip_hash: ipHash,
             })
