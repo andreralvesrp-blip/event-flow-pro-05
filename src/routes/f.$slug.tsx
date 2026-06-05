@@ -240,14 +240,21 @@ function PublicForm() {
       });
       if (!res.ok) {
         const t = await res.text();
-        throw new Error(t || "submit_failed");
+        let friendly = "Não foi possível enviar agora. Tente novamente em instantes.";
+        if (/desired_date|check constraint|opp_desired_date/i.test(t)) {
+          friendly = "A data informada é inválida. Escolha uma data futura para a festa.";
+        }
+        setErrorMsg(friendly);
+        setStep("error");
+        return;
       }
       setStep("done");
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erro");
+    } catch {
+      setErrorMsg("Sem conexão. Verifique sua internet e tente novamente.");
       setStep("error");
     }
   }
+
 
   function retry() {
     setStep("contact");
