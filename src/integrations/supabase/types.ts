@@ -1107,10 +1107,13 @@ export type Database = {
           desired_date: string | null
           desired_slot: Database["public"]["Enums"]["event_slot"] | null
           estimated_value: number | null
+          fbclid: string | null
           first_response_at: string | null
           form_id: string | null
+          gclid: string | null
           guest_estimate: number | null
           id: string
+          landing_page: string | null
           loss_reason: Database["public"]["Enums"]["loss_reason"] | null
           lost_from_stage:
             | Database["public"]["Enums"]["opportunity_stage"]
@@ -1120,6 +1123,7 @@ export type Database = {
           owner_id: string | null
           pre_reserva_at: string | null
           pre_reserva_expires_at: string | null
+          referrer: string | null
           source: Database["public"]["Enums"]["opportunity_source"] | null
           stage: Database["public"]["Enums"]["opportunity_stage"]
           stage_changed_at: string
@@ -1127,8 +1131,10 @@ export type Database = {
           unit_id: string | null
           updated_at: string
           utm_campaign: string | null
+          utm_content: string | null
           utm_medium: string | null
           utm_source: string | null
+          utm_term: string | null
         }
         Insert: {
           celebrant_age?: number | null
@@ -1142,10 +1148,13 @@ export type Database = {
           desired_date?: string | null
           desired_slot?: Database["public"]["Enums"]["event_slot"] | null
           estimated_value?: number | null
+          fbclid?: string | null
           first_response_at?: string | null
           form_id?: string | null
+          gclid?: string | null
           guest_estimate?: number | null
           id?: string
+          landing_page?: string | null
           loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
           lost_from_stage?:
             | Database["public"]["Enums"]["opportunity_stage"]
@@ -1155,6 +1164,7 @@ export type Database = {
           owner_id?: string | null
           pre_reserva_at?: string | null
           pre_reserva_expires_at?: string | null
+          referrer?: string | null
           source?: Database["public"]["Enums"]["opportunity_source"] | null
           stage?: Database["public"]["Enums"]["opportunity_stage"]
           stage_changed_at?: string
@@ -1162,8 +1172,10 @@ export type Database = {
           unit_id?: string | null
           updated_at?: string
           utm_campaign?: string | null
+          utm_content?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          utm_term?: string | null
         }
         Update: {
           celebrant_age?: number | null
@@ -1177,10 +1189,13 @@ export type Database = {
           desired_date?: string | null
           desired_slot?: Database["public"]["Enums"]["event_slot"] | null
           estimated_value?: number | null
+          fbclid?: string | null
           first_response_at?: string | null
           form_id?: string | null
+          gclid?: string | null
           guest_estimate?: number | null
           id?: string
+          landing_page?: string | null
           loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
           lost_from_stage?:
             | Database["public"]["Enums"]["opportunity_stage"]
@@ -1190,6 +1205,7 @@ export type Database = {
           owner_id?: string | null
           pre_reserva_at?: string | null
           pre_reserva_expires_at?: string | null
+          referrer?: string | null
           source?: Database["public"]["Enums"]["opportunity_source"] | null
           stage?: Database["public"]["Enums"]["opportunity_stage"]
           stage_changed_at?: string
@@ -1197,8 +1213,10 @@ export type Database = {
           unit_id?: string | null
           updated_at?: string
           utm_campaign?: string | null
+          utm_content?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          utm_term?: string | null
         }
         Relationships: [
           {
