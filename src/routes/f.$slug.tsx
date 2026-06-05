@@ -485,16 +485,47 @@ function PublicForm() {
                 {step === "date" && (
                   <form onSubmit={submitDate}>
                     <div className="flex gap-2">
-                      <input
-                        autoFocus
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={10}
-                        className="f-input"
-                        placeholder="DD/MM/AAAA"
-                        value={desiredDate}
-                        onChange={(e) => setDesiredDate(formatDateInput(e.target.value))}
-                      />
+                      <div className="flex-1 flex gap-2">
+                        <input
+                          autoFocus
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={10}
+                          className="f-input flex-1"
+                          placeholder="DD/MM/AAAA"
+                          value={desiredDate}
+                          onChange={(e) => setDesiredDate(formatDateInput(e.target.value))}
+                        />
+                        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="f-btn-inline"
+                              style={{ padding: "0 12px", minWidth: 44, display: "flex", alignItems: "center", justifyContent: "center" }}
+                              aria-label="Abrir calendário"
+                            >
+                              <CalendarIcon className="w-5 h-5" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 pointer-events-auto" align="end">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                isValidDateDDMMYYYY(desiredDate)
+                                  ? new Date(ddmmyyyyToISO(desiredDate) + "T00:00:00")
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  setDesiredDate(dateToDDMMYYYY(date));
+                                  setDatePickerOpen(false);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                       <button
                         type="submit"
                         className="f-btn-inline"
