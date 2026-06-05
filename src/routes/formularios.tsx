@@ -148,6 +148,7 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   var bbl=document.getElementById(id+'-bbl');
   if(bbl){bbl.onclick=open;}
   document.getElementById(id+'-cls').onclick=close;
+  window.addEventListener('message',function(e){if(e&&e.data&&e.data.type==='kpw-close')close();});
   if(D!==null&&typeof D==='number'&&D>=0){setTimeout(function(){if(!opened)open();},D*1000);}
 
 })();
