@@ -393,15 +393,24 @@ function MarketingPage() {
         const { data: mev, error: mevErr } = await mevQ;
         if (cancel) return;
 
+        const byEventCount: Record<string, number> = {};
+        for (const e of mev ?? []) byEventCount[e.event_name] = (byEventCount[e.event_name] ?? 0) + 1;
+        if (!cancel) {
+          setMevDebug({
+            total: (mev ?? []).length,
+            byEvent: byEventCount,
+            rows: (mev ?? []).slice(0, 20) as MevRow[],
+            error: mevErr?.message ?? null,
+            period: { start: startIso, end: endIso },
+          });
+        }
         if (import.meta.env.DEV) {
-          const byEvent: Record<string, number> = {};
-          for (const e of mev ?? []) byEvent[e.event_name] = (byEvent[e.event_name] ?? 0) + 1;
           console.info("[marketing] marketing_events debug", {
             period: { start: startIso, end: endIso },
             unitFilter,
             error: mevErr?.message ?? null,
             total: (mev ?? []).length,
-            byEvent,
+            byEvent: byEventCount,
             last20: (mev ?? []).slice(0, 20),
           });
         }
