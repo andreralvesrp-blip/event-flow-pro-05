@@ -24,10 +24,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as ConfiguracoesUnidadesRouteImport } from './routes/configuracoes.unidades'
+import { Route as ConfiguracoesIntegracoesRouteImport } from './routes/configuracoes.integracoes'
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.equipe'
 import { Route as AvaliarSlugRouteImport } from './routes/avaliar.$slug'
 import { Route as ApiPublicMarketingEventRouteImport } from './routes/api/public/marketing-event'
+import { Route as ApiPublicGa4OauthCallbackRouteImport } from './routes/api/public/ga4-oauth.callback'
 
 const WebhooksRoute = WebhooksRouteImport.update({
   id: '/webhooks',
@@ -104,6 +106,12 @@ const ConfiguracoesUnidadesRoute = ConfiguracoesUnidadesRouteImport.update({
   path: '/unidades',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
+const ConfiguracoesIntegracoesRoute =
+  ConfiguracoesIntegracoesRouteImport.update({
+    id: '/integracoes',
+    path: '/integracoes',
+    getParentRoute: () => ConfiguracoesRoute,
+  } as any)
 const ConfiguracoesImportacaoHistoricaRoute =
   ConfiguracoesImportacaoHistoricaRouteImport.update({
     id: '/importacao-historica',
@@ -125,6 +133,12 @@ const ApiPublicMarketingEventRoute = ApiPublicMarketingEventRouteImport.update({
   path: '/api/public/marketing-event',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicGa4OauthCallbackRoute =
+  ApiPublicGa4OauthCallbackRouteImport.update({
+    id: '/api/public/ga4-oauth/callback',
+    path: '/api/public/ga4-oauth/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -142,10 +156,12 @@ export interface FileRoutesByFullPath {
   '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
+  '/api/public/ga4-oauth/callback': typeof ApiPublicGa4OauthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -162,10 +178,12 @@ export interface FileRoutesByTo {
   '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes': typeof ConfiguracoesIndexRoute
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
+  '/api/public/ga4-oauth/callback': typeof ApiPublicGa4OauthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -184,10 +202,12 @@ export interface FileRoutesById {
   '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
+  '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
+  '/api/public/ga4-oauth/callback': typeof ApiPublicGa4OauthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -207,10 +227,12 @@ export interface FileRouteTypes {
     | '/avaliar/$slug'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
+    | '/configuracoes/integracoes'
     | '/configuracoes/unidades'
     | '/f/$slug'
     | '/configuracoes/'
     | '/api/public/marketing-event'
+    | '/api/public/ga4-oauth/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -227,10 +249,12 @@ export interface FileRouteTypes {
     | '/avaliar/$slug'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
+    | '/configuracoes/integracoes'
     | '/configuracoes/unidades'
     | '/f/$slug'
     | '/configuracoes'
     | '/api/public/marketing-event'
+    | '/api/public/ga4-oauth/callback'
   id:
     | '__root__'
     | '/'
@@ -248,10 +272,12 @@ export interface FileRouteTypes {
     | '/avaliar/$slug'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
+    | '/configuracoes/integracoes'
     | '/configuracoes/unidades'
     | '/f/$slug'
     | '/configuracoes/'
     | '/api/public/marketing-event'
+    | '/api/public/ga4-oauth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -270,6 +296,7 @@ export interface RootRouteChildren {
   AvaliarSlugRoute: typeof AvaliarSlugRoute
   FSlugRoute: typeof FSlugRoute
   ApiPublicMarketingEventRoute: typeof ApiPublicMarketingEventRoute
+  ApiPublicGa4OauthCallbackRoute: typeof ApiPublicGa4OauthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -379,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesUnidadesRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
+    '/configuracoes/integracoes': {
+      id: '/configuracoes/integracoes'
+      path: '/integracoes'
+      fullPath: '/configuracoes/integracoes'
+      preLoaderRoute: typeof ConfiguracoesIntegracoesRouteImport
+      parentRoute: typeof ConfiguracoesRoute
+    }
     '/configuracoes/importacao-historica': {
       id: '/configuracoes/importacao-historica'
       path: '/importacao-historica'
@@ -407,12 +441,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMarketingEventRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ga4-oauth/callback': {
+      id: '/api/public/ga4-oauth/callback'
+      path: '/api/public/ga4-oauth/callback'
+      fullPath: '/api/public/ga4-oauth/callback'
+      preLoaderRoute: typeof ApiPublicGa4OauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface ConfiguracoesRouteChildren {
   ConfiguracoesEquipeRoute: typeof ConfiguracoesEquipeRoute
   ConfiguracoesImportacaoHistoricaRoute: typeof ConfiguracoesImportacaoHistoricaRoute
+  ConfiguracoesIntegracoesRoute: typeof ConfiguracoesIntegracoesRoute
   ConfiguracoesUnidadesRoute: typeof ConfiguracoesUnidadesRoute
   ConfiguracoesIndexRoute: typeof ConfiguracoesIndexRoute
 }
@@ -420,6 +462,7 @@ interface ConfiguracoesRouteChildren {
 const ConfiguracoesRouteChildren: ConfiguracoesRouteChildren = {
   ConfiguracoesEquipeRoute: ConfiguracoesEquipeRoute,
   ConfiguracoesImportacaoHistoricaRoute: ConfiguracoesImportacaoHistoricaRoute,
+  ConfiguracoesIntegracoesRoute: ConfiguracoesIntegracoesRoute,
   ConfiguracoesUnidadesRoute: ConfiguracoesUnidadesRoute,
   ConfiguracoesIndexRoute: ConfiguracoesIndexRoute,
 }
@@ -444,6 +487,7 @@ const rootRouteChildren: RootRouteChildren = {
   AvaliarSlugRoute: AvaliarSlugRoute,
   FSlugRoute: FSlugRoute,
   ApiPublicMarketingEventRoute: ApiPublicMarketingEventRoute,
+  ApiPublicGa4OauthCallbackRoute: ApiPublicGa4OauthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

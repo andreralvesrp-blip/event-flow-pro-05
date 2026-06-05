@@ -1,14 +1,14 @@
 // Server function for the Marketing dashboard.
-// Returns GA4-derived metrics (sessions, users, form_open events) for the requested period.
-// When GA4 credentials are missing, returns a disabled state and zeros — the UI will
-// degrade gracefully and Supabase-sourced metrics still render.
+// Uses GA4 via OAuth (per-tenant connection in integrations_ga4).
+// When GA4 is not connected, returns gaConfigured=false; UI shows the "Connect GA4" banner.
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getGa4AccessTokenForTenant } from "@/lib/ga4.functions";
 
 type OverviewInput = {
-  start: string; // YYYY-MM-DD
-  end: string;   // YYYY-MM-DD
+  start: string;
+  end: string;
   source?: string;
   medium?: string;
   campaign?: string;
@@ -42,61 +42,6 @@ export type MarketingOverview = {
   byCampaign: Ga4Campaign[];
 };
 
-// --- JWT (RS256) signing for Google service-account auth ----------------------
-function base64UrlEncode(input: ArrayBuffer | string): string {
-  const bytes =
-    typeof input === "string" ? new TextEncoder().encode(input) : new Uint8Array(input);
-  let bin = "";
-  for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-
-function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const b64 = pem
-    .replace(/-----BEGIN [^-]+-----/g, "")
-    .replace(/-----END [^-]+-----/g, "")
-    .replace(/\s+/g, "");
-  const bin = atob(b64);
-  const buf = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-  return buf.buffer;
-}
-
-async function getAccessToken(clientEmail: string, privateKeyPem: string): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: "RS256", typ: "JWT" };
-  const claim = {
-    iss: clientEmail,
-    scope: "https://www.googleapis.com/auth/analytics.readonly",
-    aud: "https://oauth2.googleapis.com/token",
-    exp: now + 3600,
-    iat: now,
-  };
-  const unsigned =
-    base64UrlEncode(JSON.stringify(header)) + "." + base64UrlEncode(JSON.stringify(claim));
-
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    pemToArrayBuffer(privateKeyPem),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
-  const jwt = unsigned + "." + base64UrlEncode(sig);
-
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body:
-      "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" +
-      encodeURIComponent(jwt),
-  });
-  if (!res.ok) throw new Error(`google_token_failed_${res.status}`);
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
-}
-
 async function runReport(token: string, propertyId: string, body: unknown): Promise<any> {
   const res = await fetch(
     `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
@@ -119,11 +64,7 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
     if (!data?.start || !data?.end) throw new Error("missing_dates");
     return data;
   })
-  .handler(async ({ data }): Promise<MarketingOverview> => {
-    const propertyId = process.env.GA4_PROPERTY_ID;
-    const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
+  .handler(async ({ data, context }): Promise<MarketingOverview> => {
     const empty: MarketingOverview = {
       gaConfigured: false,
       gaError: null,
@@ -136,15 +77,26 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
       byCampaign: [],
     };
 
-    if (!propertyId || !clientEmail || !privateKey) {
-      return empty;
+    // Resolve tenant from authenticated user
+    const supabase = (context as any).supabase;
+    const userId = (context as any).userId as string;
+    const { data: u } = await supabase
+      .from("users")
+      .select("tenant_id")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!u?.tenant_id) return empty;
+
+    let creds: { token: string; propertyId: string } | null = null;
+    try {
+      creds = await getGa4AccessTokenForTenant(u.tenant_id as string);
+    } catch (err) {
+      return { ...empty, gaConfigured: true, gaError: (err as Error).message };
     }
+    if (!creds) return empty;
 
     try {
-      const token = await getAccessToken(clientEmail, privateKey);
-
-      // Daily series: sessions, users, form_open_cta, form_open_float by date
-      const dailyRes = await runReport(token, propertyId, {
+      const dailyRes = await runReport(creds.token, creds.propertyId, {
         dateRanges: [{ startDate: data.start, endDate: data.end }],
         dimensions: [{ name: "date" }, { name: "eventName" }],
         metrics: [{ name: "sessions" }, { name: "activeUsers" }, { name: "eventCount" }],
@@ -176,7 +128,6 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
         const users = Number(r.metricValues?.[1]?.value || 0);
         const eventCount = Number(r.metricValues?.[2]?.value || 0);
         const row = ensure(dateRaw);
-        // sessions/users get aggregated across event rows for the same date — keep only the first occurrence per date
         if (!sessionsByDate.has(row.date)) {
           sessionsByDate.set(row.date, sessions);
           row.sessions = sessions;
@@ -198,8 +149,7 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
 
       const daily = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
 
-      // By campaign: sessions + form_opens (both event variants)
-      const campRes = await runReport(token, propertyId, {
+      const campRes = await runReport(creds.token, creds.propertyId, {
         dateRanges: [{ startDate: data.start, endDate: data.end }],
         dimensions: [
           { name: "sessionSource" },
@@ -225,7 +175,6 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
           row = { source: src, medium: med, campaign: camp, sessions: 0, formOpens: 0 };
           campMap.set(key, row);
         }
-        // sessions repeat per event row — capture once
         if (row.sessions === 0) row.sessions = sessions;
         if (evt === "form_open_cta" || evt === "form_open_float") {
           row.formOpens += eventCount;

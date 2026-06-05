@@ -730,9 +730,18 @@ function MarketingPage() {
         {/* GA4 status banner */}
         {ga && !ga.gaConfigured && (
           <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="p-4 text-sm text-blue-900">
-              <strong>Modo first-party ativo.</strong> GA4 não está configurado — sessões e aberturas do formulário vêm da tabela <code>marketing_events</code>, alimentada pelo widget do site. Para complementar com dados de GA4 (incluindo sessões orgânicas e usuários únicos), adicione os secrets <code>GA4_PROPERTY_ID</code>, <code>GOOGLE_CLIENT_EMAIL</code> e <code>GOOGLE_PRIVATE_KEY</code>.
-
+            <CardContent className="p-4 text-sm text-blue-900 flex items-center justify-between gap-4">
+              <div>
+                <strong>Conecte o Google Analytics.</strong> Sem GA4, sessões/usuários do site não aparecem aqui. Leads, visitas e contratos continuam vindo do banco. Aberturas do formulário usam o tracking first-party (<code>marketing_events</code>).
+              </div>
+              {isAdmin && (
+                <a
+                  href="/configuracoes/integracoes"
+                  className="shrink-0 inline-flex items-center px-3 py-1.5 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Conectar GA4
+                </a>
+              )}
             </CardContent>
           </Card>
         )}

@@ -565,6 +565,53 @@ export type Database = {
           },
         ]
       }
+      integrations_ga4: {
+        Row: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          connected_at: string
+          connected_by_user_id: string | null
+          google_email: string | null
+          property_id: string | null
+          refresh_token: string
+          scope: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          connected_at?: string
+          connected_by_user_id?: string | null
+          google_email?: string | null
+          property_id?: string | null
+          refresh_token: string
+          scope?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          connected_at?: string
+          connected_by_user_id?: string | null
+          google_email?: string | null
+          property_id?: string | null
+          refresh_token?: string
+          scope?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrations_ga4_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legacy_import_batches: {
         Row: {
           committed_at: string | null
