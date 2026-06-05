@@ -470,8 +470,9 @@ function MarketingPage() {
   }, [r.start, r.end, unitFilter, sourceFilter, mediumFilter, campaignFilter, fetchOverview]);
 
 
-  // Derived — usa GA4 quando configurado, senão fallback first-party (marketing_events)
-  const useGa = !!ga?.gaConfigured;
+  // Derived — usa GA4 quando configurado E com dados; senão fallback first-party (marketing_events)
+  const gaHasData = !!ga?.gaConfigured && (ga?.sessions ?? 0) > 0;
+  const useGa = gaHasData;
   const siteSource = useGa ? ga : firstParty;
   const sessions = siteSource?.sessions ?? 0;
   const users = siteSource?.users ?? 0;
