@@ -162,9 +162,8 @@ function PublicForm() {
 
   async function submitDate(e: React.FormEvent) {
     e.preventDefault();
-    if (!desiredDate) return;
-    const [y, m, d] = desiredDate.split("-");
-    pushUser(`${d}/${m}/${y}`);
+    if (!isValidDateDDMMYYYY(desiredDate)) return;
+    pushUser(desiredDate);
     setStep("contact");
     await pushBot(
       "Pra finalizar, me diz seu nome e WhatsApp para te enviarmos o orçamento.",
