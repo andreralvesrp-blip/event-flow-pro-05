@@ -146,13 +146,14 @@ function MarketingPage() {
   const [agg, setAgg] = useState<SbAgg>(emptyAgg());
   const [ga, setGa] = useState<MarketingOverview | null>(null);
   const [firstParty, setFirstParty] = useState<{
+    pageviews: number;
     sessions: number;
     users: number;
     formOpens: number;
     formOpenCta: number;
     formOpenFloat: number;
-    daily: { date: string; sessions: number; formOpenCta: number; formOpenFloat: number }[];
-    byCampaign: { source: string; medium: string; campaign: string; sessions: number; formOpens: number }[];
+    daily: { date: string; pageviews: number; sessions: number; formOpenCta: number; formOpenFloat: number }[];
+    byCampaign: { source: string; medium: string; campaign: string; pageviews: number; sessions: number; users: number; formOpens: number }[];
   } | null>(null);
   type MevRow = {
     created_at: string;
@@ -161,6 +162,7 @@ function MarketingPage() {
     tenant_id: string | null;
     unit_id: string | null;
     session_id: string | null;
+    visitor_id: string | null;
     utm_source: string | null;
     utm_medium: string | null;
     utm_campaign: string | null;
