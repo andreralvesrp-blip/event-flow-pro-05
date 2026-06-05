@@ -59,7 +59,10 @@ export const Route = createFileRoute("/api/public/marketing-event")({
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders() }),
       POST: async ({ request }) => {
         try {
-          const raw = await request.json().catch(() => null);
+          // Accept any Content-Type (sendBeacon may send text/plain or application/json)
+          const text = await request.text().catch(() => "");
+          let raw: unknown = null;
+          try { raw = text ? JSON.parse(text) : null; } catch { raw = null; }
           const parsed = Body.safeParse(raw);
           if (!parsed.success) {
             return new Response(JSON.stringify({ error: "invalid_body" }), {
@@ -129,9 +132,18 @@ export const Route = createFileRoute("/api/public/marketing-event")({
             ip_hash: ipHash,
           });
 
+          console.log("[marketing-event]", {
+            event_name: b.event_name,
+            form_slug: b.form_slug,
+            tenant_id: form.tenant_id,
+            unit_id: form.unit_id,
+            session_id: b.session_id ?? null,
+            ok: !insErr,
+            error: insErr?.message ?? null,
+          });
+
           if (insErr) {
-            console.error("marketing-event insert failed", insErr);
-            return new Response(JSON.stringify({ error: "insert_failed" }), {
+            return new Response(JSON.stringify({ error: "insert_failed", detail: insErr.message }), {
               status: 500,
               headers: { "Content-Type": "application/json", ...corsHeaders() },
             });

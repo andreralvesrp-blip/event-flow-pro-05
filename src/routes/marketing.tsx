@@ -358,15 +358,32 @@ function MarketingPage() {
 
       // ----- First-party marketing_events (fallback / sempre p/ form opens) -----
       try {
+        // Use BRT end-of-day to avoid losing same-day events
+        const startIso = `${r.start}T00:00:00-03:00`;
+        const endIso = `${r.end}T23:59:59.999-03:00`;
         let mevQ = supabase
           .from("marketing_events")
-          .select("event_name, session_id, created_at, utm_source, utm_medium, utm_campaign")
-          .gte("created_at", `${r.start}T00:00:00`)
-          .lte("created_at", `${r.end}T23:59:59`)
+          .select("event_name, session_id, created_at, utm_source, utm_medium, utm_campaign, form_slug, tenant_id, unit_id")
+          .gte("created_at", startIso)
+          .lte("created_at", endIso)
+          .order("created_at", { ascending: false })
           .limit(50000);
         if (unitFilter) mevQ = mevQ.eq("unit_id", unitFilter);
-        const { data: mev } = await mevQ;
+        const { data: mev, error: mevErr } = await mevQ;
         if (cancel) return;
+
+        if (import.meta.env.DEV) {
+          const byEvent: Record<string, number> = {};
+          for (const e of mev ?? []) byEvent[e.event_name] = (byEvent[e.event_name] ?? 0) + 1;
+          console.info("[marketing] marketing_events debug", {
+            period: { start: startIso, end: endIso },
+            unitFilter,
+            error: mevErr?.message ?? null,
+            total: (mev ?? []).length,
+            byEvent,
+            last20: (mev ?? []).slice(0, 20),
+          });
+        }
 
         const sessSet = new Set<string>();
         const dailyMap = new Map<
@@ -453,8 +470,9 @@ function MarketingPage() {
   }, [r.start, r.end, unitFilter, sourceFilter, mediumFilter, campaignFilter, fetchOverview]);
 
 
-  // Derived — usa GA4 quando configurado, senão fallback first-party (marketing_events)
-  const useGa = !!ga?.gaConfigured;
+  // Derived — usa GA4 quando configurado E com dados; senão fallback first-party (marketing_events)
+  const gaHasData = !!ga?.gaConfigured && (ga?.sessions ?? 0) > 0;
+  const useGa = gaHasData;
   const siteSource = useGa ? ga : firstParty;
   const sessions = siteSource?.sessions ?? 0;
   const users = siteSource?.users ?? 0;
