@@ -287,7 +287,8 @@ function MarketingPage() {
   const convOpenLead = formOpens > 0 ? leadsCount / formOpens : 0;
   const convOpenLeadPrev = formOpensPrev > 0 ? prevLeadsCount / formOpensPrev : 0;
   const abandono = formOpens > 0 ? 1 - leadsCount / formOpens : 0;
-  const convUserLead = users > 0 ? leadsCount / users : 0;
+  const convUserOpen = users > 0 ? formOpens / users : 0;
+  const convUserOpenPrev = usersPrev > 0 ? formOpensPrev / usersPrev : 0;
 
   // Daily series (users/aperturas/leads)
   const leadsByDate = new Map<string, number>();
@@ -444,25 +445,57 @@ function MarketingPage() {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
-          <Kpi label="Usuários" value={fmtInt(users)} delta={deltaPct(users, usersPrev)} loading={loading} />
-          <Kpi label="Sessões" value={fmtInt(sessions)} delta={deltaPct(sessions, sessionsPrev)} loading={loading} />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* Volume do funil */}
+          <Kpi
+            label="Usuários"
+            value={fmtInt(users)}
+            subtitle="Base do funil"
+            variant="volume"
+            delta={deltaPct(users, usersPrev)}
+            loading={loading}
+          />
           <Kpi
             label="Aberturas do form"
             value={fmtInt(formOpens)}
-            sub={`CTA ${fmtInt(formOpenCta)} · Float ${fmtInt(formOpenFloat)}`}
+            subtitle={users > 0 ? `${fmtPct(formOpens, users)} dos usuários abriram o form` : "—"}
+            variant="volume"
             delta={deltaPct(formOpens, formOpensPrev)}
             loading={loading}
           />
-          <Kpi label="Leads" value={fmtInt(leadsCount)} delta={deltaPct(leadsCount, prevLeadsCount)} loading={loading} highlight />
+          <Kpi
+            label="Leads"
+            value={fmtInt(leadsCount)}
+            subtitle={formOpens > 0 ? `${fmtPct(leadsCount, formOpens)} das aberturas viraram lead` : "—"}
+            variant="volume"
+            delta={deltaPct(leadsCount, prevLeadsCount)}
+            loading={loading}
+          />
+          {/* Eficiência do funil */}
+          <Kpi
+            label="Conv. usuário → abertura"
+            value={fmtPct(formOpens, users)}
+            subtitle="Aberturas / usuários"
+            variant="conversion"
+            delta={deltaPct(convUserOpen * 1000, convUserOpenPrev * 1000)}
+            loading={loading}
+          />
           <Kpi
             label="Conv. abertura → lead"
             value={fmtPct(leadsCount, formOpens)}
+            subtitle="Leads / aberturas"
+            variant="conversion"
             delta={deltaPct(convOpenLead * 1000, convOpenLeadPrev * 1000)}
             loading={loading}
           />
-          <Kpi label="Abandono do form" value={formOpens > 0 ? `${(abandono * 100).toFixed(1)}%` : "—"} loading={loading} />
-          <Kpi label="Conv. usuário → lead" value={fmtPct(leadsCount, users)} loading={loading} />
+          <Kpi
+            label="Abandono do form"
+            value={formOpens > 0 ? `${(abandono * 100).toFixed(1)}%` : "—"}
+            subtitle="Aberturas sem lead"
+            variant="conversion"
+            delta={deltaPct(abandono * 1000, formOpensPrev > 0 ? (1 - prevLeadsCount / formOpensPrev) * 1000 : 0)}
+            loading={loading}
+          />
         </div>
 
         {/* Série diária */}
@@ -647,39 +680,40 @@ function MarketingPage() {
 function Kpi({
   label,
   value,
-  sub,
-  highlight,
+  subtitle,
+  variant,
   loading,
   delta,
 }: {
   label: string;
   value: string;
-  sub?: string;
-  highlight?: boolean;
+  subtitle?: string;
+  variant?: "volume" | "conversion";
   loading?: boolean;
   delta?: { txt: string; up: boolean | null };
 }) {
+  const cardClass =
+    variant === "volume"
+      ? "bg-kpi-volume-bg border-kpi-volume-border"
+      : variant === "conversion"
+        ? "bg-kpi-conversion-bg border-kpi-conversion-border"
+        : "";
+
   return (
-    <Card className={highlight ? "border-emerald-300 bg-emerald-50/40" : ""}>
+    <Card className={cardClass}>
       <CardContent className="p-4">
         <div className="text-xs text-slate-500">{label}</div>
         {loading ? (
           <Skeleton className="h-7 w-20 mt-2" />
         ) : (
-          <div className={`text-2xl font-semibold mt-1 ${highlight ? "text-emerald-900" : "text-slate-900"}`}>
-            {value}
-          </div>
+          <div className="text-2xl font-semibold mt-1 text-slate-900 dark:text-slate-100">{value}</div>
+        )}
+        {subtitle && !loading && (
+          <div className="text-xs text-slate-600 dark:text-slate-300 mt-2">{subtitle}</div>
         )}
         {delta && !loading && (
-          <div
-            className={`text-[11px] mt-1 ${
-              delta.up === null ? "text-slate-400" : delta.up ? "text-emerald-600" : "text-rose-600"
-            }`}
-          >
-            {delta.txt} vs período anterior
-          </div>
+          <div className="text-[10px] text-slate-400 mt-2">{delta.txt} vs período anterior</div>
         )}
-        {sub && <div className="text-[11px] text-slate-500 mt-1">{sub}</div>}
       </CardContent>
     </Card>
   );
