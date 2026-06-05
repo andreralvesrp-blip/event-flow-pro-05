@@ -78,7 +78,9 @@ function PublicForm() {
         }
         setCfg(data);
         setStep("intro");
-        await pushBot("Oi! Vamos verificar a disponibilidade para a festa?");
+        await pushBot(
+          "Precisamos de algumas informações para te passar o orçamento, vai ser bem rápido!",
+        );
       } catch {
         setStep("unavailable");
       }
@@ -89,7 +91,7 @@ function PublicForm() {
   async function startConversation() {
     pushUser("Vamos lá");
     setStep("name");
-    await pushBot("Nome do aniversariante?");
+    await pushBot("Qual o nome do(a) aniversariante?");
   }
 
   async function submitName(e: React.FormEvent) {
@@ -97,7 +99,10 @@ function PublicForm() {
     if (!celebrantName.trim()) return;
     pushUser(celebrantName);
     setStep("age");
-    await pushBot(`Quantos anos o(a) ${celebrantName} vai fazer?`);
+    const first = celebrantName.trim().split(/\s+/)[0];
+    const last = first.slice(-1).toLowerCase();
+    const article = last === "a" ? "a " : last === "o" ? "o " : "";
+    await pushBot(`Quantos anos ${article}${first} vai fazer?`);
   }
 
   async function submitAge(e: React.FormEvent) {
@@ -106,7 +111,7 @@ function PublicForm() {
     if (!n || n < 1 || n > 17) return;
     pushUser(`${n} aninhos`);
     setStep("date");
-    await pushBot("Qual data você tem em mente?");
+    await pushBot("E qual a data para a festa?");
   }
 
   async function submitDate(e: React.FormEvent) {
@@ -116,13 +121,14 @@ function PublicForm() {
     pushUser(`${d}/${m}/${y}`);
     setStep("contact");
     await pushBot(
-      "Me passa seu nome e WhatsApp que eu verifico a disponibilidade pra você.",
+      "Pra finalizar, me diz seu nome e WhatsApp para te enviarmos o orçamento.",
     );
   }
 
   async function submitContact(e: React.FormEvent) {
     e.preventDefault();
-    if (!parentName.trim() || !parentPhone.trim()) return;
+    if (!parentName.trim()) return;
+    if (!isValidPhone(parentPhone)) return;
     pushUser(`${parentName} · ${parentPhone}`);
     setStep("submitting");
     await pushBot("Verificando...");
