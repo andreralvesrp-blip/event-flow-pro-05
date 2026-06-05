@@ -114,11 +114,18 @@ Deno.serve(async (req) => {
     utm_source,
     utm_medium,
     utm_campaign,
+    utm_content,
+    utm_term,
+    gclid,
+    fbclid,
+    landing_page,
+    referrer,
   } = body || {};
 
   if (!form_slug || !celebrant_name || !celebrant_age || !desired_date || !parent_name || !parent_phone) {
     return json({ error: "missing_fields" }, 400);
   }
+
 
   // a) Form
   const { data: form, error: fErr } = await admin
