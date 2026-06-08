@@ -287,6 +287,7 @@ Deno.serve(async (req) => {
   return json({
     success: true,
     opportunity_id: opp.id,
+    lead_event_id: leadEventId,
     date_status: dateStatus,
     whatsapp_stub: whatsappStub,
   });
