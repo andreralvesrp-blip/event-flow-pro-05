@@ -117,9 +117,14 @@ Deno.serve(async (req) => {
     utm_content,
     utm_term,
     gclid,
+    gbraid,
+    wbraid,
     fbclid,
+    fbp,
+    fbc,
     landing_page,
     referrer,
+    marketing_event_id,
   } = body || {};
 
   if (!form_slug || !celebrant_name || !celebrant_age || !desired_date || !parent_name || !parent_phone) {
@@ -163,8 +168,9 @@ Deno.serve(async (req) => {
     clientId = created.id;
   }
 
-  // c) Opportunity
+  // c) Opportunity — generate lead_event_id for ad platform deduplication
   const finalCampaign = utm_campaign || form.utm_campaign || null;
+  const leadEventId = crypto.randomUUID();
   const { data: opp, error: oErr } = await admin
     .from("opportunities")
     .insert({
@@ -178,15 +184,22 @@ Deno.serve(async (req) => {
       stage: "em_conversa",
       source: form.source,
       form_id: form.id,
+      form_slug,
       utm_source: utm_source || null,
       utm_medium: utm_medium || null,
       utm_campaign: finalCampaign,
       utm_content: utm_content || null,
       utm_term: utm_term || null,
       gclid: gclid || null,
+      gbraid: gbraid || null,
+      wbraid: wbraid || null,
       fbclid: fbclid || null,
+      fbp: fbp || null,
+      fbc: fbc || null,
       landing_page: landing_page || null,
       referrer: referrer || null,
+      marketing_event_id: marketing_event_id || null,
+      lead_event_id: leadEventId,
       first_response_at: new Date().toISOString(),
       stage_changed_at: new Date().toISOString(),
     })
@@ -274,6 +287,7 @@ Deno.serve(async (req) => {
   return json({
     success: true,
     opportunity_id: opp.id,
+    lead_event_id: leadEventId,
     date_status: dateStatus,
     whatsapp_stub: whatsappStub,
   });

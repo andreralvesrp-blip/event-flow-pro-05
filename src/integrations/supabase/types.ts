@@ -478,6 +478,156 @@ export type Database = {
           },
         ]
       }
+      conversion_events: {
+        Row: {
+          contract_id: string | null
+          created_at: string
+          currency: string
+          event_id: string
+          event_name: string
+          fbc: string | null
+          fbclid: string | null
+          fbp: string | null
+          form_slug: string | null
+          gbraid: string | null
+          gclid: string | null
+          google_error: string | null
+          google_status: string | null
+          id: string
+          landing_page: string | null
+          lead_event_id: string | null
+          meta_error: string | null
+          meta_status: string | null
+          occurred_at: string
+          opportunity_id: string | null
+          payload: Json | null
+          referrer: string | null
+          sent_to_google_at: string | null
+          sent_to_meta_at: string | null
+          tenant_id: string
+          unit_id: string | null
+          updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          value: number | null
+          visit_id: string | null
+          wbraid: string | null
+        }
+        Insert: {
+          contract_id?: string | null
+          created_at?: string
+          currency?: string
+          event_id?: string
+          event_name: string
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          form_slug?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          google_error?: string | null
+          google_status?: string | null
+          id?: string
+          landing_page?: string | null
+          lead_event_id?: string | null
+          meta_error?: string | null
+          meta_status?: string | null
+          occurred_at?: string
+          opportunity_id?: string | null
+          payload?: Json | null
+          referrer?: string | null
+          sent_to_google_at?: string | null
+          sent_to_meta_at?: string | null
+          tenant_id: string
+          unit_id?: string | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          value?: number | null
+          visit_id?: string | null
+          wbraid?: string | null
+        }
+        Update: {
+          contract_id?: string | null
+          created_at?: string
+          currency?: string
+          event_id?: string
+          event_name?: string
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          form_slug?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          google_error?: string | null
+          google_status?: string | null
+          id?: string
+          landing_page?: string | null
+          lead_event_id?: string | null
+          meta_error?: string | null
+          meta_status?: string | null
+          occurred_at?: string
+          opportunity_id?: string | null
+          payload?: Json | null
+          referrer?: string | null
+          sent_to_google_at?: string | null
+          sent_to_meta_at?: string | null
+          tenant_id?: string
+          unit_id?: string | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          value?: number | null
+          visit_id?: string | null
+          wbraid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversion_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversion_events_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversion_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversion_events_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversion_events_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forms: {
         Row: {
           active: boolean
@@ -1244,17 +1394,23 @@ export type Database = {
           desired_date: string | null
           desired_slot: Database["public"]["Enums"]["event_slot"] | null
           estimated_value: number | null
+          fbc: string | null
           fbclid: string | null
+          fbp: string | null
           first_response_at: string | null
           form_id: string | null
+          form_slug: string | null
+          gbraid: string | null
           gclid: string | null
           guest_estimate: number | null
           id: string
           landing_page: string | null
+          lead_event_id: string | null
           loss_reason: Database["public"]["Enums"]["loss_reason"] | null
           lost_from_stage:
             | Database["public"]["Enums"]["opportunity_stage"]
             | null
+          marketing_event_id: string | null
           notes: string | null
           nps_response_id: string | null
           owner_id: string | null
@@ -1272,6 +1428,7 @@ export type Database = {
           utm_medium: string | null
           utm_source: string | null
           utm_term: string | null
+          wbraid: string | null
         }
         Insert: {
           celebrant_age?: number | null
@@ -1285,17 +1442,23 @@ export type Database = {
           desired_date?: string | null
           desired_slot?: Database["public"]["Enums"]["event_slot"] | null
           estimated_value?: number | null
+          fbc?: string | null
           fbclid?: string | null
+          fbp?: string | null
           first_response_at?: string | null
           form_id?: string | null
+          form_slug?: string | null
+          gbraid?: string | null
           gclid?: string | null
           guest_estimate?: number | null
           id?: string
           landing_page?: string | null
+          lead_event_id?: string | null
           loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
           lost_from_stage?:
             | Database["public"]["Enums"]["opportunity_stage"]
             | null
+          marketing_event_id?: string | null
           notes?: string | null
           nps_response_id?: string | null
           owner_id?: string | null
@@ -1313,6 +1476,7 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          wbraid?: string | null
         }
         Update: {
           celebrant_age?: number | null
@@ -1326,17 +1490,23 @@ export type Database = {
           desired_date?: string | null
           desired_slot?: Database["public"]["Enums"]["event_slot"] | null
           estimated_value?: number | null
+          fbc?: string | null
           fbclid?: string | null
+          fbp?: string | null
           first_response_at?: string | null
           form_id?: string | null
+          form_slug?: string | null
+          gbraid?: string | null
           gclid?: string | null
           guest_estimate?: number | null
           id?: string
           landing_page?: string | null
+          lead_event_id?: string | null
           loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
           lost_from_stage?:
             | Database["public"]["Enums"]["opportunity_stage"]
             | null
+          marketing_event_id?: string | null
           notes?: string | null
           nps_response_id?: string | null
           owner_id?: string | null
@@ -1354,6 +1524,7 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          wbraid?: string | null
         }
         Relationships: [
           {
@@ -1679,6 +1850,16 @@ export type Database = {
       mark_nps_google_redirect: {
         Args: { _response_id: string }
         Returns: undefined
+      }
+      record_conversion_event: {
+        Args: {
+          _contract_id?: string
+          _event_name: string
+          _opportunity_id: string
+          _value?: number
+          _visit_id?: string
+        }
+        Returns: string
       }
       submit_nps_response: {
         Args: {

@@ -214,15 +214,28 @@ function PublicForm() {
 
     const url = new URL(window.location.href);
     const qp = (k: string) => url.searchParams.get(k) || undefined;
+    const cookie = (k: string): string | undefined => {
+      try {
+        const m = document.cookie.match(new RegExp("(?:^|; )" + k.replace(/[.$?*|{}()[\]\\/+^]/g, "\\$&") + "=([^;]*)"));
+        return m ? decodeURIComponent(m[1]) : undefined;
+      } catch { return undefined; }
+    };
     const utm_source = qp("utm_source");
     const utm_medium = qp("utm_medium");
     const utm_campaign = qp("utm_campaign");
     const utm_content = qp("utm_content");
     const utm_term = qp("utm_term");
     const gclid = qp("gclid");
+    const gbraid = qp("gbraid");
+    const wbraid = qp("wbraid");
     const fbclid = qp("fbclid");
+    const fbp = cookie("_fbp");
+    // Build fbc from fbclid when cookie missing
+    const fbcCookie = cookie("_fbc");
+    const fbc = fbcCookie || (fbclid ? `fb.1.${Date.now()}.${fbclid}` : undefined);
     const landing_page = qp("kp_landing") || undefined;
     const referrer = qp("kp_ref") || undefined;
+    const marketing_event_id = qp("kp_evt") || undefined;
 
     try {
       await new Promise((r) => setTimeout(r, 2000));
@@ -246,9 +259,14 @@ function PublicForm() {
           utm_content,
           utm_term,
           gclid,
+          gbraid,
+          wbraid,
           fbclid,
+          fbp,
+          fbc,
           landing_page,
           referrer,
+          marketing_event_id,
         }),
       });
 
@@ -262,6 +280,26 @@ function PublicForm() {
         setStep("error");
         return;
       }
+      // Parse response, notify parent site (host page) for ad pixels
+      let leadEventId: string | undefined;
+      try {
+        const data = await res.json();
+        leadEventId = data?.lead_event_id;
+      } catch { /* ignore */ }
+      try {
+        window.parent?.postMessage(
+          {
+            type: "kpw-lead-created",
+            event_id: leadEventId,
+            form_slug: slug,
+            landing_page,
+            utm_source,
+            utm_medium,
+            utm_campaign,
+          },
+          "*",
+        );
+      } catch { /* ignore */ }
       setStep("done");
     } catch {
       setErrorMsg("Sem conexão. Verifique sua internet e tente novamente.");
