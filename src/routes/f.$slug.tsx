@@ -284,22 +284,25 @@ function PublicForm() {
       let leadEventId: string | undefined;
       try {
         const data = await res.json();
-        leadEventId = data?.lead_event_id;
+        leadEventId = data?.lead_event_id || data?.event_id;
       } catch { /* ignore */ }
-      try {
-        window.parent?.postMessage(
-          {
-            type: "kpw-lead-created",
-            event_id: leadEventId,
-            form_slug: slug,
-            landing_page,
-            utm_source,
-            utm_medium,
-            utm_campaign,
-          },
-          "*",
-        );
-      } catch { /* ignore */ }
+      if (res.ok && leadEventId) {
+        try {
+          window.parent?.postMessage(
+            {
+              type: "kpw-lead-created",
+              event_id: leadEventId,
+              lead_event_id: leadEventId,
+              form_slug: slug,
+              landing_page,
+              utm_source,
+              utm_medium,
+              utm_campaign,
+            },
+            "*",
+          );
+        } catch { /* ignore */ }
+      }
       setStep("done");
     } catch {
       setErrorMsg("Sem conexão. Verifique sua internet e tente novamente.");
