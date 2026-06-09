@@ -411,7 +411,7 @@ function OportunidadesPage() {
             </div>
             <div className="space-y-2 flex-1">
               {(opsByStage.get(stage) ?? []).map((o) => (
-                <OpCard key={o.id} op={o} onClick={() => setSelected(o)} />
+                <OpCard key={o.id} op={o} formLabel={formLabel} onClick={() => setSelected(o)} />
               ))}
               {(opsByStage.get(stage) ?? []).length === 0 && (
                 <div className="text-xs text-slate-400 px-2 py-3 text-center">—</div>
