@@ -238,6 +238,9 @@ function OportunidadesPage() {
 
     const { data: vs } = await visitsQ;
     setVisits((vs ?? []) as Visit[]);
+
+    const { data: fs } = await supabase.from("forms").select("slug, name");
+    setForms((fs ?? []) as FormLite[]);
   }, [unitFilter]);
 
   useEffect(() => {
