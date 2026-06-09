@@ -451,6 +451,7 @@ function OportunidadesPage() {
               )}
               tenantId={profile?.tenant_id ?? null}
               userId={user?.id ?? null}
+              formLabel={formLabel}
               onChanged={loadAll}
             />
           )}
