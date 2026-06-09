@@ -87,8 +87,11 @@ type Opportunity = {
   pre_reserva_expires_at: string | null;
   first_response_at: string | null;
   created_at: string;
+  form_slug: string | null;
   client?: { id: string; full_name: string; phone: string | null; email: string | null } | null;
 };
+
+type FormLite = { slug: string; name: string };
 
 type Visit = {
   id: string;
@@ -202,6 +205,8 @@ function OportunidadesPage() {
   const search = useSearch({ from: "/oportunidades" });
   const [ops, setOps] = useState<Opportunity[] | null>(null);
   const [visits, setVisits] = useState<Visit[]>([]);
+  const [forms, setForms] = useState<FormLite[]>([]);
+  const [formFilter, setFormFilter] = useState<string>("all");
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -233,6 +238,9 @@ function OportunidadesPage() {
 
     const { data: vs } = await visitsQ;
     setVisits((vs ?? []) as Visit[]);
+
+    const { data: fs } = await supabase.from("forms").select("slug, name");
+    setForms((fs ?? []) as FormLite[]);
   }, [unitFilter]);
 
   useEffect(() => {
@@ -281,12 +289,31 @@ function OportunidadesPage() {
     };
   }, [ops, visits]);
 
+  const formsMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const f of forms) m.set(f.slug, f.name);
+    return m;
+  }, [forms]);
+
+  const formLabel = useCallback(
+    (slug: string | null | undefined) =>
+      slug ? formsMap.get(slug) ?? slug : "Manual / não identificado",
+    [formsMap],
+  );
+
+  const filteredOps = useMemo(() => {
+    if (!ops) return ops;
+    if (formFilter === "all") return ops;
+    if (formFilter === "__none") return ops.filter((o) => !o.form_slug);
+    return ops.filter((o) => o.form_slug === formFilter);
+  }, [ops, formFilter]);
+
   const opsByStage = useMemo(() => {
     const map = new Map<Stage, Opportunity[]>();
     STAGES.forEach((s) => map.set(s, []));
-    for (const o of ops ?? []) map.get(o.stage)!.push(o);
+    for (const o of filteredOps ?? []) map.get(o.stage)!.push(o);
     return map;
-  }, [ops]);
+  }, [filteredOps]);
 
   const openOp = (id: string) => {
     const o = (ops ?? []).find((x) => x.id === id);
@@ -295,13 +322,28 @@ function OportunidadesPage() {
 
   return (
     <AppLayout title="Oportunidades">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="text-sm text-slate-500">
-          {ops ? `${ops.length} oportunidade${ops.length === 1 ? "" : "s"}` : "Carregando…"}
+          {filteredOps
+            ? `${filteredOps.length} oportunidade${filteredOps.length === 1 ? "" : "s"}`
+            : "Carregando…"}
         </div>
-        <Button onClick={() => setShowNew(true)}>
-          <Plus className="w-4 h-4" /> Nova oportunidade
-        </Button>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-slate-500">Formulário:</Label>
+          <Select value={formFilter} onValueChange={setFormFilter}>
+            <SelectTrigger className="h-8 w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="__none">Manual / não identificado</SelectItem>
+              {forms.map((f) => (
+                <SelectItem key={f.slug} value={f.slug}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setShowNew(true)}>
+            <Plus className="w-4 h-4" /> Nova oportunidade
+          </Button>
+        </div>
       </div>
 
       {err && <div className="text-sm text-red-600 mb-4">Erro: {err}</div>}
@@ -369,7 +411,7 @@ function OportunidadesPage() {
             </div>
             <div className="space-y-2 flex-1">
               {(opsByStage.get(stage) ?? []).map((o) => (
-                <OpCard key={o.id} op={o} onClick={() => setSelected(o)} />
+                <OpCard key={o.id} op={o} formLabel={formLabel} onClick={() => setSelected(o)} />
               ))}
               {(opsByStage.get(stage) ?? []).length === 0 && (
                 <div className="text-xs text-slate-400 px-2 py-3 text-center">—</div>
@@ -409,6 +451,7 @@ function OportunidadesPage() {
               )}
               tenantId={profile?.tenant_id ?? null}
               userId={user?.id ?? null}
+              formLabel={formLabel}
               onChanged={loadAll}
             />
           )}
@@ -458,7 +501,15 @@ function ActionGroup({
   );
 }
 
-function OpCard({ op, onClick }: { op: Opportunity; onClick: () => void }) {
+function OpCard({
+  op,
+  formLabel,
+  onClick,
+}: {
+  op: Opportunity;
+  formLabel: (slug: string | null | undefined) => string;
+  onClick: () => void;
+}) {
   const parado = daysSince(op.stage_changed_at);
   return (
     <button
@@ -479,12 +530,20 @@ function OpCard({ op, onClick }: { op: Opportunity; onClick: () => void }) {
         {op.source && <div>{SOURCE_LABELS[op.source]}</div>}
         {op.estimated_value != null && <div>{fmtBRL(op.estimated_value)}</div>}
       </div>
-      <div className="text-[10px] text-slate-400 mt-1.5 flex justify-between">
-        <span>parado há {parado}d</span>
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <Badge
+          variant="outline"
+          className="text-[10px] font-normal px-1.5 py-0 truncate max-w-[80%]"
+          title={formLabel(op.form_slug)}
+        >
+          {formLabel(op.form_slug)}
+        </Badge>
+        <span className="text-[10px] text-slate-400 shrink-0">parado há {parado}d</span>
       </div>
     </button>
   );
 }
+
 
 // ----------- New Opportunity dialog -----------
 function NewOpportunityDialog({
@@ -822,12 +881,14 @@ function OpDetail({
   visits,
   tenantId,
   userId,
+  formLabel,
   onChanged,
 }: {
   op: Opportunity;
   visits: Visit[];
   tenantId: string | null;
   userId: string | null;
+  formLabel: (slug: string | null | undefined) => string;
   onChanged: () => void;
 }) {
   const [showLoss, setShowLoss] = useState(false);
@@ -961,6 +1022,10 @@ function OpDetail({
           <div>
             <div className="text-xs text-slate-500">Parado há</div>
             <div>{daysSince(op.stage_changed_at)} dias</div>
+          </div>
+          <div className="col-span-2">
+            <div className="text-xs text-slate-500">Formulário de origem</div>
+            <div>{formLabel(op.form_slug)}</div>
           </div>
           {op.pre_reserva_expires_at && (
             <div className="col-span-2">
