@@ -1023,6 +1023,10 @@ function OpDetail({
             <div className="text-xs text-slate-500">Parado há</div>
             <div>{daysSince(op.stage_changed_at)} dias</div>
           </div>
+          <div className="col-span-2">
+            <div className="text-xs text-slate-500">Formulário de origem</div>
+            <div>{formLabel(op.form_slug)}</div>
+          </div>
           {op.pre_reserva_expires_at && (
             <div className="col-span-2">
               <div className="text-xs text-slate-500">Pré-reserva expira em</div>
