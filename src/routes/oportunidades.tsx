@@ -322,13 +322,28 @@ function OportunidadesPage() {
 
   return (
     <AppLayout title="Oportunidades">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="text-sm text-slate-500">
-          {ops ? `${ops.length} oportunidade${ops.length === 1 ? "" : "s"}` : "Carregando…"}
+          {filteredOps
+            ? `${filteredOps.length} oportunidade${filteredOps.length === 1 ? "" : "s"}`
+            : "Carregando…"}
         </div>
-        <Button onClick={() => setShowNew(true)}>
-          <Plus className="w-4 h-4" /> Nova oportunidade
-        </Button>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-slate-500">Formulário:</Label>
+          <Select value={formFilter} onValueChange={setFormFilter}>
+            <SelectTrigger className="h-8 w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="__none">Manual / não identificado</SelectItem>
+              {forms.map((f) => (
+                <SelectItem key={f.slug} value={f.slug}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setShowNew(true)}>
+            <Plus className="w-4 h-4" /> Nova oportunidade
+          </Button>
+        </div>
       </div>
 
       {err && <div className="text-sm text-red-600 mb-4">Erro: {err}</div>}
