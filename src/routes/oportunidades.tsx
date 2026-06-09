@@ -500,7 +500,15 @@ function ActionGroup({
   );
 }
 
-function OpCard({ op, onClick }: { op: Opportunity; onClick: () => void }) {
+function OpCard({
+  op,
+  formLabel,
+  onClick,
+}: {
+  op: Opportunity;
+  formLabel: (slug: string | null | undefined) => string;
+  onClick: () => void;
+}) {
   const parado = daysSince(op.stage_changed_at);
   return (
     <button
@@ -521,12 +529,20 @@ function OpCard({ op, onClick }: { op: Opportunity; onClick: () => void }) {
         {op.source && <div>{SOURCE_LABELS[op.source]}</div>}
         {op.estimated_value != null && <div>{fmtBRL(op.estimated_value)}</div>}
       </div>
-      <div className="text-[10px] text-slate-400 mt-1.5 flex justify-between">
-        <span>parado há {parado}d</span>
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <Badge
+          variant="outline"
+          className="text-[10px] font-normal px-1.5 py-0 truncate max-w-[80%]"
+          title={formLabel(op.form_slug)}
+        >
+          {formLabel(op.form_slug)}
+        </Badge>
+        <span className="text-[10px] text-slate-400 shrink-0">parado há {parado}d</span>
       </div>
     </button>
   );
 }
+
 
 // ----------- New Opportunity dialog -----------
 function NewOpportunityDialog({
