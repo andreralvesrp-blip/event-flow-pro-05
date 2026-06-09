@@ -205,6 +205,8 @@ function OportunidadesPage() {
   const search = useSearch({ from: "/oportunidades" });
   const [ops, setOps] = useState<Opportunity[] | null>(null);
   const [visits, setVisits] = useState<Visit[]>([]);
+  const [forms, setForms] = useState<FormLite[]>([]);
+  const [formFilter, setFormFilter] = useState<string>("all");
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [showNew, setShowNew] = useState(false);
