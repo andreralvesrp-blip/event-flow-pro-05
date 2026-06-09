@@ -289,12 +289,31 @@ function OportunidadesPage() {
     };
   }, [ops, visits]);
 
+  const formsMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const f of forms) m.set(f.slug, f.name);
+    return m;
+  }, [forms]);
+
+  const formLabel = useCallback(
+    (slug: string | null | undefined) =>
+      slug ? formsMap.get(slug) ?? slug : "Manual / não identificado",
+    [formsMap],
+  );
+
+  const filteredOps = useMemo(() => {
+    if (!ops) return ops;
+    if (formFilter === "all") return ops;
+    if (formFilter === "__none") return ops.filter((o) => !o.form_slug);
+    return ops.filter((o) => o.form_slug === formFilter);
+  }, [ops, formFilter]);
+
   const opsByStage = useMemo(() => {
     const map = new Map<Stage, Opportunity[]>();
     STAGES.forEach((s) => map.set(s, []));
-    for (const o of ops ?? []) map.get(o.stage)!.push(o);
+    for (const o of filteredOps ?? []) map.get(o.stage)!.push(o);
     return map;
-  }, [ops]);
+  }, [filteredOps]);
 
   const openOp = (id: string) => {
     const o = (ops ?? []).find((x) => x.id === id);
