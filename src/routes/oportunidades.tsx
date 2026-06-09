@@ -881,12 +881,14 @@ function OpDetail({
   visits,
   tenantId,
   userId,
+  formLabel,
   onChanged,
 }: {
   op: Opportunity;
   visits: Visit[];
   tenantId: string | null;
   userId: string | null;
+  formLabel: (slug: string | null | undefined) => string;
   onChanged: () => void;
 }) {
   const [showLoss, setShowLoss] = useState(false);
