@@ -233,9 +233,9 @@ function PublicForm() {
     // Build fbc from fbclid when cookie missing
     const fbcCookie = cookie("_fbc");
     const fbc = fbcCookie || (fbclid ? `fb.1.${Date.now()}.${fbclid}` : undefined);
-    const landing_page = qp("kp_landing") || undefined;
-    const referrer = qp("kp_ref") || undefined;
-    const marketing_event_id = qp("kp_evt") || undefined;
+    const landing_page = qp("landing_page") || qp("kp_landing") || (typeof window !== "undefined" ? window.location.href : undefined);
+    const referrer = qp("referrer") || qp("kp_ref") || (typeof document !== "undefined" ? document.referrer || undefined : undefined);
+    const marketing_event_id = qp("marketing_event_id") || qp("kp_evt") || undefined;
 
     try {
       await new Promise((r) => setTimeout(r, 2000));
@@ -284,22 +284,25 @@ function PublicForm() {
       let leadEventId: string | undefined;
       try {
         const data = await res.json();
-        leadEventId = data?.lead_event_id;
+        leadEventId = data?.lead_event_id || data?.event_id;
       } catch { /* ignore */ }
-      try {
-        window.parent?.postMessage(
-          {
-            type: "kpw-lead-created",
-            event_id: leadEventId,
-            form_slug: slug,
-            landing_page,
-            utm_source,
-            utm_medium,
-            utm_campaign,
-          },
-          "*",
-        );
-      } catch { /* ignore */ }
+      if (res.ok && leadEventId) {
+        try {
+          window.parent?.postMessage(
+            {
+              type: "kpw-lead-created",
+              event_id: leadEventId,
+              lead_event_id: leadEventId,
+              form_slug: slug,
+              landing_page,
+              utm_source,
+              utm_medium,
+              utm_campaign,
+            },
+            "*",
+          );
+        } catch { /* ignore */ }
+      }
       setStep("done");
     } catch {
       setErrorMsg("Sem conexão. Verifique sua internet e tente novamente.");
