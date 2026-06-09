@@ -87,8 +87,11 @@ type Opportunity = {
   pre_reserva_expires_at: string | null;
   first_response_at: string | null;
   created_at: string;
+  form_slug: string | null;
   client?: { id: string; full_name: string; phone: string | null; email: string | null } | null;
 };
+
+type FormLite = { slug: string; name: string };
 
 type Visit = {
   id: string;
