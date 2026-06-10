@@ -88,6 +88,7 @@ type Opportunity = {
   first_response_at: string | null;
   created_at: string;
   form_slug: string | null;
+  cliente_contactado: boolean;
   client?: { id: string; full_name: string; phone: string | null; email: string | null } | null;
 };
 
