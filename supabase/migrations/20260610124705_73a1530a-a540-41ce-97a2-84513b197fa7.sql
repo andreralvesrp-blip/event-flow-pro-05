@@ -1,0 +1,1 @@
+ALTER TABLE public.opportunities ADD COLUMN IF NOT EXISTS cliente_contactado boolean NOT NULL DEFAULT false;

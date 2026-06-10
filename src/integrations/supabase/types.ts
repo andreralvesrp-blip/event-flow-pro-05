@@ -1387,6 +1387,7 @@ export type Database = {
           celebrant_birthdate: string | null
           celebrant_name: string | null
           client_id: string
+          cliente_contactado: boolean
           closed_at: string | null
           contract_id: string | null
           created_at: string
@@ -1435,6 +1436,7 @@ export type Database = {
           celebrant_birthdate?: string | null
           celebrant_name?: string | null
           client_id: string
+          cliente_contactado?: boolean
           closed_at?: string | null
           contract_id?: string | null
           created_at?: string
@@ -1483,6 +1485,7 @@ export type Database = {
           celebrant_birthdate?: string | null
           celebrant_name?: string | null
           client_id?: string
+          cliente_contactado?: boolean
           closed_at?: string | null
           contract_id?: string | null
           created_at?: string
