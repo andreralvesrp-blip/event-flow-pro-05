@@ -88,6 +88,7 @@ type Opportunity = {
   first_response_at: string | null;
   created_at: string;
   form_slug: string | null;
+  cliente_contactado: boolean;
   client?: { id: string; full_name: string; phone: string | null; email: string | null } | null;
 };
 
@@ -411,7 +412,32 @@ function OportunidadesPage() {
             </div>
             <div className="space-y-2 flex-1">
               {(opsByStage.get(stage) ?? []).map((o) => (
-                <OpCard key={o.id} op={o} formLabel={formLabel} onClick={() => setSelected(o)} />
+                <OpCard
+                  key={o.id}
+                  op={o}
+                  formLabel={formLabel}
+                  onClick={() => setSelected(o)}
+                  onToggleContacted={async (next) => {
+                    setOps((prev) =>
+                      prev
+                        ? prev.map((x) => (x.id === o.id ? { ...x, cliente_contactado: next } : x))
+                        : prev,
+                    );
+                    const { error } = await supabase
+                      .from("opportunities")
+                      .update({ cliente_contactado: next })
+                      .eq("id", o.id);
+                    if (error) {
+                      setOps((prev) =>
+                        prev
+                          ? prev.map((x) =>
+                              x.id === o.id ? { ...x, cliente_contactado: !next } : x,
+                            )
+                          : prev,
+                      );
+                    }
+                  }}
+                />
               ))}
               {(opsByStage.get(stage) ?? []).length === 0 && (
                 <div className="text-xs text-slate-400 px-2 py-3 text-center">—</div>
@@ -505,18 +531,49 @@ function OpCard({
   op,
   formLabel,
   onClick,
+  onToggleContacted,
 }: {
   op: Opportunity;
   formLabel: (slug: string | null | undefined) => string;
   onClick: () => void;
+  onToggleContacted: (next: boolean) => void;
 }) {
   const parado = daysSince(op.stage_changed_at);
+  const contacted = !!op.cliente_contactado;
   return (
-    <button
+    <div
       onClick={onClick}
-      className="w-full text-left bg-white border border-slate-200 rounded-md p-2.5 hover:border-emerald-400 hover:shadow-sm transition"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="relative w-full text-left bg-white border border-slate-200 rounded-md p-2.5 hover:border-emerald-400 hover:shadow-sm transition cursor-pointer"
     >
-      <div className="text-sm font-medium text-slate-900 truncate">
+      <button
+        type="button"
+        aria-label={contacted ? "Cliente contactado" : "Marcar como contactado"}
+        title={contacted ? "Cliente contactado" : "Marcar como contactado"}
+        aria-pressed={contacted}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleContacted(!contacted);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        className={
+          "absolute top-2 right-2 h-6 w-6 rounded border flex items-center justify-center transition-colors " +
+          (contacted
+            ? "bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700"
+            : "bg-white border-slate-300 text-transparent hover:border-emerald-400 hover:text-emerald-300")
+        }
+      >
+        <CheckCircle2 className="h-4 w-4" strokeWidth={3} />
+      </button>
+      <div className="text-sm font-medium text-slate-900 truncate pr-8">
         {op.client?.full_name ?? "—"}
       </div>
       {op.celebrant_name && (
@@ -540,7 +597,7 @@ function OpCard({
         </Badge>
         <span className="text-[10px] text-slate-400 shrink-0">parado há {parado}d</span>
       </div>
-    </button>
+    </div>
   );
 }
 
