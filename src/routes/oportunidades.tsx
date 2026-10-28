@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, AlertTriangle, Clock, CheckCircle2, Calendar } from "lucide-react";
+import { Plus, AlertTriangle, Clock, CheckCircle2, Calendar, Phone } from "lucide-react";
 
 // ----------- types -----------
 type Stage =
@@ -576,6 +576,12 @@ function OpCard({
       <div className="text-sm font-medium text-slate-900 truncate pr-8">
         {op.client?.full_name ?? "—"}
       </div>
+      {op.client?.phone && (
+        <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-600">
+          <Phone className="h-3 w-3 shrink-0 text-slate-400" />
+          <span className="truncate">{op.client.phone}</span>
+        </div>
+      )}
       {op.celebrant_name && (
         <div className="text-xs text-slate-600 truncate">
           {op.celebrant_name}
