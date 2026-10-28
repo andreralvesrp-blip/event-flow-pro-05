@@ -9,76 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WebhooksRouteImport } from './routes/webhooks'
-import { Route as OportunidadesRouteImport } from './routes/oportunidades'
-import { Route as NpsRouteImport } from './routes/nps'
-import { Route as MarketingRouteImport } from './routes/marketing'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as FormulariosRouteImport } from './routes/formularios'
-import { Route as FinanceiroRouteImport } from './routes/financeiro'
-import { Route as FestasRouteImport } from './routes/festas'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as ContratosRouteImport } from './routes/contratos'
-import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
-import { Route as FSlugRouteImport } from './routes/f.$slug'
-import { Route as ConfiguracoesUnidadesRouteImport } from './routes/configuracoes.unidades'
-import { Route as ConfiguracoesIntegracoesRouteImport } from './routes/configuracoes.integracoes'
-import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
-import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.equipe'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as ContratosRouteImport } from './routes/contratos'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as FestasRouteImport } from './routes/festas'
+import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as FormulariosRouteImport } from './routes/formularios'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MarketingRouteImport } from './routes/marketing'
+import { Route as NpsRouteImport } from './routes/nps'
+import { Route as OportunidadesRouteImport } from './routes/oportunidades'
+import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as AvaliarSlugRouteImport } from './routes/avaliar.$slug'
+import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
+import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.equipe'
+import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
+import { Route as ConfiguracoesIntegracoesRouteImport } from './routes/configuracoes.integracoes'
+import { Route as ConfiguracoesUnidadesRouteImport } from './routes/configuracoes.unidades'
+import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as ApiPublicMarketingEventRouteImport } from './routes/api/public/marketing-event'
 import { Route as ApiPublicGa4OauthCallbackRouteImport } from './routes/api/public/ga4-oauth.callback'
 
-const WebhooksRoute = WebhooksRouteImport.update({
-  id: '/webhooks',
-  path: '/webhooks',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OportunidadesRoute = OportunidadesRouteImport.update({
-  id: '/oportunidades',
-  path: '/oportunidades',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NpsRoute = NpsRouteImport.update({
-  id: '/nps',
-  path: '/nps',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MarketingRoute = MarketingRouteImport.update({
-  id: '/marketing',
-  path: '/marketing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FormulariosRoute = FormulariosRouteImport.update({
-  id: '/formularios',
-  path: '/formularios',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FinanceiroRoute = FinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FestasRoute = FestasRouteImport.update({
-  id: '/festas',
-  path: '/festas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContratosRoute = ContratosRouteImport.update({
-  id: '/contratos',
-  path: '/contratos',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
@@ -86,9 +41,59 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ContratosRoute = ContratosRouteImport.update({
+  id: '/contratos',
+  path: '/contratos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FestasRoute = FestasRouteImport.update({
+  id: '/festas',
+  path: '/festas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceiroRoute = FinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FormulariosRoute = FormulariosRouteImport.update({
+  id: '/formularios',
+  path: '/formularios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingRoute = MarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NpsRoute = NpsRouteImport.update({
+  id: '/nps',
+  path: '/nps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OportunidadesRoute = OportunidadesRouteImport.update({
+  id: '/oportunidades',
+  path: '/oportunidades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebhooksRoute = WebhooksRouteImport.update({
+  id: '/webhooks',
+  path: '/webhooks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AvaliarSlugRoute = AvaliarSlugRouteImport.update({
+  id: '/avaliar/$slug',
+  path: '/avaliar/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfiguracoesIndexRoute = ConfiguracoesIndexRouteImport.update({
@@ -96,36 +101,31 @@ const ConfiguracoesIndexRoute = ConfiguracoesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
-const FSlugRoute = FSlugRouteImport.update({
-  id: '/f/$slug',
-  path: '/f/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfiguracoesUnidadesRoute = ConfiguracoesUnidadesRouteImport.update({
-  id: '/unidades',
-  path: '/unidades',
+const ConfiguracoesEquipeRoute = ConfiguracoesEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
-const ConfiguracoesIntegracoesRoute =
-  ConfiguracoesIntegracoesRouteImport.update({
-    id: '/integracoes',
-    path: '/integracoes',
-    getParentRoute: () => ConfiguracoesRoute,
-  } as any)
 const ConfiguracoesImportacaoHistoricaRoute =
   ConfiguracoesImportacaoHistoricaRouteImport.update({
     id: '/importacao-historica',
     path: '/importacao-historica',
     getParentRoute: () => ConfiguracoesRoute,
   } as any)
-const ConfiguracoesEquipeRoute = ConfiguracoesEquipeRouteImport.update({
-  id: '/equipe',
-  path: '/equipe',
+const ConfiguracoesIntegracoesRoute =
+  ConfiguracoesIntegracoesRouteImport.update({
+    id: '/integracoes',
+    path: '/integracoes',
+    getParentRoute: () => ConfiguracoesRoute,
+  } as any)
+const ConfiguracoesUnidadesRoute = ConfiguracoesUnidadesRouteImport.update({
+  id: '/unidades',
+  path: '/unidades',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
-const AvaliarSlugRoute = AvaliarSlugRouteImport.update({
-  id: '/avaliar/$slug',
-  path: '/avaliar/$slug',
+const FSlugRoute = FSlugRouteImport.update({
+  id: '/f/$slug',
+  path: '/f/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicMarketingEventRoute = ApiPublicMarketingEventRouteImport.update({
@@ -301,74 +301,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/webhooks': {
-      id: '/webhooks'
-      path: '/webhooks'
-      fullPath: '/webhooks'
-      preLoaderRoute: typeof WebhooksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oportunidades': {
-      id: '/oportunidades'
-      path: '/oportunidades'
-      fullPath: '/oportunidades'
-      preLoaderRoute: typeof OportunidadesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/nps': {
-      id: '/nps'
-      path: '/nps'
-      fullPath: '/nps'
-      preLoaderRoute: typeof NpsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/marketing': {
-      id: '/marketing'
-      path: '/marketing'
-      fullPath: '/marketing'
-      preLoaderRoute: typeof MarketingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/formularios': {
-      id: '/formularios'
-      path: '/formularios'
-      fullPath: '/formularios'
-      preLoaderRoute: typeof FormulariosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/financeiro': {
-      id: '/financeiro'
-      path: '/financeiro'
-      fullPath: '/financeiro'
-      preLoaderRoute: typeof FinanceiroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/festas': {
-      id: '/festas'
-      path: '/festas'
-      fullPath: '/festas'
-      preLoaderRoute: typeof FestasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contratos': {
-      id: '/contratos'
-      path: '/contratos'
-      fullPath: '/contratos'
-      preLoaderRoute: typeof ContratosRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/configuracoes': {
@@ -378,11 +315,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/contratos': {
+      id: '/contratos'
+      path: '/contratos'
+      fullPath: '/contratos'
+      preLoaderRoute: typeof ContratosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/festas': {
+      id: '/festas'
+      path: '/festas'
+      fullPath: '/festas'
+      preLoaderRoute: typeof FestasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financeiro': {
+      id: '/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/formularios': {
+      id: '/formularios'
+      path: '/formularios'
+      fullPath: '/formularios'
+      preLoaderRoute: typeof FormulariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing': {
+      id: '/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof MarketingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nps': {
+      id: '/nps'
+      path: '/nps'
+      fullPath: '/nps'
+      preLoaderRoute: typeof NpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oportunidades': {
+      id: '/oportunidades'
+      path: '/oportunidades'
+      fullPath: '/oportunidades'
+      preLoaderRoute: typeof OportunidadesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/webhooks': {
+      id: '/webhooks'
+      path: '/webhooks'
+      fullPath: '/webhooks'
+      preLoaderRoute: typeof WebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/avaliar/$slug': {
+      id: '/avaliar/$slug'
+      path: '/avaliar/$slug'
+      fullPath: '/avaliar/$slug'
+      preLoaderRoute: typeof AvaliarSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/configuracoes/': {
@@ -392,25 +399,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesIndexRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
-    '/f/$slug': {
-      id: '/f/$slug'
-      path: '/f/$slug'
-      fullPath: '/f/$slug'
-      preLoaderRoute: typeof FSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/configuracoes/unidades': {
-      id: '/configuracoes/unidades'
-      path: '/unidades'
-      fullPath: '/configuracoes/unidades'
-      preLoaderRoute: typeof ConfiguracoesUnidadesRouteImport
-      parentRoute: typeof ConfiguracoesRoute
-    }
-    '/configuracoes/integracoes': {
-      id: '/configuracoes/integracoes'
-      path: '/integracoes'
-      fullPath: '/configuracoes/integracoes'
-      preLoaderRoute: typeof ConfiguracoesIntegracoesRouteImport
+    '/configuracoes/equipe': {
+      id: '/configuracoes/equipe'
+      path: '/equipe'
+      fullPath: '/configuracoes/equipe'
+      preLoaderRoute: typeof ConfiguracoesEquipeRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
     '/configuracoes/importacao-historica': {
@@ -420,18 +413,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesImportacaoHistoricaRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
-    '/configuracoes/equipe': {
-      id: '/configuracoes/equipe'
-      path: '/equipe'
-      fullPath: '/configuracoes/equipe'
-      preLoaderRoute: typeof ConfiguracoesEquipeRouteImport
+    '/configuracoes/integracoes': {
+      id: '/configuracoes/integracoes'
+      path: '/integracoes'
+      fullPath: '/configuracoes/integracoes'
+      preLoaderRoute: typeof ConfiguracoesIntegracoesRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
-    '/avaliar/$slug': {
-      id: '/avaliar/$slug'
-      path: '/avaliar/$slug'
-      fullPath: '/avaliar/$slug'
-      preLoaderRoute: typeof AvaliarSlugRouteImport
+    '/configuracoes/unidades': {
+      id: '/configuracoes/unidades'
+      path: '/unidades'
+      fullPath: '/configuracoes/unidades'
+      preLoaderRoute: typeof ConfiguracoesUnidadesRouteImport
+      parentRoute: typeof ConfiguracoesRoute
+    }
+    '/f/$slug': {
+      id: '/f/$slug'
+      path: '/f/$slug'
+      fullPath: '/f/$slug'
+      preLoaderRoute: typeof FSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/marketing-event': {
@@ -492,3 +492,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
