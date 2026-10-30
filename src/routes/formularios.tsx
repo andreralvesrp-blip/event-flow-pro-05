@@ -502,7 +502,10 @@ function FormDialog({
   const [welcome, setWelcome] = useState(
     initial?.welcome_message ?? "Vamos planejar sua festa? 🎉",
   );
-  const [source, setSource] = useState<Source>(initial?.source ?? "outro");
+  // origem do formulário não é mais editável: a origem do lead é classificada
+  // automaticamente por lead (classify_lead_source). Mantida só para preservar
+  // o valor já gravado ao salvar o formulário.
+  const [source] = useState<Source>(initial?.source ?? "outro");
   const [utm, setUtm] = useState(initial?.utm_campaign ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
 
