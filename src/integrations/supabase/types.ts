@@ -1928,6 +1928,7 @@ export type Database = {
         | "social_organico"
         | "whatsapp_link"
         | "direto"
+        | "ia_busca"
       opportunity_stage:
         | "em_conversa"
         | "visita_agendada"
@@ -2104,6 +2105,7 @@ export const Constants = {
         "social_organico",
         "whatsapp_link",
         "direto",
+        "ia_busca",
       ],
       opportunity_stage: [
         "em_conversa",
