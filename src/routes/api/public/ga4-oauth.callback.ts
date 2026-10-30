@@ -86,6 +86,7 @@ export const Route = createFileRoute("/api/public/ga4-oauth/callback")({
             scope: tok.scope ?? null,
             connected_by_user_id: parsed.user_id,
             connected_at: new Date().toISOString(),
+            needs_reconnect: false,
           });
         if (error) {
           console.error("[ga4-oauth] upsert failed", error);

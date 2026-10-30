@@ -147,6 +147,14 @@ export const disconnectGa4 = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export async function markGa4NeedsReconnect(tenantId: string): Promise<void> {
+  const admin = adminClient();
+  await admin
+    .from("integrations_ga4")
+    .update({ needs_reconnect: true, access_token: null, access_token_expires_at: null })
+    .eq("tenant_id", tenantId);
+}
+
 // --- list properties (admin api) --------------------------------------------
 async function refreshAccessToken(tenantId: string): Promise<string> {
   const admin = adminClient();
@@ -171,7 +179,15 @@ async function refreshAccessToken(tenantId: string): Promise<string> {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
   });
-  if (!res.ok) throw new Error(`refresh_failed_${res.status}_${await res.text()}`);
+  if (!res.ok) {
+    const txt = await res.text();
+    console.error(`[ga4] token refresh failed [${res.status}]: ${txt}`);
+    if (res.status === 400 || res.status === 401 || /invalid_grant|unauthorized|invalid_client/i.test(txt)) {
+      await markGa4NeedsReconnect(tenantId);
+      throw new Error("ga4_needs_reconnect");
+    }
+    throw new Error(`refresh_failed_${res.status}`);
+  }
   const data = (await res.json()) as { access_token: string; expires_in: number };
   const expiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString();
   await admin
@@ -236,10 +252,11 @@ export async function getGa4AccessTokenForTenant(tenantId: string): Promise<{
   const admin = adminClient();
   const { data: row } = await admin
     .from("integrations_ga4")
-    .select("property_id")
+    .select("property_id, needs_reconnect")
     .eq("tenant_id", tenantId)
     .maybeSingle();
   if (!row?.property_id) return null;
+  if ((row as any).needs_reconnect) throw new Error("ga4_needs_reconnect");
   const token = await refreshAccessToken(tenantId);
   return { token, propertyId: row.property_id as string };
 }
