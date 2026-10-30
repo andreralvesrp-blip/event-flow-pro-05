@@ -83,7 +83,13 @@ Deno.serve(async (req) => {
 
   // HMAC validation
   const sigHeader = getSignatureHeader(req.headers);
-  if (secret) {
+  if (!secret) {
+    console.error("[clicksign-webhook] clicksign_webhook_secret not configured — rejecting request");
+    return new Response(JSON.stringify({ error: "webhook secret not configured" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  {
     if (!sigHeader) {
       console.warn("[clicksign-webhook] missing HMAC header. Saw:", JSON.stringify(headerNames));
       return new Response(JSON.stringify({ error: "missing signature header" }), {
@@ -97,8 +103,6 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-  } else {
-    console.warn("[clicksign-webhook] secret not configured — accepting unauthenticated (dev mode)");
   }
 
   const { eventName, documentKey, rawStatus } = extractTopLevel(payload);
