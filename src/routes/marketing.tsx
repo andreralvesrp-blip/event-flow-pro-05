@@ -110,6 +110,26 @@ function deltaPct(curr: number, prev: number): { txt: string; up: boolean | null
   return { txt: `${up ? "+" : ""}${d.toFixed(1)}%`, up };
 }
 
+// Rótulos das origens (opportunities.source) — mesmos da tela de Oportunidades
+const SOURCE_LABELS: Record<string, string> = {
+  ga: "Google Ads",
+  meta: "Meta Ads",
+  google_organico: "Google orgânico",
+  google_meu_negocio: "Google Meu Negócio",
+  social_organico: "Instagram/Facebook orgânico",
+  whatsapp_link: "Link compartilhado no WhatsApp",
+  direto: "Direto/Site",
+  ia_busca: "Busca por IA",
+  indicacao: "Indicação",
+  offline: "Passando em frente",
+  veio_em_festa: "Veio em festa",
+  ja_cliente: "Já é cliente",
+  recorrencia: "Recorrência",
+  outro: "Outro",
+};
+const sourceLabel = (s: string) => SOURCE_LABELS[s] ?? s;
+const GA_OFF = "GA4 desconectado";
+
 // --- types -------------------------------------------------------------------
 type LeadAttr = {
   source: string;
@@ -122,9 +142,6 @@ type CampRow = {
   source: string;
   medium: string;
   campaign: string;
-  users: number;
-  sessions: number;
-  formOpens: number;
   leads: number;
 };
 
@@ -182,13 +199,14 @@ function MarketingPage() {
       const loadLeads = async (start: string, end: string): Promise<LeadAttr[]> => {
         let q = supabase
           .from("opportunities")
-          .select("id, created_at, utm_source, utm_medium, utm_campaign")
+          .select("id, created_at, source, utm_medium, utm_campaign")
           .gte("created_at", `${start}T00:00:00`)
           .lte("created_at", `${end}T23:59:59`);
         if (unitFilter) q = q.eq("unit_id", unitFilter);
-        const { data } = await q;
+        const { data, error } = await q;
+        if (error) console.error("[marketing] leads query failed", error);
         return (data ?? []).map((o) => ({
-          source: o.utm_source && o.utm_source.trim() !== "" ? o.utm_source : "(direct)",
+          source: (o.source as string | null) ?? "outro",
           medium: o.utm_medium && o.utm_medium.trim() !== "" ? o.utm_medium : "(none)",
           campaign: o.utm_campaign && o.utm_campaign.trim() !== "" ? o.utm_campaign : "(not set)",
           date: (o.created_at as string).slice(0, 10),
@@ -202,7 +220,6 @@ function MarketingPage() {
             data: {
               start,
               end,
-              source: sourceFilter !== "all" ? sourceFilter : undefined,
               medium: mediumFilter !== "all" ? mediumFilter : undefined,
               campaign: campaignFilter !== "all" ? campaignFilter : undefined,
             },
@@ -210,7 +227,8 @@ function MarketingPage() {
         } catch (e) {
           return {
             gaConfigured: false,
-            gaError: (e as Error).message,
+            gaError: "ga4_unavailable",
+            gaNeedsReconnect: false,
             sessions: 0,
             users: 0,
             formOpens: 0,
@@ -270,7 +288,7 @@ function MarketingPage() {
     return () => {
       cancel = true;
     };
-  }, [r.start, r.end, r.prevStart, r.prevEnd, unitFilter, sourceFilter, mediumFilter, campaignFilter, fetchOverview, isAdmin]);
+  }, [r.start, r.end, r.prevStart, r.prevEnd, unitFilter, mediumFilter, campaignFilter, fetchOverview, isAdmin]);
 
   // ---- Derived ----
   const users = ga?.users ?? 0;
@@ -278,7 +296,17 @@ function MarketingPage() {
   const formOpens = ga?.formOpens ?? 0;
   const formOpenCta = ga?.formOpenCta ?? 0;
   const formOpenFloat = ga?.formOpenFloat ?? 0;
-  const leadsCount = leads.length;
+  const gaOk = !!ga && ga.gaConfigured && !ga.gaError;
+  const gaPrevOk = !!gaPrev && gaPrev.gaConfigured && !gaPrev.gaError;
+
+  // Leads (banco) — filtros aplicados sobre opportunities.source / utm_medium / utm_campaign
+  const filteredLeads = leads.filter(
+    (l) =>
+      (sourceFilter === "all" || l.source === sourceFilter) &&
+      (mediumFilter === "all" || l.medium === mediumFilter) &&
+      (campaignFilter === "all" || l.campaign === campaignFilter),
+  );
+  const leadsCount = filteredLeads.length;
 
   const usersPrev = gaPrev?.users ?? 0;
   const sessionsPrev = gaPrev?.sessions ?? 0;
@@ -292,17 +320,17 @@ function MarketingPage() {
 
   // Daily series (users/aperturas/leads)
   const leadsByDate = new Map<string, number>();
-  for (const l of leads) leadsByDate.set(l.date, (leadsByDate.get(l.date) ?? 0) + 1);
-  const dailyMap = new Map<string, { date: string; users: number; formOpens: number; leads: number }>();
+  for (const l of filteredLeads) leadsByDate.set(l.date, (leadsByDate.get(l.date) ?? 0) + 1);
+  const dailyMap = new Map<string, { date: string; users?: number; formOpens?: number; leads: number }>();
   const ensureDay = (d: string) => {
     let row = dailyMap.get(d);
     if (!row) {
-      row = { date: d, users: 0, formOpens: 0, leads: 0 };
+      row = { date: d, users: gaOk ? 0 : undefined, formOpens: gaOk ? 0 : undefined, leads: 0 };
       dailyMap.set(d, row);
     }
     return row;
   };
-  (ga?.daily ?? []).forEach((g) => {
+  (gaOk ? ga!.daily : []).forEach((g) => {
     const row = ensureDay(g.date);
     row.users = g.users;
     row.formOpens = g.formOpenCta + g.formOpenFloat;
@@ -310,47 +338,44 @@ function MarketingPage() {
   leadsByDate.forEach((v, k) => (ensureDay(k).leads = v));
   const dailySeries = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
-  // Performance por canal — merge GA4 + leads Supabase
+  // Performance por canal — leads do banco agrupados por origem (opportunities.source)
   const campMap = new Map<string, CampRow>();
-  const getCamp = (s: string, m: string, c: string) => {
-    const k = `${s}|${m}|${c}`;
+  for (const l of leads) {
+    const k = `${l.source}|${l.medium}|${l.campaign}`;
     let row = campMap.get(k);
     if (!row) {
-      row = { source: s, medium: m, campaign: c, users: 0, sessions: 0, formOpens: 0, leads: 0 };
+      row = { source: l.source, medium: l.medium, campaign: l.campaign, leads: 0 };
       campMap.set(k, row);
     }
-    return row;
-  };
-  (ga?.byCampaign ?? []).forEach((g) => {
-    const row = getCamp(g.source, g.medium, g.campaign);
-    row.sessions = g.sessions;
-    row.formOpens = g.formOpens;
-    // GA4 byCampaign não inclui users por linha; aproximamos via sessões (display)
-    row.users = Math.max(row.users, 0);
-  });
-  for (const l of leads) {
-    getCamp(l.source, l.medium, l.campaign).leads++;
+    row.leads++;
   }
 
   let campRows = Array.from(campMap.values());
   if (sourceFilter !== "all") campRows = campRows.filter((r) => r.source === sourceFilter);
   if (mediumFilter !== "all") campRows = campRows.filter((r) => r.medium === mediumFilter);
   if (campaignFilter !== "all") campRows = campRows.filter((r) => r.campaign === campaignFilter);
-  campRows.sort((a, b) => (b.leads - a.leads) || (b.formOpens - a.formOpens));
+  campRows.sort((a, b) => b.leads - a.leads);
 
-  const sourceOptions = Array.from(new Set(Array.from(campMap.values()).map((c) => c.source))).sort();
-  const mediumOptions = Array.from(new Set(Array.from(campMap.values()).map((c) => c.medium))).sort();
-  const campaignOptions = Array.from(new Set(Array.from(campMap.values()).map((c) => c.campaign))).sort();
+  const sourceOptions = Array.from(new Set(leads.map((c) => c.source))).sort((a, b) =>
+    sourceLabel(a).localeCompare(sourceLabel(b)),
+  );
+  const mediumOptions = Array.from(new Set(leads.map((c) => c.medium))).sort();
+  const campaignOptions = Array.from(new Set(leads.map((c) => c.campaign))).sort();
 
   // Top campanhas
-  const topCampaigns = [...campRows]
-    .sort((a, b) => (topMode === "leads" ? b.leads - a.leads : b.formOpens - a.formOpens))
-    .slice(0, 10)
-    .map((r) => ({
-      name: `${r.source} · ${r.campaign}`.slice(0, 40),
-      leads: r.leads,
-      formOpens: r.formOpens,
-    }));
+  // Por Leads: origem (opportunities.source) · utm_campaign. Por Aberturas: GA4 (utm source · campanha).
+  const topCampaigns =
+    topMode === "leads"
+      ? [...campRows].slice(0, 10).map((r) => ({
+          name: `${sourceLabel(r.source)} · ${r.campaign}`.slice(0, 40),
+          leads: r.leads,
+        }))
+      : gaOk
+        ? [...ga!.byCampaign]
+            .sort((a, b) => b.formOpens - a.formOpens)
+            .slice(0, 10)
+            .map((r) => ({ name: `${r.source} · ${r.campaign}`.slice(0, 40), formOpens: r.formOpens }))
+        : [];
 
   return (
     <AppLayout title="Marketing">
@@ -383,12 +408,12 @@ function MarketingPage() {
             </>
           )}
           <div className="min-w-[150px]">
-            <label className="text-xs text-slate-500">Source</label>
+            <label className="text-xs text-slate-500">Origem</label>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                {sourceOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {sourceOptions.map((s) => <SelectItem key={s} value={s}>{sourceLabel(s)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -436,10 +461,25 @@ function MarketingPage() {
             </CardContent>
           </Card>
         )}
-        {ga?.gaError && (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="p-4 text-sm text-red-900">
-              Erro ao consultar GA4: <code>{ga.gaError}</code>
+        {ga?.gaNeedsReconnect && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-4 text-sm text-amber-900 flex items-center justify-between gap-4">
+              <div>
+                <strong>A conexão com o Google Analytics expirou.</strong> Os leads continuam aparecendo normalmente.
+              </div>
+              <a
+                href="/configuracoes/integracoes"
+                className="shrink-0 inline-flex items-center px-3 py-1.5 text-xs font-medium rounded bg-amber-600 text-white hover:bg-amber-700"
+              >
+                Reconectar
+              </a>
+            </CardContent>
+          </Card>
+        )}
+        {ga?.gaError && !ga.gaNeedsReconnect && (
+          <Card className="border-slate-200 bg-slate-50">
+            <CardContent className="p-4 text-sm text-slate-700">
+              O Google Analytics está indisponível no momento. Os leads continuam aparecendo normalmente.
             </CardContent>
           </Card>
         )}
@@ -449,24 +489,24 @@ function MarketingPage() {
           {/* Volume do funil */}
           <Kpi
             label="Usuários"
-            value={fmtInt(users)}
-            subtitle="Base do funil"
+            value={gaOk ? fmtInt(users) : "—"}
+            subtitle={gaOk ? "Base do funil" : GA_OFF}
             variant="volume"
-            delta={deltaPct(users, usersPrev)}
+            delta={gaOk && gaPrevOk ? deltaPct(users, usersPrev) : undefined}
             loading={loading}
           />
           <Kpi
             label="Aberturas do form"
-            value={fmtInt(formOpens)}
-            subtitle={users > 0 ? `${fmtPct(formOpens, users)} dos usuários abriram o form` : "—"}
+            value={gaOk ? fmtInt(formOpens) : "—"}
+            subtitle={!gaOk ? GA_OFF : users > 0 ? `${fmtPct(formOpens, users)} dos usuários abriram o form` : "—"}
             variant="volume"
-            delta={deltaPct(formOpens, formOpensPrev)}
+            delta={gaOk && gaPrevOk ? deltaPct(formOpens, formOpensPrev) : undefined}
             loading={loading}
           />
           <Kpi
             label="Leads"
             value={fmtInt(leadsCount)}
-            subtitle={formOpens > 0 ? `${fmtPct(leadsCount, formOpens)} das aberturas viraram lead` : "—"}
+            subtitle={!gaOk ? "Do banco de leads" : formOpens > 0 ? `${fmtPct(leadsCount, formOpens)} das aberturas viraram lead` : "—"}
             variant="volume"
             delta={deltaPct(leadsCount, prevLeadsCount)}
             loading={loading}
@@ -474,26 +514,26 @@ function MarketingPage() {
           {/* Eficiência do funil */}
           <Kpi
             label="Conv. usuário → abertura"
-            value={fmtPct(formOpens, users)}
-            subtitle="Aberturas / usuários"
+            value={gaOk ? fmtPct(formOpens, users) : "—"}
+            subtitle={gaOk ? "Aberturas / usuários" : GA_OFF}
             variant="conversion"
-            delta={deltaPct(convUserOpen * 1000, convUserOpenPrev * 1000)}
+            delta={gaOk && gaPrevOk ? deltaPct(convUserOpen * 1000, convUserOpenPrev * 1000) : undefined}
             loading={loading}
           />
           <Kpi
             label="Conv. abertura → lead"
-            value={fmtPct(leadsCount, formOpens)}
-            subtitle="Leads / aberturas"
+            value={gaOk ? fmtPct(leadsCount, formOpens) : "—"}
+            subtitle={gaOk ? "Leads / aberturas" : GA_OFF}
             variant="conversion"
-            delta={deltaPct(convOpenLead * 1000, convOpenLeadPrev * 1000)}
+            delta={gaOk && gaPrevOk ? deltaPct(convOpenLead * 1000, convOpenLeadPrev * 1000) : undefined}
             loading={loading}
           />
           <Kpi
             label="Abandono do form"
-            value={formOpens > 0 ? `${(abandono * 100).toFixed(1)}%` : "—"}
-            subtitle="Aberturas sem lead"
+            value={gaOk && formOpens > 0 ? `${(abandono * 100).toFixed(1)}%` : "—"}
+            subtitle={gaOk ? "Aberturas sem lead" : GA_OFF}
             variant="conversion"
-            delta={deltaPct(abandono * 1000, formOpensPrev > 0 ? (1 - prevLeadsCount / formOpensPrev) * 1000 : 0)}
+            delta={gaOk && gaPrevOk ? deltaPct(abandono * 1000, formOpensPrev > 0 ? (1 - prevLeadsCount / formOpensPrev) * 1000 : 0) : undefined}
             loading={loading}
           />
         </div>
@@ -502,6 +542,9 @@ function MarketingPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Série diária</CardTitle>
+            {!gaOk && !loading && (
+              <div className="text-xs text-slate-500">Usuários e aberturas: — ({GA_OFF})</div>
+            )}
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -512,8 +555,8 @@ function MarketingPage() {
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="users" name="Usuários" fill="#94a3b8" />
-                  <Bar dataKey="formOpens" name="Aberturas" fill="#60a5fa" />
+                  {gaOk && <Bar dataKey="users" name="Usuários" fill="#94a3b8" />}
+                  {gaOk && <Bar dataKey="formOpens" name="Aberturas" fill="#60a5fa" />}
                   <Line type="monotone" dataKey="leads" name="Leads" stroke="#3b82f6" strokeWidth={2} />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -535,6 +578,9 @@ function MarketingPage() {
               </Select>
             </CardHeader>
             <CardContent>
+              {topMode === "formOpens" && !gaOk && (
+                <div className="text-xs text-slate-500 mb-2">— {GA_OFF}</div>
+              )}
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={topCampaigns} layout="vertical" margin={{ left: 40 }}>
@@ -542,7 +588,7 @@ function MarketingPage() {
                     <XAxis type="number" tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={180} />
                     <Tooltip />
-                    <Bar dataKey={topMode} fill={topMode === "leads" ? "#3b82f6" : "#60a5fa"} />
+                    <Bar dataKey={topMode} name={topMode === "leads" ? "Leads" : "Aberturas"} fill={topMode === "leads" ? "#3b82f6" : "#60a5fa"} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -556,11 +602,13 @@ function MarketingPage() {
             <CardContent className="space-y-3">
               <div className="rounded-lg border p-4">
                 <div className="text-xs text-slate-500">CTA do site (form_open_cta)</div>
-                <div className="text-2xl font-semibold">{fmtInt(formOpenCta)}</div>
+                <div className="text-2xl font-semibold">{gaOk ? fmtInt(formOpenCta) : "—"}</div>
+                {!gaOk && <div className="text-xs text-slate-500">{GA_OFF}</div>}
               </div>
               <div className="rounded-lg border p-4">
                 <div className="text-xs text-slate-500">Botão flutuante (form_open_float)</div>
-                <div className="text-2xl font-semibold">{fmtInt(formOpenFloat)}</div>
+                <div className="text-2xl font-semibold">{gaOk ? fmtInt(formOpenFloat) : "—"}</div>
+                {!gaOk && <div className="text-xs text-slate-500">{GA_OFF}</div>}
               </div>
             </CardContent>
           </Card>
@@ -576,47 +624,30 @@ function MarketingPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Source</TableHead>
+                    <TableHead>Origem</TableHead>
                     <TableHead>Medium</TableHead>
                     <TableHead>Campaign</TableHead>
-                    <TableHead className="text-right">Usuários</TableHead>
-                    <TableHead className="text-right">Sessões</TableHead>
-                    <TableHead className="text-right">Aberturas</TableHead>
                     <TableHead className="text-right">Leads</TableHead>
-                    <TableHead className="text-right">Ab/User</TableHead>
-                    <TableHead className="text-right">Lead/Ab</TableHead>
-                    <TableHead className="text-right">Lead/User</TableHead>
-                    <TableHead className="text-right">Abandono</TableHead>
+                    <TableHead className="text-right">% dos leads</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {campRows.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center text-sm text-slate-500 py-8">
+                      <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
                         Nenhum dado no período.
                       </TableCell>
                     </TableRow>
                   )}
-                  {campRows.map((r) => {
-                    const aband = r.formOpens > 0 ? 1 - r.leads / r.formOpens : 0;
-                    return (
-                      <TableRow key={`${r.source}|${r.medium}|${r.campaign}`}>
-                        <TableCell className="text-sm">{r.source}</TableCell>
-                        <TableCell className="text-sm">{r.medium}</TableCell>
-                        <TableCell className="text-sm">{r.campaign}</TableCell>
-                        <TableCell className="text-right text-sm">{fmtInt(r.users)}</TableCell>
-                        <TableCell className="text-right text-sm">{fmtInt(r.sessions)}</TableCell>
-                        <TableCell className="text-right text-sm">{fmtInt(r.formOpens)}</TableCell>
-                        <TableCell className="text-right text-sm font-medium">{fmtInt(r.leads)}</TableCell>
-                        <TableCell className="text-right text-xs text-slate-500">{fmtPct(r.formOpens, r.users)}</TableCell>
-                        <TableCell className="text-right text-xs text-slate-500">{fmtPct(r.leads, r.formOpens)}</TableCell>
-                        <TableCell className="text-right text-xs text-slate-500">{fmtPct(r.leads, r.users)}</TableCell>
-                        <TableCell className="text-right text-xs text-slate-500">
-                          {r.formOpens > 0 ? `${(aband * 100).toFixed(1)}%` : "—"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {campRows.map((r) => (
+                    <TableRow key={`${r.source}|${r.medium}|${r.campaign}`}>
+                      <TableCell className="text-sm">{sourceLabel(r.source)}</TableCell>
+                      <TableCell className="text-sm">{r.medium}</TableCell>
+                      <TableCell className="text-sm">{r.campaign}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">{fmtInt(r.leads)}</TableCell>
+                      <TableCell className="text-right text-xs text-slate-500">{fmtPct(r.leads, leadsCount)}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>

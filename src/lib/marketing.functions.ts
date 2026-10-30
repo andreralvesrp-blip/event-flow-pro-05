@@ -4,7 +4,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { getGa4AccessTokenForTenant } from "@/lib/ga4.functions";
+import { getGa4AccessTokenForTenant, markGa4NeedsReconnect } from "@/lib/ga4.functions";
 
 type OverviewInput = {
   start: string;
@@ -33,6 +33,8 @@ export type Ga4Campaign = {
 export type MarketingOverview = {
   gaConfigured: boolean;
   gaError: string | null;
+  /** true when the OAuth connection expired/was revoked and must be redone */
+  gaNeedsReconnect: boolean;
   sessions: number;
   users: number;
   formOpens: number;
@@ -54,7 +56,11 @@ async function runReport(token: string, propertyId: string, body: unknown): Prom
       body: JSON.stringify(body),
     },
   );
-  if (!res.ok) throw new Error(`ga4_report_failed_${res.status}_${await res.text()}`);
+  if (!res.ok) {
+    const txt = await res.text();
+    console.error(`[ga4] runReport failed [${res.status}]: ${txt}`);
+    throw new Error(res.status === 401 ? "ga4_needs_reconnect" : `ga4_report_failed_${res.status}`);
+  }
   return res.json();
 }
 
@@ -68,6 +74,7 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
     const empty: MarketingOverview = {
       gaConfigured: false,
       gaError: null,
+      gaNeedsReconnect: false,
       sessions: 0,
       users: 0,
       formOpens: 0,
@@ -91,7 +98,9 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
     try {
       creds = await getGa4AccessTokenForTenant(u.tenant_id as string);
     } catch (err) {
-      return { ...empty, gaConfigured: true, gaError: (err as Error).message };
+      const msg = (err as Error).message;
+      console.error("[marketing] GA4 credentials error:", msg);
+      return { ...empty, gaConfigured: true, gaError: "ga4_unavailable", gaNeedsReconnect: msg === "ga4_needs_reconnect" };
     }
     if (!creds) return empty;
 
@@ -189,6 +198,7 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
       return {
         gaConfigured: true,
         gaError: null,
+        gaNeedsReconnect: false,
         sessions: totalSessions,
         users: totalUsers,
         formOpens: totalCta + totalFloat,
@@ -198,7 +208,10 @@ export const getMarketingOverview = createServerFn({ method: "POST" })
         byCampaign,
       };
     } catch (err) {
-      console.error("GA4 error:", err);
-      return { ...empty, gaConfigured: true, gaError: (err as Error).message };
+      const msg = (err as Error).message;
+      console.error("[marketing] GA4 report error:", msg);
+      const needs = msg === "ga4_needs_reconnect";
+      if (needs) await markGa4NeedsReconnect(u.tenant_id as string).catch(() => {});
+      return { ...empty, gaConfigured: true, gaError: "ga4_unavailable", gaNeedsReconnect: needs };
     }
   });
