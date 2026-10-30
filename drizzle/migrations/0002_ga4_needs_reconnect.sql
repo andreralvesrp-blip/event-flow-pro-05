@@ -1,0 +1,1 @@
+ALTER TABLE public.integrations_ga4 ADD COLUMN IF NOT EXISTS needs_reconnect boolean NOT NULL DEFAULT false;

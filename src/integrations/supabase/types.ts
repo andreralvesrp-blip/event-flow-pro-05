@@ -722,6 +722,7 @@ export type Database = {
           connected_at: string
           connected_by_user_id: string | null
           google_email: string | null
+          needs_reconnect: boolean
           property_id: string | null
           refresh_token: string
           scope: string | null
@@ -734,6 +735,7 @@ export type Database = {
           connected_at?: string
           connected_by_user_id?: string | null
           google_email?: string | null
+          needs_reconnect?: boolean
           property_id?: string | null
           refresh_token: string
           scope?: string | null
@@ -746,6 +748,7 @@ export type Database = {
           connected_at?: string
           connected_by_user_id?: string | null
           google_email?: string | null
+          needs_reconnect?: boolean
           property_id?: string | null
           refresh_token?: string
           scope?: string | null
