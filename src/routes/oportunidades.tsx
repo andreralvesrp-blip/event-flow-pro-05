@@ -42,8 +42,13 @@ type Stage =
   | "perdido";
 
 type Source =
-  | "meta"
   | "ga"
+  | "meta"
+  | "google_organico"
+  | "google_meu_negocio"
+  | "social_organico"
+  | "whatsapp_link"
+  | "direto"
   | "indicacao"
   | "veio_em_festa"
   | "offline"
@@ -129,15 +134,25 @@ const STAGES: Stage[] = [
 ];
 
 const SOURCE_LABELS: Record<Source, string> = {
-  meta: "Meta (Instagram/Facebook)",
   ga: "Google Ads",
+  meta: "Meta Ads",
+  google_organico: "Google orgânico",
+  google_meu_negocio: "Google Meu Negócio",
+  social_organico: "Instagram/Facebook orgânico",
+  whatsapp_link: "Link compartilhado no WhatsApp",
+  direto: "Direto/Site",
   indicacao: "Indicação",
+  offline: "Passando em frente",
   veio_em_festa: "Veio em festa",
-  offline: "Off-line",
   ja_cliente: "Já é cliente",
   recorrencia: "Recorrência",
   outro: "Outro",
 };
+
+// "recorrencia" é valor legado: existe no enum e nos rótulos, mas não aparece nos seletores
+const SELECTABLE_SOURCES: Source[] = (Object.keys(SOURCE_LABELS) as Source[]).filter(
+  (s) => s !== "recorrencia",
+);
 
 const LOSS_LABELS: Record<LossReason, string> = {
   preco: "Preço",
@@ -905,7 +920,7 @@ function NewOpportunityDialog({
               <Select value={source} onValueChange={setSource}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(SOURCE_LABELS) as Source[]).map((s) => (
+                  {SELECTABLE_SOURCES.map((s) => (
                     <SelectItem key={s} value={s}>{SOURCE_LABELS[s]}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1051,6 +1066,18 @@ function OpDetail({
     await moveStage(next);
   }
 
+  async function changeSource(next: Source) {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ source: next })
+      .eq("id", op.id);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    onChanged();
+  }
+
   return (
     <>
       <SheetHeader>
@@ -1076,7 +1103,19 @@ function OpDetail({
           </div>
           <div>
             <div className="text-xs text-slate-500">Origem</div>
-            <div>{op.source ? SOURCE_LABELS[op.source] : "—"}</div>
+            <Select value={op.source ?? ""} onValueChange={(v) => changeSource(v as Source)}>
+              <SelectTrigger className="h-8 mt-1">
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                {(op.source && !SELECTABLE_SOURCES.includes(op.source)
+                  ? [...SELECTABLE_SOURCES, op.source]
+                  : SELECTABLE_SOURCES
+                ).map((s) => (
+                  <SelectItem key={s} value={s}>{SOURCE_LABELS[s]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <div className="text-xs text-slate-500">Valor estimado</div>

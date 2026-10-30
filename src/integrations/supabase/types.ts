@@ -1836,6 +1836,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      classify_lead_source: {
+        Args: {
+          _fbclid: string
+          _gbraid?: string
+          _gclid: string
+          _landing_page: string
+          _referrer: string
+          _utm_medium: string
+          _utm_source: string
+          _wbraid?: string
+        }
+        Returns: Database["public"]["Enums"]["opportunity_source"]
+      }
       current_tenant_id: { Args: never; Returns: string }
       current_user_role: {
         Args: never
@@ -1910,6 +1923,11 @@ export type Database = {
         | "ja_cliente"
         | "recorrencia"
         | "outro"
+        | "google_organico"
+        | "google_meu_negocio"
+        | "social_organico"
+        | "whatsapp_link"
+        | "direto"
       opportunity_stage:
         | "em_conversa"
         | "visita_agendada"
@@ -2081,6 +2099,11 @@ export const Constants = {
         "ja_cliente",
         "recorrencia",
         "outro",
+        "google_organico",
+        "google_meu_negocio",
+        "social_organico",
+        "whatsapp_link",
+        "direto",
       ],
       opportunity_stage: [
         "em_conversa",
