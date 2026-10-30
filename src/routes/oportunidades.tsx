@@ -150,7 +150,7 @@ const SOURCE_LABELS: Record<Source, string> = {
 };
 
 // "recorrencia" é valor legado: existe no enum e nos rótulos, mas não aparece nos seletores
-const SELECTABLE_SOURCES = (Object.keys(SOURCE_LABELS) as Source[]).filter(
+const SELECTABLE_SOURCES: Source[] = (Object.keys(SOURCE_LABELS) as Source[]).filter(
   (s) => s !== "recorrencia",
 );
 
