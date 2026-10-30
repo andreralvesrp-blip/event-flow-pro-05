@@ -49,6 +49,7 @@ type Source =
   | "social_organico"
   | "whatsapp_link"
   | "direto"
+  | "ia_busca"
   | "indicacao"
   | "veio_em_festa"
   | "offline"
@@ -141,6 +142,7 @@ const SOURCE_LABELS: Record<Source, string> = {
   social_organico: "Instagram/Facebook orgânico",
   whatsapp_link: "Link compartilhado no WhatsApp",
   direto: "Direto/Site",
+  ia_busca: "Busca por IA",
   indicacao: "Indicação",
   offline: "Passando em frente",
   veio_em_festa: "Veio em festa",
