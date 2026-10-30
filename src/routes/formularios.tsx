@@ -41,8 +41,13 @@ export const Route = createFileRoute("/formularios")({
 });
 
 type Source =
-  | "meta"
   | "ga"
+  | "meta"
+  | "google_organico"
+  | "google_meu_negocio"
+  | "social_organico"
+  | "whatsapp_link"
+  | "direto"
   | "indicacao"
   | "veio_em_festa"
   | "offline"
@@ -51,11 +56,16 @@ type Source =
   | "outro";
 
 const SOURCE_LABELS: Record<Source, string> = {
-  meta: "Meta (Instagram/Facebook)",
   ga: "Google Ads",
+  meta: "Meta Ads",
+  google_organico: "Google orgânico",
+  google_meu_negocio: "Google Meu Negócio",
+  social_organico: "Instagram/Facebook orgânico",
+  whatsapp_link: "Link compartilhado no WhatsApp",
+  direto: "Direto/Site",
   indicacao: "Indicação",
+  offline: "Passando em frente",
   veio_em_festa: "Veio em festa",
-  offline: "Off-line",
   ja_cliente: "Já é cliente",
   recorrencia: "Recorrência",
   outro: "Outro",
@@ -618,21 +628,6 @@ function FormDialog({
               onChange={(e) => setWelcome(e.target.value)}
               rows={2}
             />
-          </div>
-          <div>
-            <Label>Canal de origem padrão</Label>
-            <Select value={source} onValueChange={(v) => setSource(v as Source)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(SOURCE_LABELS) as Source[]).map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {SOURCE_LABELS[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <div>
             <Label>UTM Campaign (opcional)</Label>

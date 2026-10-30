@@ -171,6 +171,24 @@ Deno.serve(async (req) => {
   // c) Opportunity — generate lead_event_id for ad platform deduplication
   const finalCampaign = utm_campaign || form.utm_campaign || null;
   const leadEventId = crypto.randomUUID();
+
+  // Origem classificada automaticamente por lead (gclid/UTMs/referrer),
+  // independente do forms.source
+  const { data: classifiedSource, error: clErr } = await admin.rpc(
+    "classify_lead_source",
+    {
+      _gclid: gclid || null,
+      _fbclid: fbclid || null,
+      _utm_source: utm_source || null,
+      _utm_medium: utm_medium || null,
+      _referrer: referrer || null,
+      _landing_page: landing_page || null,
+      _gbraid: gbraid || null,
+      _wbraid: wbraid || null,
+    },
+  );
+  const leadSource = !clErr && classifiedSource ? classifiedSource : "outro";
+
   const { data: opp, error: oErr } = await admin
     .from("opportunities")
     .insert({
@@ -182,7 +200,7 @@ Deno.serve(async (req) => {
       desired_date,
       desired_slot: null,
       stage: "em_conversa",
-      source: form.source,
+      source: leadSource,
       form_id: form.id,
       form_slug,
       utm_source: utm_source || null,
