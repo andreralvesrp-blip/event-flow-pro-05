@@ -134,8 +134,7 @@ function buildWidgetScript(row: FormRow, rawOrigin: string) {
   const origin = publicOrigin(rawOrigin);
   const formUrl = `${origin}/f/${row.slug}`;
   const eventEndpoint = `${origin}/api/public/marketing-event`;
-  // Auto-open disabled site-wide: D stays null so the `D!==null` guard never arms the timer.
-  const delay = "null";
+  const delay = row.widget_delay ?? "null";
   const av = (row.widget_avatar_url ?? "").replace(/'/g, "\\'");
   const m1 = (row.widget_msg_1 ?? "").replace(/'/g, "\\'");
   const m2 = (row.widget_msg_2 ?? "").replace(/'/g, "\\'");
