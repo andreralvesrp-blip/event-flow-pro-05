@@ -29,6 +29,13 @@
       "when": 1793721456912,
       "tag": "0003_classify_unknown_utm_as_outro",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793741342997,
+      "tag": "0004_clicksign_document_kind",
+      "breakpoints": true
     }
   ]
 }

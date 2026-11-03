@@ -73,11 +73,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { contract_id, client_id, warnings } = await processClicksignPayload(
-      admin, ev.tenant_id, ev.payload as Json,
-    );
+    const { contract_id, client_id, warnings, document_kind, linked_contract_id, needs_review } =
+      await processClicksignPayload(admin, ev.tenant_id, ev.payload as Json);
     await admin.from("clicksign_webhook_events").update({
       processed: true,
+      document_kind, linked_contract_id, needs_review,
       processing_error: warnings.length ? warnings.join(" | ") : null,
       processed_at: new Date().toISOString(),
     }).eq("id", eventId);
