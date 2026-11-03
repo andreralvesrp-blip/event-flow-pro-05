@@ -123,7 +123,7 @@ function PendingCard({ item, onDone }: { item: Item; onDone: () => void }) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex flex-wrap items-center gap-2">
-          <FileWarning className="h-4 w-4 text-warning" />
+          <FileWarning className="h-4 w-4 text-primary" />
           {item.client?.full_name ?? "Sem cliente"}
           <Badge variant="outline">Assinado – dados pendentes</Badge>
           {sug.source && (
