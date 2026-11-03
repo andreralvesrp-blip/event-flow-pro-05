@@ -734,7 +734,7 @@ async function createPendingContract(
   const { data: existing } = await admin.from("contracts").select("id")
     .eq("tenant_id", tenantId).eq("clicksign_document_key", documentKey).maybeSingle();
   if (existing) {
-    const { suggested_data: _s, suggested_at: _a, ...upd } = row;
+    const { suggested_data: _s, suggested_at: _a, data_pending: _p, ...upd } = row;
     await admin.from("contracts").update(upd).eq("id", existing.id);
     return { contract_id: existing.id as string, client_id: clientId, warnings };
   }
