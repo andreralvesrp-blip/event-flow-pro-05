@@ -56,18 +56,16 @@ const ALLOWED_ORIGINS = new Set([
   "https://www.buffetkidspoint.com.br",
 ]);
 
-// Set per request by the handlers below (echoes the allowed Origin).
-let currentOrigin: string | null = null;
 
-function corsHeaders(): Record<string, string> {
+function corsHeaders(origin: string | null): Record<string, string> {
   const h: Record<string, string> = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "content-type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
-  if (currentOrigin && ALLOWED_ORIGINS.has(currentOrigin)) {
-    h["Access-Control-Allow-Origin"] = currentOrigin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    h["Access-Control-Allow-Origin"] = origin;
     // sendBeacon sends with credentials; wildcard "*" is rejected by browsers.
     h["Access-Control-Allow-Credentials"] = "true";
   }
@@ -78,11 +76,11 @@ export const Route = createFileRoute("/api/public/marketing-event")({
   server: {
     handlers: {
       OPTIONS: async ({ request }) => {
-        currentOrigin = request.headers.get("origin");
-        return new Response(null, { status: 204, headers: corsHeaders() });
+        const origin = request.headers.get("origin");
+        return new Response(null, { status: 204, headers: corsHeaders(origin) });
       },
       POST: async ({ request }) => {
-        currentOrigin = request.headers.get("origin");
+        const origin = request.headers.get("origin");
         try {
           // Accept any Content-Type (sendBeacon may send text/plain or application/json)
           const text = await request.text().catch(() => "");
@@ -97,14 +95,14 @@ export const Route = createFileRoute("/api/public/marketing-event")({
             console.log("[marketing-event] invalid_body", parsed.error.message);
             return new Response(
               JSON.stringify({ ok: false, inserted: false, error: "invalid_body", detail: parsed.error.message }),
-              { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+              { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders(origin) } },
             );
           }
           const b = parsed.data;
           if (!ALLOWED_EVENTS.has(b.event_name)) {
             return new Response(
               JSON.stringify({ ok: false, inserted: false, event_name: b.event_name, error: "invalid_event" }),
-              { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+              { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders(origin) } },
             );
           }
 
@@ -116,7 +114,7 @@ export const Route = createFileRoute("/api/public/marketing-event")({
           if (rateLimited(rlKey)) {
             return new Response(
               JSON.stringify({ ok: false, inserted: false, event_name: b.event_name, error: "rate_limited" }),
-              { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+              { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders(origin) } },
             );
           }
 
@@ -144,7 +142,7 @@ export const Route = createFileRoute("/api/public/marketing-event")({
                 error: "unknown_form",
                 detail: formErr?.message ?? null,
               }),
-              { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+              { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders(origin) } },
             );
           }
 
@@ -203,7 +201,7 @@ export const Route = createFileRoute("/api/public/marketing-event")({
                 error: "insert_failed",
                 detail: insErr.message,
               }),
-              { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+              { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(origin) } },
             );
           }
 
@@ -227,13 +225,13 @@ export const Route = createFileRoute("/api/public/marketing-event")({
               unit_id: form.unit_id,
               session_id: b.session_id ?? null,
             }),
-            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(origin) } },
           );
         } catch (err) {
           console.error("[marketing-event] server_error", err);
           return new Response(
             JSON.stringify({ ok: false, inserted: false, error: "server_error", detail: (err as Error).message }),
-            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() } },
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(origin) } },
           );
         }
       },
