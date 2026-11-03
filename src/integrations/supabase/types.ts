@@ -17,8 +17,11 @@ export type Database = {
       clicksign_webhook_events: {
         Row: {
           document_key: string | null
+          document_kind: string | null
           event_name: string | null
           id: string
+          linked_contract_id: string | null
+          needs_review: boolean
           payload: Json
           processed: boolean
           processed_at: string | null
@@ -29,8 +32,11 @@ export type Database = {
         }
         Insert: {
           document_key?: string | null
+          document_kind?: string | null
           event_name?: string | null
           id?: string
+          linked_contract_id?: string | null
+          needs_review?: boolean
           payload: Json
           processed?: boolean
           processed_at?: string | null
@@ -41,8 +47,11 @@ export type Database = {
         }
         Update: {
           document_key?: string | null
+          document_kind?: string | null
           event_name?: string | null
           id?: string
+          linked_contract_id?: string | null
+          needs_review?: boolean
           payload?: Json
           processed?: boolean
           processed_at?: string | null
@@ -52,6 +61,13 @@ export type Database = {
           tenant_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clicksign_webhook_events_linked_contract_id_fkey"
+            columns: ["linked_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clicksign_webhook_events_tenant_id_fkey"
             columns: ["tenant_id"]
