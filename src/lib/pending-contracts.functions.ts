@@ -73,18 +73,43 @@ export const suggestPendingContract = createServerFn({ method: "POST" })
     // RLS check: caller must see this contract
     const { data: ct, error } = await context.supabase
       .from("contracts")
-      .select("id, signed_pdf_path, signed_file_name, suggested_data")
+      .select("id, tenant_id, signed_pdf_path, signed_file_name, suggested_data, clicksign_document_key")
       .eq("id", data.id)
       .maybeSingle();
     if (error || !ct) throw new Error("Contrato não encontrado");
     const base = (ct.suggested_data ?? {}) as PendingSuggestion;
-    if (!ct.signed_pdf_path) {
-      return { ok: false as const, message: "O PDF assinado não está guardado; só há a sugestão pelo nome do arquivo." };
-    }
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) return { ok: false as const, message: "IA não configurada." };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Old documents: fetch a fresh signed-PDF link from Clicksign (read-only GET) and keep a copy.
+    if (!ct.signed_pdf_path) {
+      const token = process.env.CLICKSIGN_ACCESS_TOKEN;
+      if (!token || !ct.clicksign_document_key) {
+        return { ok: false as const, message: "O PDF assinado não está guardado e a Clicksign não está conectada." };
+      }
+      const host = process.env.CLICKSIGN_API_HOST || "https://app.clicksign.com";
+      const meta = await fetch(
+        `${host}/api/v1/documents/${encodeURIComponent(ct.clicksign_document_key)}?access_token=${encodeURIComponent(token)}`,
+        { headers: { Accept: "application/json" } },
+      );
+      if (!meta.ok) {
+        console.error("[clicksign] document fetch", meta.status, await meta.text());
+        return { ok: false as const, message: `A Clicksign recusou o acesso ao documento (${meta.status}).` };
+      }
+      const j: any = await meta.json();
+      const url = j?.document?.downloads?.signed_file_url;
+      if (!url) return { ok: false as const, message: "A Clicksign não devolveu o PDF assinado." };
+      const pdf = await fetch(url);
+      if (!pdf.ok) return { ok: false as const, message: "Falha ao baixar o PDF da Clicksign." };
+      const path = `${ct.tenant_id}/${ct.clicksign_document_key}.pdf`;
+      const { error: upErr } = await supabaseAdmin.storage.from("contract-pdfs")
+        .upload(path, new Uint8Array(await pdf.arrayBuffer()), { contentType: "application/pdf", upsert: true });
+      if (upErr) return { ok: false as const, message: "Falha ao guardar o PDF." };
+      await supabaseAdmin.from("contracts").update({ signed_pdf_path: path }).eq("id", ct.id);
+      ct.signed_pdf_path = path;
+    }
     const { data: file, error: dlErr } = await supabaseAdmin.storage.from("contract-pdfs").download(ct.signed_pdf_path);
     if (dlErr || !file) return { ok: false as const, message: "Não foi possível abrir o PDF." };
     const bytes = new Uint8Array(await file.arrayBuffer());

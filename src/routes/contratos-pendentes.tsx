@@ -154,9 +154,9 @@ function PendingCard({ item, onDone }: { item: Item; onDone: () => void }) {
           <Button onClick={save} disabled={busy !== null}>
             <Check className="h-4 w-4 mr-1" /> {busy === "save" ? "Salvando…" : "Confirmar dados"}
           </Button>
-          <Button variant="outline" onClick={runAi} disabled={busy !== null || !item.has_pdf}>
+          <Button variant="outline" onClick={runAi} disabled={busy !== null}>
             <Sparkles className="h-4 w-4 mr-1" />
-            {busy === "ai" ? "Lendo PDF…" : item.has_pdf ? "Ler PDF com IA de novo" : "PDF não disponível"}
+            {busy === "ai" ? "Lendo PDF…" : "Ler PDF com IA"}
           </Button>
         </div>
       </CardContent>
