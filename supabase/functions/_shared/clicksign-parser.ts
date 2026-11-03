@@ -310,7 +310,8 @@ async function processContractDocument(
   );
   if (!cpf) throw new Error("CPF não encontrado no payload");
 
-  const primarySigner = signers.find(
+  const internal = await loadInternalSigners(admin, tenantId);
+  const primarySigner = signers.filter((s) => !isInternalSigner(s, internal)).find(
     (s) => normCpf((s as Json).documentation ?? (s as Json).cpf) === cpf,
   ) ?? signers[0] ?? {};
 
