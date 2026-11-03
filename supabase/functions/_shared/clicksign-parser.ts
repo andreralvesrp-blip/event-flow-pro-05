@@ -617,11 +617,9 @@ async function findOriginalContract(
   admin: SupabaseClient, tenantId: string, payload: Json, documentKey: string, onlyActive: boolean,
 ): Promise<{ id: string | null; reason?: string }> {
   const signers = (pick<unknown[]>(payload, "document.signers", "signers", "data.document.signers") ?? []) as Json[];
-  const { data: setting } = await admin.from("system_settings").select("value")
-    .eq("tenant_id", tenantId).eq("key", "contracted_company_email").maybeSingle();
-  const contracted = String(setting?.value ?? "andre@buffetkidspoint.com.br").trim().toLowerCase();
-  const emails = Array.from(new Set(signers.map((s) => String(s.email ?? "").trim().toLowerCase())
-    .filter((e) => e && e !== contracted)));
+  const internal = await loadInternalSigners(admin, tenantId);
+  const emails = Array.from(new Set(signers.filter((s) => !isInternalSigner(s, internal))
+    .map((s) => String(s.email ?? "").trim().toLowerCase()).filter(Boolean)));
   if (!emails.length) return { id: null, reason: "sem e-mail de contratante nos signatários" };
   const { data: clients } = await admin.from("clients").select("id, email").eq("tenant_id", tenantId).in("email", emails);
   const ids = (clients ?? []).map((c) => c.id as string);
@@ -633,6 +631,34 @@ async function findOriginalContract(
   if (!cts?.length) return { id: null, reason: "nenhum contrato original encontrado" };
   if (cts.length > 1) return { id: null, reason: `${cts.length} contratos possíveis (ambíguo)` };
   return { id: cts[0].id as string };
+}
+
+// ---------- Kids Point-side signers ----------
+// contracted_company_email + system_settings.internal_signers (comma/space
+// separated e-mails and phones) + any e-mail on a Kids Point domain.
+type InternalCfg = { emails: Set<string>; phones8: Set<string> };
+
+async function loadInternalSigners(admin: SupabaseClient, tenantId: string): Promise<InternalCfg> {
+  const { data } = await admin.from("system_settings").select("key, value")
+    .eq("tenant_id", tenantId).in("key", ["contracted_company_email", "internal_signers"]);
+  const emails = new Set<string>(["andre@buffetkidspoint.com.br"]);
+  const phones8 = new Set<string>();
+  for (const r of data ?? []) {
+    for (const tok of String(r.value ?? "").split(/[\s,;]+/)) {
+      const t = tok.trim().toLowerCase();
+      if (!t) continue;
+      if (t.includes("@")) emails.add(t);
+      else { const d = t.replace(/\D/g, ""); if (d.length >= 8) phones8.add(d.slice(-8)); }
+    }
+  }
+  return { emails, phones8 };
+}
+
+function isInternalSigner(s: Json, cfg: InternalCfg): boolean {
+  const e = String(s.email ?? "").trim().toLowerCase();
+  if (e && (cfg.emails.has(e) || /@([a-z0-9-]+\.)*(buffet)?kidspoint\.com\.br$/.test(e))) return true;
+  const p = String(s.phone_number ?? "").replace(/\D/g, "");
+  return p.length >= 8 && cfg.phones8.has(p.slice(-8));
 }
 
 // ---------- PDF avulso → contrato "assinado – dados pendentes" ----------
@@ -658,12 +684,11 @@ async function createPendingContract(
 ): Promise<{ contract_id: string; client_id: string; warnings: string[] }> {
   const warnings: string[] = ["PDF avulso assinado: contrato criado com dados pendentes."];
   const signers = (pick<unknown[]>(payload, "document.signers", "signers", "data.document.signers") ?? []) as Json[];
-  const { data: setting } = await admin.from("system_settings").select("value")
-    .eq("tenant_id", tenantId).eq("key", "contracted_company_email").maybeSingle();
-  const contracted = String(setting?.value ?? "andre@buffetkidspoint.com.br").trim().toLowerCase();
-  const clientSigners = signers.filter((s) => String(s.email ?? "").trim().toLowerCase() !== contracted);
-  const main = clientSigners[0] ?? {};
+  const internal = await loadInternalSigners(admin, tenantId);
+  const clientSigners = signers.filter((s) => !isInternalSigner(s, internal));
+  const main: Json = clientSigners[0] ?? {};
   const email = String(main.email ?? "").trim().toLowerCase() || null;
+  const unidentified = clientSigners.length === 0;
 
   // phone may only be in the sign events
   const events = (pick<unknown[]>(payload, "document.events") ?? []) as Json[];
@@ -684,6 +709,18 @@ async function createPendingContract(
     const { data } = await admin.from("clients").select("id, phone").eq("tenant_id", tenantId).ilike("phone", `%${last8.slice(0, 4)}%`);
     const hit = (data ?? []).find((c) => String(c.phone ?? "").replace(/\D/g, "").slice(-8) === last8);
     clientId = (hit?.id as string) ?? null;
+  }
+  if (unidentified) {
+    // Only Kids Point signed: park on a placeholder client, never on the owner.
+    const PH = "Cliente não identificado (Clicksign)";
+    const { data: ph } = await admin.from("clients").select("id").eq("tenant_id", tenantId).eq("full_name", PH).limit(1);
+    clientId = (ph?.[0]?.id as string) ?? null;
+    if (!clientId) {
+      const { data: c, error } = await admin.from("clients").insert({ tenant_id: tenantId, full_name: PH }).select("id").single();
+      if (error || !c) throw new Error(`placeholder client insert failed: ${error?.message}`);
+      clientId = c.id as string;
+    }
+    warnings.push("cliente não identificado");
   }
   if (!clientId) {
     const { data: created, error } = await admin.from("clients").insert({
@@ -733,6 +770,7 @@ async function createPendingContract(
     suggested_at: new Date().toISOString(),
   };
   if (pdfPath) row.signed_pdf_path = pdfPath;
+  if (unidentified) { row.needs_review = true; row.import_warnings = "cliente não identificado"; }
 
   const { data: existing } = await admin.from("contracts").select("id")
     .eq("tenant_id", tenantId).eq("clicksign_document_key", documentKey).maybeSingle();
