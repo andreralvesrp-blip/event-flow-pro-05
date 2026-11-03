@@ -292,7 +292,7 @@ export function extractTopLevel(payload: Json) {
 
 // ---------- main processor ----------
 
-export async function processClicksignPayload(
+async function processContractDocument(
   admin: SupabaseClient,
   tenantId: string,
   payload: Json,
@@ -585,6 +585,106 @@ export async function processClicksignPayload(
   }
 
   return { contract_id: contractId, client_id: clientId, warnings };
+}
+
+// ---------- document kind routing ----------
+// Only CONTRATO documents create/update contracts. Distrato cancels the
+// original contract; aditivo is linked to it; unidentified → review log.
+
+export type DocumentKind = "contrato" | "distrato" | "aditivo" | "desconhecido";
+
+function normText(v: unknown): string {
+  return String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+export function classifyDocument(payload: Json): DocumentKind {
+  const bag = normText([
+    pick<string>(payload, "document.template.name", "template.name"),
+    pick<string>(payload, "document.filename", "filename"),
+    pick<string>(payload, "document.path", "path"),
+  ].filter(Boolean).join(" "));
+  if (/distrato|rescisao|cancelamento/.test(bag)) return "distrato";
+  if (/aditivo|adendo/.test(bag)) return "aditivo";
+  // A contract is only identifiable when it comes from the template (carries data).
+  if (deepGet(payload, "document.template") || deepGet(payload, "data.document.template")) return "contrato";
+  return "desconhecido";
+}
+
+async function findOriginalContract(
+  admin: SupabaseClient, tenantId: string, payload: Json, documentKey: string, onlyActive: boolean,
+): Promise<{ id: string | null; reason?: string }> {
+  const signers = (pick<unknown[]>(payload, "document.signers", "signers", "data.document.signers") ?? []) as Json[];
+  const { data: setting } = await admin.from("system_settings").select("value")
+    .eq("tenant_id", tenantId).eq("key", "contracted_company_email").maybeSingle();
+  const contracted = String(setting?.value ?? "andre@buffetkidspoint.com.br").trim().toLowerCase();
+  const emails = Array.from(new Set(signers.map((s) => String(s.email ?? "").trim().toLowerCase())
+    .filter((e) => e && e !== contracted)));
+  if (!emails.length) return { id: null, reason: "sem e-mail de contratante nos signatários" };
+  const { data: clients } = await admin.from("clients").select("id, email").eq("tenant_id", tenantId).in("email", emails);
+  const ids = (clients ?? []).map((c) => c.id as string);
+  if (!ids.length) return { id: null, reason: "nenhum cliente com esse e-mail" };
+  let q = admin.from("contracts").select("id, status").eq("tenant_id", tenantId).in("client_id", ids)
+    .neq("clicksign_document_key", documentKey);
+  if (onlyActive) q = q.neq("status", "cancelado");
+  const { data: cts } = await q;
+  if (!cts?.length) return { id: null, reason: "nenhum contrato original encontrado" };
+  if (cts.length > 1) return { id: null, reason: `${cts.length} contratos possíveis (ambíguo)` };
+  return { id: cts[0].id as string };
+}
+
+export type ClicksignResult = {
+  contract_id: string | null;
+  client_id: string | null;
+  warnings: string[];
+  document_kind: DocumentKind;
+  linked_contract_id: string | null;
+  needs_review: boolean;
+};
+
+export async function processClicksignPayload(
+  admin: SupabaseClient, tenantId: string, payload: Json,
+): Promise<ClicksignResult> {
+  const kind = classifyDocument(payload);
+  const { eventName, documentKey, rawStatus } = extractTopLevel(payload);
+  if (!documentKey) throw new Error("document_key não encontrado no payload");
+
+  if (kind === "contrato") {
+    const r = await processContractDocument(admin, tenantId, payload);
+    return { ...r, document_kind: kind, linked_contract_id: null, needs_review: false };
+  }
+  if (kind === "desconhecido") {
+    return {
+      contract_id: null, client_id: null, document_kind: kind, linked_contract_id: null, needs_review: true,
+      warnings: ["Tipo de documento não identificado (sem template de contrato). Nenhum contrato criado; revisar."],
+    };
+  }
+
+  const signed = mapStatus(eventName, rawStatus) === "assinado";
+  const orig = await findOriginalContract(admin, tenantId, payload, documentKey, kind === "distrato");
+  if (!orig.id) {
+    return {
+      contract_id: null, client_id: null, document_kind: kind, linked_contract_id: null, needs_review: true,
+      warnings: [`${kind}: contrato original não encontrado (${orig.reason}). Revisar.`],
+    };
+  }
+  const warnings: string[] = [];
+  if (kind === "distrato") {
+    if (signed) {
+      const { data: c } = await admin.from("contracts").select("status").eq("id", orig.id).single();
+      if (c?.status !== "cancelado") {
+        await admin.from("contracts").update({
+          status: "cancelado", canceled_at: new Date().toISOString(),
+          cancellation_reason: `Distrato Clicksign ${documentKey}`,
+        }).eq("id", orig.id);
+        warnings.push("Distrato assinado: contrato original cancelado.");
+      }
+    } else {
+      warnings.push("Distrato ainda não assinado: contrato original mantido.");
+    }
+  } else {
+    warnings.push("Aditivo vinculado ao contrato original; nenhum contrato novo criado.");
+  }
+  return { contract_id: null, client_id: null, document_kind: kind, linked_contract_id: orig.id, needs_review: false, warnings };
 }
 
 // ---------- HMAC SHA256 validator (hex) ----------
