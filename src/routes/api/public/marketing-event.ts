@@ -50,20 +50,39 @@ function rateLimited(key: string): boolean {
   return false;
 }
 
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = new Set([
+  "https://buffetinfantil.kidspoint.com.br",
+  "https://buffetkidspoint.com.br",
+  "https://www.buffetkidspoint.com.br",
+]);
+
+// Set per request by the handlers below (echoes the allowed Origin).
+let currentOrigin: string | null = null;
+
+function corsHeaders(): Record<string, string> {
+  const h: Record<string, string> = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "content-type",
     "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
   };
+  if (currentOrigin && ALLOWED_ORIGINS.has(currentOrigin)) {
+    h["Access-Control-Allow-Origin"] = currentOrigin;
+    // sendBeacon sends with credentials; wildcard "*" is rejected by browsers.
+    h["Access-Control-Allow-Credentials"] = "true";
+  }
+  return h;
 }
 
 export const Route = createFileRoute("/api/public/marketing-event")({
   server: {
     handlers: {
-      OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders() }),
+      OPTIONS: async ({ request }) => {
+        currentOrigin = request.headers.get("origin");
+        return new Response(null, { status: 204, headers: corsHeaders() });
+      },
       POST: async ({ request }) => {
+        currentOrigin = request.headers.get("origin");
         try {
           // Accept any Content-Type (sendBeacon may send text/plain or application/json)
           const text = await request.text().catch(() => "");
