@@ -304,16 +304,18 @@ async function processContractDocument(
   const answers = getAnswers(payload);
   const signers = (pick<unknown[]>(payload, "document.signers", "signers", "data.document.signers") ?? []) as Json[];
 
+  // Kids Point-side signers (owners/partners/@kidspoint) never identify the client.
+  const internal = await loadInternalSigners(admin, tenantId);
+  const clientSigners = signers.filter((s) => !isInternalSigner(s, internal));
   const cpfRaw = exact(answers, ["CPF"]);
   const cpf = normCpf(
-    cpfRaw ?? signers.map((s) => (s as Json).documentation ?? (s as Json).cpf).find(Boolean),
+    cpfRaw ?? clientSigners.map((s) => (s as Json).documentation ?? (s as Json).cpf).find(Boolean),
   );
-  if (!cpf) throw new Error("CPF não encontrado no payload");
+  if (!cpf) throw new Error("CPF do contratante não encontrado no payload");
 
-  const internal = await loadInternalSigners(admin, tenantId);
-  const primarySigner = signers.filter((s) => !isInternalSigner(s, internal)).find(
+  const primarySigner = clientSigners.find(
     (s) => normCpf((s as Json).documentation ?? (s as Json).cpf) === cpf,
-  ) ?? signers[0] ?? {};
+  ) ?? clientSigners[0] ?? {};
 
   // ----- Resolve fixed contracted company email (system_settings) -----
   const FALLBACK_CONTRACTED_EMAIL = "andre@buffetkidspoint.com.br";
