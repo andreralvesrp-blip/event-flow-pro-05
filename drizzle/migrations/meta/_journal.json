@@ -36,6 +36,13 @@
       "when": 1793741342997,
       "tag": "0004_clicksign_document_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793741740114,
+      "tag": "0005_contracts_pending_data",
+      "breakpoints": true
     }
   ]
 }
