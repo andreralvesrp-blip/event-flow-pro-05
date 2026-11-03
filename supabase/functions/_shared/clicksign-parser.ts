@@ -632,6 +632,117 @@ async function findOriginalContract(
   return { id: cts[0].id as string };
 }
 
+// ---------- PDF avulso → contrato "assinado – dados pendentes" ----------
+
+export function suggestFromFilename(name: string | null): Json {
+  const out: Json = {};
+  if (!name) return out;
+  // ddmmyyyy[_ ]HHhMM  ou  yyyymmdd
+  const a = name.match(/(\d{2})(\d{2})(20\d{2})[_\s-]*(\d{2})h?(\d{2})?/);
+  const b = name.match(/(20\d{2})(\d{2})(\d{2})/);
+  if (a && +a[1] <= 31 && +a[2] <= 12) {
+    out.event_date = `${a[3]}-${a[2]}-${a[1]}`;
+    if (a[4] && +a[4] < 24) out.event_start_time = `${a[4]}:${a[5] ?? "00"}`;
+  } else if (b && +b[2] <= 12 && +b[3] <= 31) {
+    out.event_date = `${b[1]}-${b[2]}-${b[3]}`;
+  }
+  if (Object.keys(out).length) out.source = "nome_do_arquivo";
+  return out;
+}
+
+async function createPendingContract(
+  admin: SupabaseClient, tenantId: string, payload: Json, documentKey: string,
+): Promise<{ contract_id: string; client_id: string; warnings: string[] }> {
+  const warnings: string[] = ["PDF avulso assinado: contrato criado com dados pendentes."];
+  const signers = (pick<unknown[]>(payload, "document.signers", "signers", "data.document.signers") ?? []) as Json[];
+  const { data: setting } = await admin.from("system_settings").select("value")
+    .eq("tenant_id", tenantId).eq("key", "contracted_company_email").maybeSingle();
+  const contracted = String(setting?.value ?? "andre@buffetkidspoint.com.br").trim().toLowerCase();
+  const clientSigners = signers.filter((s) => String(s.email ?? "").trim().toLowerCase() !== contracted);
+  const main = clientSigners[0] ?? {};
+  const email = String(main.email ?? "").trim().toLowerCase() || null;
+
+  // phone may only be in the sign events
+  const events = (pick<unknown[]>(payload, "document.events") ?? []) as Json[];
+  let phoneRaw: string | null = (main.phone_number as string) ?? null;
+  for (const ev of events) {
+    const sg = deepGet<Json>(ev, "data.signer");
+    if (sg && String(sg.email ?? "").toLowerCase() === email && sg.phone_number) phoneRaw = String(sg.phone_number);
+  }
+  const phone = normPhone(phoneRaw);
+  const last8 = (phone ?? "").replace(/\D/g, "").slice(-8);
+
+  let clientId: string | null = null;
+  if (email) {
+    const { data } = await admin.from("clients").select("id").eq("tenant_id", tenantId).ilike("email", email).limit(1);
+    clientId = (data?.[0]?.id as string) ?? null;
+  }
+  if (!clientId && last8.length === 8) {
+    const { data } = await admin.from("clients").select("id, phone").eq("tenant_id", tenantId).ilike("phone", `%${last8.slice(0, 4)}%`);
+    const hit = (data ?? []).find((c) => String(c.phone ?? "").replace(/\D/g, "").slice(-8) === last8);
+    clientId = (hit?.id as string) ?? null;
+  }
+  if (!clientId) {
+    const { data: created, error } = await admin.from("clients").insert({
+      tenant_id: tenantId,
+      full_name: (main.name as string) || email || "Sem nome",
+      email, phone,
+      cpf: normCpf(main.documentation) ?? null,
+    }).select("id").single();
+    if (error || !created) throw new Error(`client insert failed: ${error?.message}`);
+    clientId = created.id as string;
+    warnings.push("Cliente criado a partir do signatário.");
+  }
+
+  const path = pick<string>(payload, "document.path") ?? "";
+  const fileName = path.split("/").pop() || pick<string>(payload, "document.filename") || null;
+  const signedUrl = pick<string>(payload, "document.downloads.signed_file_url");
+
+  // Save the signed PDF now (Clicksign links expire in minutes)
+  let pdfPath: string | null = null;
+  if (signedUrl) {
+    try {
+      const res = await fetch(signedUrl);
+      if (res.ok) {
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        pdfPath = `${tenantId}/${documentKey}.pdf`;
+        const { error } = await admin.storage.from("contract-pdfs").upload(pdfPath, bytes, {
+          contentType: "application/pdf", upsert: true,
+        });
+        if (error) { pdfPath = null; warnings.push(`Falha ao guardar PDF: ${error.message}`); }
+      } else warnings.push(`Download do PDF falhou (${res.status})`);
+    } catch (e) { warnings.push(`Download do PDF falhou: ${(e as Error).message}`); }
+  }
+
+  const finishedAt = pick<string>(payload, "document.finished_at", "event.occurred_at");
+  const row: Json = {
+    tenant_id: tenantId,
+    client_id: clientId,
+    clicksign_document_key: documentKey,
+    status: "assinado",
+    data_pending: true,
+    signed_file_name: fileName,
+    clicksign_signed_pdf_url: signedUrl,
+    client_signed_at: finishedAt,
+    raw_webhook_payload: payload,
+    webhook_received_at: new Date().toISOString(),
+    suggested_data: suggestFromFilename(fileName),
+    suggested_at: new Date().toISOString(),
+  };
+  if (pdfPath) row.signed_pdf_path = pdfPath;
+
+  const { data: existing } = await admin.from("contracts").select("id")
+    .eq("tenant_id", tenantId).eq("clicksign_document_key", documentKey).maybeSingle();
+  if (existing) {
+    const { suggested_data: _s, suggested_at: _a, data_pending: _p, ...upd } = row;
+    await admin.from("contracts").update(upd).eq("id", existing.id);
+    return { contract_id: existing.id as string, client_id: clientId, warnings };
+  }
+  const { data: c, error: cErr } = await admin.from("contracts").insert(row).select("id").single();
+  if (cErr || !c) throw new Error(`contract insert failed: ${cErr?.message}`);
+  return { contract_id: c.id as string, client_id: clientId, warnings };
+}
+
 export type ClicksignResult = {
   contract_id: string | null;
   client_id: string | null;
@@ -653,10 +764,14 @@ export async function processClicksignPayload(
     return { ...r, document_kind: kind, linked_contract_id: null, needs_review: false };
   }
   if (kind === "desconhecido") {
-    return {
-      contract_id: null, client_id: null, document_kind: kind, linked_contract_id: null, needs_review: true,
-      warnings: ["Tipo de documento não identificado (sem template de contrato). Nenhum contrato criado; revisar."],
-    };
+    if (mapStatus(eventName, rawStatus) !== "assinado") {
+      return {
+        contract_id: null, client_id: null, document_kind: kind, linked_contract_id: null, needs_review: false,
+        warnings: ["PDF avulso ainda não assinado (ou cancelado): nenhum contrato criado."],
+      };
+    }
+    const r = await createPendingContract(admin, tenantId, payload, documentKey);
+    return { ...r, document_kind: "contrato", linked_contract_id: null, needs_review: true };
   }
 
   const signed = mapStatus(eventName, rawStatus) === "assinado";

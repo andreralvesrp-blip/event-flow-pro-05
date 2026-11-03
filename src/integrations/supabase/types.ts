@@ -302,6 +302,9 @@ export type Database = {
           contract_form_date: string | null
           contracted_company_email: string | null
           created_at: string
+          data_confirmed_at: string | null
+          data_confirmed_by: string | null
+          data_pending: boolean
           decoration: string | null
           event_date: string | null
           event_end_time: string | null
@@ -330,8 +333,12 @@ export type Database = {
           payment_method: string | null
           payment_schedule_raw: string | null
           raw_webhook_payload: Json | null
+          signed_file_name: string | null
+          signed_pdf_path: string | null
           source_system: string | null
           status: Database["public"]["Enums"]["contract_status"]
+          suggested_at: string | null
+          suggested_data: Json | null
           tasting_menu: string | null
           tenant_id: string
           total_value: number | null
@@ -357,6 +364,9 @@ export type Database = {
           contract_form_date?: string | null
           contracted_company_email?: string | null
           created_at?: string
+          data_confirmed_at?: string | null
+          data_confirmed_by?: string | null
+          data_pending?: boolean
           decoration?: string | null
           event_date?: string | null
           event_end_time?: string | null
@@ -385,8 +395,12 @@ export type Database = {
           payment_method?: string | null
           payment_schedule_raw?: string | null
           raw_webhook_payload?: Json | null
+          signed_file_name?: string | null
+          signed_pdf_path?: string | null
           source_system?: string | null
           status?: Database["public"]["Enums"]["contract_status"]
+          suggested_at?: string | null
+          suggested_data?: Json | null
           tasting_menu?: string | null
           tenant_id: string
           total_value?: number | null
@@ -412,6 +426,9 @@ export type Database = {
           contract_form_date?: string | null
           contracted_company_email?: string | null
           created_at?: string
+          data_confirmed_at?: string | null
+          data_confirmed_by?: string | null
+          data_pending?: boolean
           decoration?: string | null
           event_date?: string | null
           event_end_time?: string | null
@@ -440,8 +457,12 @@ export type Database = {
           payment_method?: string | null
           payment_schedule_raw?: string | null
           raw_webhook_payload?: Json | null
+          signed_file_name?: string | null
+          signed_pdf_path?: string | null
           source_system?: string | null
           status?: Database["public"]["Enums"]["contract_status"]
+          suggested_at?: string | null
+          suggested_data?: Json | null
           tasting_menu?: string | null
           tenant_id?: string
           total_value?: number | null

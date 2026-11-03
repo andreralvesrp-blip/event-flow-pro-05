@@ -32,6 +32,7 @@ type ContractRow = {
   event_date: string | null;
   status: string;
   client_id: string | null;
+  data_pending?: boolean;
 };
 type ClientRow = { id: string; source: string | null; cep: string | null };
 type OppRow = { stage: string; estimated_value: number | null };
@@ -146,7 +147,7 @@ function DashboardPage() {
       try {
         let contractsQ = supabase
           .from("contracts")
-          .select("id,total_value,event_date,status,client_id")
+          .select("id,total_value,event_date,status,client_id,data_pending")
           .eq("status", "assinado");
         let clientsQ = supabase.from("clients").select("id,source,cep");
         let oppsQ = supabase.from("opportunities").select("stage,estimated_value");
@@ -173,6 +174,8 @@ function DashboardPage() {
   }, [unitFilter]);
 
   const loading = !contracts || !clients || !opps;
+  // data_pending contracts (no event date yet) don't enter the period KPIs; alert instead
+  const pendingCount = (contracts ?? []).filter((c) => c.data_pending).length;
 
   const ranges = useMemo(() => getRanges(period), [period]);
 
@@ -194,15 +197,19 @@ function DashboardPage() {
     const prvRev = sum(prv);
     const curCount = cur.length;
     const prvCount = prv.length;
-    const curAvg = curCount ? curRev / curCount : 0;
-    const prvAvg = prvCount ? prvRev / prvCount : 0;
+    // ticket médio só sobre contratos com valor preenchido
+    const curValued = cur.filter((c) => c.total_value != null).length;
+    const prvValued = prv.filter((c) => c.total_value != null).length;
+    const curAvg = curValued ? curRev / curValued : 0;
+    const prvAvg = prvValued ? prvRev / prvValued : 0;
+    const curNoValue = curCount - curValued;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const in30 = new Date(today);
     in30.setDate(in30.getDate() + 30);
     const next = dated.filter((c) => c._d! >= today && c._d! <= in30);
     return {
-      revenue: { value: curRev, var: variation(curRev, prvRev) },
+      revenue: { value: curRev, var: variation(curRev, prvRev), noValue: curNoValue },
       count: { value: curCount, var: variation(curCount, prvCount) },
       avg: { value: curAvg, var: variation(curAvg, prvAvg) },
       next30: { count: next.length, value: next.reduce((s, x) => s + x._v, 0) },
@@ -342,6 +349,19 @@ function DashboardPage() {
         ))}
       </div>
 
+      {pendingCount > 0 && (
+        <Link
+          to="/contratos-pendentes"
+          className="mb-4 flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-4 py-3 text-sm"
+        >
+          <span>
+            <strong>{pendingCount} contrato{pendingCount > 1 ? "s" : ""} com dados pendentes</strong> — assinados
+            como PDF avulso, precisam de confirmação de data, valor e convidados.
+          </span>
+          <span className="font-medium text-primary">Revisar →</span>
+        </Link>
+      )}
+
       {error && (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           Erro ao carregar dados: {error}
@@ -354,7 +374,16 @@ function DashboardPage() {
           [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)
         ) : (
           <>
-            <KpiCard title="Receita" value={fmtBRL(kpis.revenue.value)} variation={kpis.revenue.var} />
+            <KpiCard
+              title="Receita"
+              value={fmtBRL(kpis.revenue.value)}
+              variation={kpis.revenue.var}
+              subtitle={
+                kpis.revenue.noValue
+                  ? `+ ${kpis.revenue.noValue} contrato${kpis.revenue.noValue > 1 ? "s" : ""} sem valor preenchido`
+                  : undefined
+              }
+            />
             <KpiCard title="Festas fechadas" value={String(kpis.count.value)} variation={kpis.count.var} />
             <KpiCard title="Ticket médio" value={fmtBRL(kpis.avg.value)} variation={kpis.avg.var} />
             <KpiCard

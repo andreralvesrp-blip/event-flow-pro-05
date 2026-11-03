@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ContratosRouteImport } from './routes/contratos'
+import { Route as ContratosPendentesRouteImport } from './routes/contratos-pendentes'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FestasRouteImport } from './routes/festas'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
@@ -44,6 +45,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
 const ContratosRoute = ContratosRouteImport.update({
   id: '/contratos',
   path: '/contratos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContratosPendentesRoute = ContratosPendentesRouteImport.update({
+  id: '/contratos-pendentes',
+  path: '/contratos-pendentes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/configuracoes': typeof ConfiguracoesRouteWithChildren
   '/contratos': typeof ContratosRoute
+  '/contratos-pendentes': typeof ContratosPendentesRoute
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contratos': typeof ContratosRoute
+  '/contratos-pendentes': typeof ContratosPendentesRoute
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/configuracoes': typeof ConfiguracoesRouteWithChildren
   '/contratos': typeof ContratosRoute
+  '/contratos-pendentes': typeof ContratosPendentesRoute
   '/dashboard': typeof DashboardRoute
   '/festas': typeof FestasRoute
   '/financeiro': typeof FinanceiroRoute
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/'
     | '/configuracoes'
     | '/contratos'
+    | '/contratos-pendentes'
     | '/dashboard'
     | '/festas'
     | '/financeiro'
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/contratos'
+    | '/contratos-pendentes'
     | '/dashboard'
     | '/festas'
     | '/financeiro'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/'
     | '/configuracoes'
     | '/contratos'
+    | '/contratos-pendentes'
     | '/dashboard'
     | '/festas'
     | '/financeiro'
@@ -284,6 +296,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConfiguracoesRoute: typeof ConfiguracoesRouteWithChildren
   ContratosRoute: typeof ContratosRoute
+  ContratosPendentesRoute: typeof ContratosPendentesRoute
   DashboardRoute: typeof DashboardRoute
   FestasRoute: typeof FestasRoute
   FinanceiroRoute: typeof FinanceiroRoute
@@ -320,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/contratos'
       fullPath: '/contratos'
       preLoaderRoute: typeof ContratosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contratos-pendentes': {
+      id: '/contratos-pendentes'
+      path: '/contratos-pendentes'
+      fullPath: '/contratos-pendentes'
+      preLoaderRoute: typeof ContratosPendentesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -475,6 +495,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConfiguracoesRoute: ConfiguracoesRouteWithChildren,
   ContratosRoute: ContratosRoute,
+  ContratosPendentesRoute: ContratosPendentesRoute,
   DashboardRoute: DashboardRoute,
   FestasRoute: FestasRoute,
   FinanceiroRoute: FinanceiroRoute,
