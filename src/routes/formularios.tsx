@@ -756,6 +756,65 @@ function FormDialog({
             />
           </div>
 
+          {isQuoteFlow && (
+            <>
+              <Separator />
+              <h3 className="text-sm font-semibold text-slate-900">
+                Envio do orçamento (versão Orçamento automático)
+              </h3>
+              <div className="flex items-center justify-between">
+                <Label>WhatsApp ativo</Label>
+                <Switch checked={whatsappEnabled} onCheckedChange={setWhatsappEnabled} />
+              </div>
+              <p className="text-xs text-slate-500 -mt-2">
+                Desligado: o envio de WhatsApp fica registrado como "desligado" e só o e-mail é
+                enviado. Vale só para leads novos, sem envio retroativo.
+              </p>
+              <div>
+                <Label>Identificação do diálogo no ChatGuru (opcional)</Label>
+                <Input
+                  value={chatguruDialogId}
+                  onChange={(e) => setChatguruDialogId(e.target.value)}
+                  placeholder="Ex: dialog_id do ChatGuru"
+                />
+              </div>
+              <div>
+                <Label>Nome da unidade (usado no e-mail)</Label>
+                <Input
+                  value={quoteUnitName}
+                  onChange={(e) => setQuoteUnitName(e.target.value)}
+                  placeholder="Ex: Bosque da Saúde"
+                />
+              </div>
+              <div>
+                <Label>Endereço (usado no e-mail)</Label>
+                <Input
+                  value={quoteUnitAddress}
+                  onChange={(e) => setQuoteUnitAddress(e.target.value)}
+                  placeholder="Ex: Rua Tiquatira, 394"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Telefone (usado no e-mail)</Label>
+                  <Input
+                    value={quoteUnitPhone}
+                    onChange={(e) => setQuoteUnitPhone(e.target.value)}
+                    placeholder="(11) 91445-4455"
+                  />
+                </div>
+                <div>
+                  <Label>WhatsApp da unidade (só dígitos, com 55)</Label>
+                  <Input
+                    value={quoteWhatsappNumber}
+                    onChange={(e) => setQuoteWhatsappNumber(e.target.value)}
+                    placeholder="5511914454455"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           <Separator />
           <h3 className="text-sm font-semibold text-slate-900">Widget flutuante</h3>
 
