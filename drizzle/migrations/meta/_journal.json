@@ -50,6 +50,13 @@
       "when": 1793825806580,
       "tag": "0006_quote_auto_form_v1",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793829453352,
+      "tag": "0007_quote_sends_bloqueado_limite",
+      "breakpoints": true
     }
   ]
 }

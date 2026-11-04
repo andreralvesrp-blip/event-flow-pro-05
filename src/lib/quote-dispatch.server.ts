@@ -74,8 +74,8 @@ export async function dispatchQuote(
     return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "already_sent" };
   }
   if (opts.force) {
-    // Reenviar só vale quando o último envio de e-mail falhou.
-    if (!prev.length || prev[0].status !== "falhou") {
+    // Reenviar só vale quando o último envio de e-mail falhou ou foi bloqueado pelo limite.
+    if (!prev.length || !["falhou", "bloqueado_limite"].includes(prev[0].status)) {
       return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "resend_only_after_failure" };
     }
   } else if (prev.length) {

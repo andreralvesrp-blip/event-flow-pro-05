@@ -104,7 +104,7 @@ type QuoteSend = {
   id: string;
   opportunity_id: string;
   channel: "email" | "whatsapp";
-  status: "pendente" | "enviado" | "falhou" | "desligado" | "sem_email";
+  status: "pendente" | "enviado" | "falhou" | "desligado" | "sem_email" | "bloqueado_limite";
   recipient: string | null;
   provider_response: string | null;
   created_at: string;
@@ -117,6 +117,7 @@ const SEND_STATUS_LABELS: Record<QuoteSend["status"], string> = {
   falhou: "falhou",
   desligado: "desligado",
   sem_email: "sem e-mail",
+  bloqueado_limite: "bloqueado (limite)",
 };
 
 type FormLite = { slug: string; name: string; flow_version?: string | null };
@@ -372,7 +373,7 @@ function OportunidadesPage() {
     else if (formFilter !== "all") list = list.filter((o) => o.form_slug === formFilter);
     if (onlyFailedSends) {
       list = list.filter((o) =>
-        (sendsByOp.get(o.id) ?? []).some((s) => s.status === "falhou"),
+        (sendsByOp.get(o.id) ?? []).some((s) => s.status === "falhou" || s.status === "bloqueado_limite"),
       );
     }
     return list;
@@ -694,7 +695,7 @@ function OpCard({
             const cls =
               last.status === "enviado"
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : last.status === "falhou"
+                : last.status === "falhou" || last.status === "bloqueado_limite"
                   ? "bg-red-50 text-red-700 border-red-200"
                   : "bg-slate-50 text-slate-500 border-slate-200";
             return (
@@ -1203,7 +1204,7 @@ function OpDetail({
     onChanged();
   }
 
-  const hasFailedSend = sends.some((s) => s.status === "falhou");
+  const hasFailedSend = sends.some((s) => s.status === "falhou" || s.status === "bloqueado_limite");
 
   return (
     <>
@@ -1312,7 +1313,7 @@ function OpDetail({
                       className={
                         s.status === "enviado"
                           ? "text-emerald-700 border-emerald-300"
-                          : s.status === "falhou"
+                          : (s.status === "falhou" || s.status === "bloqueado_limite")
                             ? "text-red-700 border-red-300"
                             : "text-slate-500"
                       }

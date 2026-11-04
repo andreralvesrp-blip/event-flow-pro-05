@@ -1,0 +1,2 @@
+ALTER TABLE public.quote_sends DROP CONSTRAINT quote_sends_status_check;
+ALTER TABLE public.quote_sends ADD CONSTRAINT quote_sends_status_check CHECK (status = ANY (ARRAY['pendente','enviado','falhou','desligado','sem_email','bloqueado_limite']));
