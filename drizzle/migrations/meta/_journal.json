@@ -43,6 +43,13 @@
       "when": 1793741740114,
       "tag": "0005_contracts_pending_data",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793825806580,
+      "tag": "0006_quote_auto_form_v1",
+      "breakpoints": true
     }
   ]
 }
