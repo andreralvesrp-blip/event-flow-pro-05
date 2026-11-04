@@ -409,6 +409,15 @@ function OportunidadesPage() {
               ))}
             </SelectContent>
           </Select>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={onlyFailedSends}
+              onChange={(e) => setOnlyFailedSends(e.target.checked)}
+              className="h-3.5 w-3.5 accent-red-600"
+            />
+            Só falhas de envio
+          </label>
           <Button onClick={() => setShowNew(true)}>
             <Plus className="w-4 h-4" /> Nova oportunidade
           </Button>
@@ -484,6 +493,7 @@ function OportunidadesPage() {
                   key={o.id}
                   op={o}
                   formLabel={formLabel}
+                  sends={sendsByOp.get(o.id) ?? []}
                   onClick={() => setSelected(o)}
                   onToggleContacted={async (next) => {
                     setOps((prev) =>
