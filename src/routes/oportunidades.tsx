@@ -361,15 +361,23 @@ function OportunidadesPage() {
     const { data: fs } = await supabase.from("forms").select("slug, name, flow_version");
     setForms((fs ?? []) as FormLite[]);
 
-    // Envios de orçamento (e-mail/WhatsApp) das oportunidades listadas
+    // Envios de orçamento (e-mail/WhatsApp) das oportunidades listadas.
+    // Busca em blocos: uma única lista com centenas de ids estoura o limite de URL
+    // e a requisição volta com erro 400, deixando todos os cards "sem envio".
     const oppIds = rows.map((r) => r.id);
     if (oppIds.length) {
-      const { data: qs } = await supabase
-        .from("quote_sends")
-        .select("id, opportunity_id, channel, status, recipient, provider_response, created_at, sent_at")
-        .in("opportunity_id", oppIds)
-        .order("created_at", { ascending: false });
-      setSends((qs ?? []) as QuoteSend[]);
+      const cols = "id, opportunity_id, channel, status, recipient, provider_response, created_at, sent_at";
+      const chunkSize = 200;
+      const all: QuoteSend[] = [];
+      for (let i = 0; i < oppIds.length; i += chunkSize) {
+        const { data: qs } = await supabase
+          .from("quote_sends")
+          .select(cols)
+          .in("opportunity_id", oppIds.slice(i, i + chunkSize))
+          .order("created_at", { ascending: false });
+        all.push(...((qs ?? []) as QuoteSend[]));
+      }
+      setSends(all);
     } else {
       setSends([]);
     }
