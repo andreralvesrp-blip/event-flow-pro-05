@@ -574,6 +574,15 @@ function FormDialog({
   const [attendantOnline, setAttendantOnline] = useState<boolean>(initial?.attendant_online ?? true);
   const [privacyUrl, setPrivacyUrl] = useState(initial?.privacy_policy_url ?? "");
 
+  // Config de envio do orçamento (só usada na versão "orcamento_automatico")
+  const [whatsappEnabled, setWhatsappEnabled] = useState<boolean>(initial?.whatsapp_enabled ?? false);
+  const [chatguruDialogId, setChatguruDialogId] = useState(initial?.chatguru_dialog_id ?? "");
+  const [quoteUnitName, setQuoteUnitName] = useState(initial?.quote_unit_name ?? "");
+  const [quoteUnitAddress, setQuoteUnitAddress] = useState(initial?.quote_unit_address ?? "");
+  const [quoteUnitPhone, setQuoteUnitPhone] = useState(initial?.quote_unit_phone ?? "");
+  const [quoteWhatsappNumber, setQuoteWhatsappNumber] = useState(initial?.quote_whatsapp_number ?? "");
+  const isQuoteFlow = (initial?.flow_version ?? "atual") === "orcamento_automatico";
+
   const [saving, setSaving] = useState(false);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -621,6 +630,12 @@ function FormDialog({
       attendant_avatar_url: attendantAvatar.trim() || null,
       attendant_online: attendantOnline,
       privacy_policy_url: privacyUrl.trim() || null,
+      whatsapp_enabled: whatsappEnabled,
+      chatguru_dialog_id: chatguruDialogId.trim() || null,
+      quote_unit_name: quoteUnitName.trim() || null,
+      quote_unit_address: quoteUnitAddress.trim() || null,
+      quote_unit_phone: quoteUnitPhone.trim() || null,
+      quote_whatsapp_number: quoteWhatsappNumber.trim() || null,
     };
     let error;
     if (initial) {
