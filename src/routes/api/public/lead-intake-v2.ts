@@ -228,7 +228,8 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
               return json({
                 success: true,
                 opportunity_id: d.id,
-                lead_event_id: d.lead_event_id,
+                // Sem lead_event_id de propósito: a página do formulário só
+                // dispara kpw-lead-created quando ele vem na resposta.
                 duplicate: true,
                 dispatch: "duplicado",
               });
@@ -237,14 +238,21 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
 
           // c) Client by normalized phone
           let clientId: string | null = null;
-          const { data: existing } = phoneNorm
-            ? await supabaseAdmin
-                .from("clients")
-                .select("id, email")
-                .eq("tenant_id", form.tenant_id)
-                .eq("phone_normalized", phoneNorm)
-                .maybeSingle()
-            : { data: null };
+          // Pode haver vários cadastros com o mesmo telefone (maybeSingle falhava
+          // nesse caso e um novo era criado). Prioridade: com contrato; senão o mais antigo.
+          let existing: { id: string; email: string | null } | null = null;
+          if (phoneNorm) {
+            const { data: matches } = await supabaseAdmin
+              .from("clients")
+              .select("id, email, created_at, contracts(id)")
+              .eq("tenant_id", form.tenant_id)
+              .eq("phone_normalized", phoneNorm)
+              .order("created_at", { ascending: true })
+              .limit(1, { foreignTable: "contracts" });
+            const list = (matches ?? []) as any[];
+            const pick = list.find((c) => (c.contracts ?? []).length > 0) ?? list[0];
+            if (pick) existing = { id: pick.id, email: pick.email };
+          }
 
           if (existing?.id) {
             clientId = existing.id;
