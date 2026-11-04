@@ -376,7 +376,22 @@ function PublicForm() {
     error: 5,
     unavailable: 0,
   };
-  const progress = progressByStep[step];
+  // Fluxo v2 (orcamento_automatico) tem 3 etapas: intro, data, contato.
+  const progressByStepV2: Record<Step, number> = {
+    loading: 0,
+    intro: 1,
+    name: 1,
+    age: 1,
+    date: 2,
+    contact: 3,
+    submitting: 3,
+    done: 3,
+    error: 3,
+    unavailable: 0,
+  };
+  const isV2Flow = cfg?.flow_version === "orcamento_automatico";
+  const progress = (isV2Flow ? progressByStepV2 : progressByStep)[step];
+  const progressBars = isV2Flow ? 3 : 5;
 
   const headerName = cfg?.name || "Kids Point";
   const attendantName = cfg?.attendant_name?.trim() || headerName;
@@ -613,12 +628,24 @@ function PublicForm() {
                 <div
                   style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", marginBottom: 12 }}
                 >
-                  Orçamento a caminho, {parentName}!
+                  {isV2
+                    ? `Pronto, ${parentName.split(/\s+/)[0]}!`
+                    : `Orçamento a caminho, ${parentName}!`}
                 </div>
                 <div style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65 }}>
-                  Em instantes você recebe no WhatsApp as opções e valores para a data escolhida.
-                  <br />
-                  Fique de olho!
+                  {isV2 ? (
+                    cfg?.whatsapp_enabled ? (
+                      "Seu orçamento está a caminho do seu WhatsApp e e-mail."
+                    ) : (
+                      "Seu orçamento está a caminho do seu e-mail."
+                    )
+                  ) : (
+                    <>
+                      Em instantes você recebe no WhatsApp as opções e valores para a data escolhida.
+                      <br />
+                      Fique de olho!
+                    </>
+                  )}
                 </div>
               </div>
             </div>
