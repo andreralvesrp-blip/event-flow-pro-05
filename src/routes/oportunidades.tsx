@@ -1174,6 +1174,35 @@ function OpDetail({
     onChanged();
   }
 
+  const [resending, setResending] = useState(false);
+  async function resendQuote() {
+    if (!accessToken) {
+      alert("Sessão inválida. Entre novamente.");
+      return;
+    }
+    setResending(true);
+    try {
+      const res = await fetch("/api/public/quote-dispatch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ opportunity_id: op.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(`Falha no reenvio: ${data?.detail || data?.error || res.status}`);
+      }
+    } catch (e) {
+      alert(`Falha no reenvio: ${(e as Error).message}`);
+    }
+    setResending(false);
+    onChanged();
+  }
+
+  const hasFailedSend = sends.some((s) => s.status === "falhou");
+
   return (
     <>
       <SheetHeader>
