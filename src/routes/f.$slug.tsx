@@ -9,6 +9,7 @@ export const Route = createFileRoute("/f/$slug")({
 });
 
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lead-intake`;
+const FN_URL_V2 = "/api/public/lead-intake-v2";
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 type FormCfg = {
@@ -19,6 +20,8 @@ type FormCfg = {
   attendant_avatar_url?: string | null;
   attendant_online?: boolean | null;
   privacy_policy_url?: string | null;
+  flow_version?: string | null;
+  whatsapp_enabled?: boolean | null;
 };
 type Msg = { from: "bot" | "user"; text: string };
 type Step =
@@ -123,6 +126,9 @@ function PublicForm() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { messages, typing, pushBot, pushUser } = useTypingMessages();
