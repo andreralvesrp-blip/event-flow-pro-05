@@ -468,6 +468,23 @@ function OportunidadesPage() {
     if (o) setSelected(o);
   };
 
+  // Exporta as oportunidades listadas (respeitando os filtros da tela)
+  const handleExport = () => {
+    const rows = filteredOps ?? [];
+    if (!rows.length) return;
+    const csv = buildOpportunitiesCsv(rows, sendsByOp);
+    // BOM para o Excel reconhecer acentos; separador ponto e vírgula
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `oportunidades_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  };
+
   return (
     <AppLayout title="Oportunidades">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -497,6 +514,9 @@ function OportunidadesPage() {
             />
             Só falhas de envio
           </label>
+          <Button variant="outline" onClick={handleExport} disabled={!filteredOps?.length}>
+            <Download className="w-4 h-4" /> Exportar CSV
+          </Button>
           <Button onClick={() => setShowNew(true)}>
             <Plus className="w-4 h-4" /> Nova oportunidade
           </Button>
