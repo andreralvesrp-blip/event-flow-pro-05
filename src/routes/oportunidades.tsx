@@ -31,7 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, AlertTriangle, Clock, CheckCircle2, Calendar, Phone } from "lucide-react";
+import {
+  Plus,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  Calendar,
+  Phone,
+  Download,
+} from "lucide-react";
 
 // ----------- types -----------
 type Stage =
@@ -97,7 +105,13 @@ type Opportunity = {
   form_slug: string | null;
   cliente_contactado: boolean;
   email: string | null;
-  client?: { id: string; full_name: string; phone: string | null; email: string | null } | null;
+  client?: {
+    id: string;
+    full_name: string;
+    phone: string | null;
+    phone_normalized?: string | null;
+    email: string | null;
+  } | null;
 };
 
 type QuoteSend = {
@@ -256,7 +270,7 @@ function OportunidadesPage() {
   const loadAll = useCallback(async () => {
     let oppsQ = supabase
       .from("opportunities")
-      .select("*, client:clients(id, full_name, phone, email)")
+      .select("*, client:clients(id, full_name, phone, phone_normalized, email)")
       .order("created_at", { ascending: false });
     let visitsQ = supabase
       .from("visits")
