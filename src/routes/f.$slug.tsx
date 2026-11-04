@@ -843,13 +843,78 @@ function PublicForm() {
                         Informe um WhatsApp válido com DDD.
                       </div>
                     )}
+                    {isV2 && (
+                      <>
+                        <input
+                          type="email"
+                          className="f-input"
+                          placeholder="Seu melhor e-mail"
+                          value={parentEmail}
+                          onChange={(e) => setParentEmail(e.target.value)}
+                        />
+                        {parentEmail && !isValidEmail(parentEmail) && (
+                          <div style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4 }}>
+                            Informe um e-mail válido.
+                          </div>
+                        )}
+                        {/* Honeypot invisível anti-bot */}
+                        <input
+                          type="text"
+                          name="website"
+                          value={honeypot}
+                          onChange={(e) => setHoneypot(e.target.value)}
+                          tabIndex={-1}
+                          autoComplete="off"
+                          aria-hidden="true"
+                          style={{
+                            position: "absolute",
+                            left: "-9999px",
+                            width: 1,
+                            height: 1,
+                            opacity: 0,
+                          }}
+                        />
+                      </>
+                    )}
+                    {isV2 && (
+                      <p
+                        style={{
+                          fontSize: 11,
+                          color: "#94A3B8",
+                          textAlign: "center",
+                          lineHeight: 1.4,
+                          margin: 0,
+                        }}
+                      >
+                        Ao enviar, você concorda em receber este orçamento por WhatsApp e e-mail.
+                      </p>
+                    )}
                     <button
                       type="submit"
                       className="f-btn-primary f-btn-green"
-                      disabled={typing || !parentName.trim() || !isValidPhone(parentPhone)}
+                      disabled={
+                        typing ||
+                        !parentName.trim() ||
+                        !isValidPhone(parentPhone) ||
+                        (isV2 && !isValidEmail(parentEmail))
+                      }
                     >
                       Receber orçamento
                     </button>
+                    {isV2 && (
+                      <label
+                        className="flex items-center gap-2 justify-center"
+                        style={{ fontSize: 12, color: "#64748B", cursor: "pointer", paddingTop: 2 }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={marketingConsent}
+                          onChange={(e) => setMarketingConsent(e.target.checked)}
+                          style={{ width: 15, height: 15, accentColor: "#F97316" }}
+                        />
+                        Quero receber novidades e ofertas da Kids Point.
+                      </label>
+                    )}
                   </form>
                 )}
                 {step === "submitting" && (
