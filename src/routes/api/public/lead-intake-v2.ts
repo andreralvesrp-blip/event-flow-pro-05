@@ -252,6 +252,30 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
             const list = (matches ?? []) as any[];
             const pick = list.find((c) => (c.contracts ?? []).length > 0) ?? list[0];
             if (pick) existing = { id: pick.id, email: pick.email };
+
+            // Fallback: cadastros antigos sem phone_normalized — calcula a partir de phone.
+            if (!existing) {
+              const { data: legacy } = await supabaseAdmin
+                .from("clients")
+                .select("id, email, phone, created_at, contracts(id)")
+                .eq("tenant_id", form.tenant_id)
+                .is("phone_normalized", null)
+                .not("phone", "is", null)
+                .order("created_at", { ascending: true })
+                .limit(1, { foreignTable: "contracts" })
+                .limit(5000);
+              const hits = ((legacy ?? []) as any[]).filter(
+                (c) => normalizePhone(c.phone) === phoneNorm,
+              );
+              const lp = hits.find((c) => (c.contracts ?? []).length > 0) ?? hits[0];
+              if (lp) {
+                existing = { id: lp.id, email: lp.email };
+                await supabaseAdmin
+                  .from("clients")
+                  .update({ phone_normalized: phoneNorm } as never)
+                  .eq("id", lp.id);
+              }
+            }
           }
 
           if (existing?.id) {
