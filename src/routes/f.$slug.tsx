@@ -141,9 +141,9 @@ function PublicForm() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${FN_URL}?slug=${encodeURIComponent(slug)}`, {
-          headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
-        });
+        // Config vem da lead-intake-v2 (mesma origem): devolve também
+        // flow_version e whatsapp_enabled para a página escolher o fluxo.
+        const res = await fetch(`${FN_URL_V2}?slug=${encodeURIComponent(slug)}`);
         if (!res.ok) {
           setStep("unavailable");
           return;
@@ -174,8 +174,15 @@ function PublicForm() {
     }
   }
 
+  const isV2 = cfg?.flow_version === "orcamento_automatico";
+
   async function startConversation() {
     pushUser("Vamos lá");
+    if (isV2) {
+      setStep("date");
+      await pushBot("E qual a data para a festa?");
+      return;
+    }
     setStep("name");
     await pushBot("Qual o nome do(a) aniversariante?");
   }
