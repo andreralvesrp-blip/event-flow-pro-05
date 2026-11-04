@@ -31,7 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, AlertTriangle, Clock, CheckCircle2, Calendar, Phone } from "lucide-react";
+import {
+  Plus,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  Calendar,
+  Phone,
+  Download,
+} from "lucide-react";
 
 // ----------- types -----------
 type Stage =
@@ -97,7 +105,13 @@ type Opportunity = {
   form_slug: string | null;
   cliente_contactado: boolean;
   email: string | null;
-  client?: { id: string; full_name: string; phone: string | null; email: string | null } | null;
+  client?: {
+    id: string;
+    full_name: string;
+    phone: string | null;
+    phone_normalized?: string | null;
+    email: string | null;
+  } | null;
 };
 
 type QuoteSend = {
@@ -234,6 +248,69 @@ function addBusinessDays(from: Date, n: number): Date {
   return d;
 }
 
+// ----------- CSV export -----------
+const CSV_DELIMITER = ";";
+
+function csvCell(value: unknown): string {
+  if (value == null) return "";
+  const s = String(value);
+  return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function csvRow(cells: unknown[]): string {
+  return cells.map(csvCell).join(CSV_DELIMITER);
+}
+
+const EXPORT_HEADERS = [
+  "Nome do responsável",
+  "Telefone",
+  "Telefone padronizado",
+  "E-mail",
+  "Status e-mail",
+  "Status WhatsApp",
+  "ID oportunidade",
+  "ID cliente",
+  "Origem",
+  "Formulário (slug)",
+  "Data da festa",
+  "Nome do aniversariante",
+  "Idade do aniversariante",
+  "Etapa",
+  "Criada em",
+];
+
+function lastSendStatus(sends: QuoteSend[], channel: QuoteSend["channel"]): string {
+  const last = sends.find((s) => s.channel === channel);
+  return last ? SEND_STATUS_LABELS[last.status] : "sem envio";
+}
+
+function buildOpportunitiesCsv(rows: Opportunity[], sendsByOp: Map<string, QuoteSend[]>): string {
+  const lines = [csvRow(EXPORT_HEADERS)];
+  for (const o of rows) {
+    const sends = sendsByOp.get(o.id) ?? [];
+    lines.push(
+      csvRow([
+        o.client?.full_name ?? "",
+        o.client?.phone ?? "",
+        o.client?.phone_normalized ?? "",
+        o.email || o.client?.email || "",
+        lastSendStatus(sends, "email"),
+        lastSendStatus(sends, "whatsapp"),
+        o.id,
+        o.client_id,
+        o.source ?? "",
+        o.form_slug ?? "",
+        o.desired_date ? o.desired_date.slice(0, 10) : "",
+        o.celebrant_name ?? "",
+        o.celebrant_age ?? "",
+        o.stage,
+        o.created_at,
+      ]),
+    );
+  }
+  return lines.join("\r\n") + "\r\n";
+}
+
 export const Route = createFileRoute("/oportunidades")({
   component: OportunidadesPage,
   validateSearch: (s: Record<string, unknown>) => ({ op: typeof s.op === "string" ? s.op : undefined }),
@@ -256,7 +333,7 @@ function OportunidadesPage() {
   const loadAll = useCallback(async () => {
     let oppsQ = supabase
       .from("opportunities")
-      .select("*, client:clients(id, full_name, phone, email)")
+      .select("*, client:clients(id, full_name, phone, phone_normalized, email)")
       .order("created_at", { ascending: false });
     let visitsQ = supabase
       .from("visits")
@@ -284,15 +361,23 @@ function OportunidadesPage() {
     const { data: fs } = await supabase.from("forms").select("slug, name, flow_version");
     setForms((fs ?? []) as FormLite[]);
 
-    // Envios de orçamento (e-mail/WhatsApp) das oportunidades listadas
+    // Envios de orçamento (e-mail/WhatsApp) das oportunidades listadas.
+    // Busca em blocos: uma única lista com centenas de ids estoura o limite de URL
+    // e a requisição volta com erro 400, deixando todos os cards "sem envio".
     const oppIds = rows.map((r) => r.id);
     if (oppIds.length) {
-      const { data: qs } = await supabase
-        .from("quote_sends")
-        .select("id, opportunity_id, channel, status, recipient, provider_response, created_at, sent_at")
-        .in("opportunity_id", oppIds)
-        .order("created_at", { ascending: false });
-      setSends((qs ?? []) as QuoteSend[]);
+      const cols = "id, opportunity_id, channel, status, recipient, provider_response, created_at, sent_at";
+      const chunkSize = 200;
+      const all: QuoteSend[] = [];
+      for (let i = 0; i < oppIds.length; i += chunkSize) {
+        const { data: qs } = await supabase
+          .from("quote_sends")
+          .select(cols)
+          .in("opportunity_id", oppIds.slice(i, i + chunkSize))
+          .order("created_at", { ascending: false });
+        all.push(...((qs ?? []) as QuoteSend[]));
+      }
+      setSends(all);
     } else {
       setSends([]);
     }
@@ -391,6 +476,23 @@ function OportunidadesPage() {
     if (o) setSelected(o);
   };
 
+  // Exporta as oportunidades listadas (respeitando os filtros da tela)
+  const handleExport = () => {
+    const rows = filteredOps ?? [];
+    if (!rows.length) return;
+    const csv = buildOpportunitiesCsv(rows, sendsByOp);
+    // BOM para o Excel reconhecer acentos; separador ponto e vírgula
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `oportunidades_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  };
+
   return (
     <AppLayout title="Oportunidades">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -420,6 +522,9 @@ function OportunidadesPage() {
             />
             Só falhas de envio
           </label>
+          <Button variant="outline" onClick={handleExport} disabled={!filteredOps?.length}>
+            <Download className="w-4 h-4" /> Exportar CSV
+          </Button>
           <Button onClick={() => setShowNew(true)}>
             <Plus className="w-4 h-4" /> Nova oportunidade
           </Button>
