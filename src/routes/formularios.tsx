@@ -413,6 +413,7 @@ function FormulariosPage() {
               <TableHead>Nome</TableHead>
               <TableHead>Slug / URL</TableHead>
               <TableHead>Canal de origem</TableHead>
+              <TableHead>Versão</TableHead>
               <TableHead className="text-right">Leads</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -440,6 +441,22 @@ function FormulariosPage() {
                   <code className="text-xs text-slate-600">/f/{r.slug}</code>
                 </TableCell>
                 <TableCell className="text-sm">{SOURCE_LABELS[r.source]}</TableCell>
+                <TableCell>
+                  <Select
+                    value={r.flow_version || "atual"}
+                    onValueChange={(v) => changeFlowVersion(r, v)}
+                  >
+                    <SelectTrigger className="h-8 w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="atual">{FLOW_LABELS.atual}</SelectItem>
+                      <SelectItem value="orcamento_automatico">
+                        {FLOW_LABELS.orcamento_automatico}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
                 <TableCell className="text-right tabular-nums">{counts[r.id] ?? 0}</TableCell>
                 <TableCell>
                   <Badge variant={r.active ? "default" : "secondary"}>
