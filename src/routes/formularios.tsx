@@ -91,6 +91,18 @@ type FormRow = {
   attendant_avatar_url: string | null;
   attendant_online: boolean | null;
   privacy_policy_url: string | null;
+  flow_version: string;
+  whatsapp_enabled: boolean;
+  chatguru_dialog_id: string | null;
+  quote_unit_name: string | null;
+  quote_unit_address: string | null;
+  quote_unit_phone: string | null;
+  quote_whatsapp_number: string | null;
+};
+
+const FLOW_LABELS: Record<string, string> = {
+  atual: "Atual",
+  orcamento_automatico: "Orçamento automático",
 };
 
 function slugify(s: string) {
@@ -329,6 +341,25 @@ function FormulariosPage() {
       .eq("id", row.id);
     if (error) toast.error(error.message);
     else load();
+  }
+
+  async function changeFlowVersion(row: FormRow, next: string) {
+    if (next === row.flow_version) return;
+    const ok = window.confirm(
+      next === "orcamento_automatico"
+        ? `Trocar "${row.name}" para Orçamento automático?\n\nO formulário passa a pedir e-mail, não pergunta aniversariante/idade e envia o orçamento por e-mail automaticamente.`
+        : `Voltar "${row.name}" para o fluxo Atual?\n\nO formulário volta a perguntar aniversariante e idade e para de enviar o orçamento automático.`,
+    );
+    if (!ok) return;
+    const { error } = await supabase
+      .from("forms")
+      .update({ flow_version: next })
+      .eq("id", row.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Versão do formulário atualizada");
+      load();
+    }
   }
 
   function copy(text: string, label: string) {
