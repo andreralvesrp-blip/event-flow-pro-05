@@ -1271,8 +1271,59 @@ function OpDetail({
         {/* Cliente */}
         <div className="border-t pt-3">
           <div className="text-xs text-slate-500">Contato</div>
-          <div className="text-sm">{op.client?.phone ?? "—"} · {op.client?.email ?? "—"}</div>
+          <div className="text-sm">
+            {op.client?.phone ?? "—"} · {op.email || op.client?.email || "—"}
+          </div>
         </div>
+
+        {/* Envios de orçamento */}
+        {sends.length > 0 && (
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-semibold">Envios de orçamento</div>
+              {hasFailedSend && (
+                <Button size="sm" variant="outline" onClick={resendQuote} disabled={resending}>
+                  {resending ? "Reenviando…" : "Reenviar"}
+                </Button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {sends.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between text-xs border rounded px-2 py-1.5"
+                >
+                  <div>
+                    <span className="font-medium">
+                      {s.channel === "email" ? "E-mail" : "WhatsApp"}
+                    </span>
+                    {s.recipient && <span className="text-slate-500"> · {s.recipient}</span>}
+                    {s.provider_response && s.status === "falhou" && (
+                      <div className="text-red-500 truncate max-w-[280px]" title={s.provider_response}>
+                        {s.provider_response}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <Badge
+                      variant="outline"
+                      className={
+                        s.status === "enviado"
+                          ? "text-emerald-700 border-emerald-300"
+                          : s.status === "falhou"
+                            ? "text-red-700 border-red-300"
+                            : "text-slate-500"
+                      }
+                    >
+                      {SEND_STATUS_LABELS[s.status]}
+                    </Badge>
+                    <div className="text-[10px] text-slate-400 mt-0.5">{fmtDateTime(s.created_at)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Mudar etapa */}
         <div className="border-t pt-3">
