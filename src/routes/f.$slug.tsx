@@ -213,8 +213,14 @@ function PublicForm() {
     pushUser(desiredDate);
     setStep("contact");
     await pushBot(
-      "Pra finalizar, me diz seu nome e WhatsApp para te enviarmos o orçamento.",
+      isV2
+        ? "Pra finalizar, me diz seu nome, WhatsApp e melhor e-mail para te enviarmos o orçamento."
+        : "Pra finalizar, me diz seu nome e WhatsApp para te enviarmos o orçamento.",
     );
+  }
+
+  function isValidEmail(input: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(input.trim());
   }
 
   async function submitContact(e: React.FormEvent) {
