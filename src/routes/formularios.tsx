@@ -91,6 +91,18 @@ type FormRow = {
   attendant_avatar_url: string | null;
   attendant_online: boolean | null;
   privacy_policy_url: string | null;
+  flow_version: string;
+  whatsapp_enabled: boolean;
+  chatguru_dialog_id: string | null;
+  quote_unit_name: string | null;
+  quote_unit_address: string | null;
+  quote_unit_phone: string | null;
+  quote_whatsapp_number: string | null;
+};
+
+const FLOW_LABELS: Record<string, string> = {
+  atual: "Atual",
+  orcamento_automatico: "Orçamento automático",
 };
 
 function slugify(s: string) {
@@ -331,6 +343,25 @@ function FormulariosPage() {
     else load();
   }
 
+  async function changeFlowVersion(row: FormRow, next: string) {
+    if (next === row.flow_version) return;
+    const ok = window.confirm(
+      next === "orcamento_automatico"
+        ? `Trocar "${row.name}" para Orçamento automático?\n\nO formulário passa a pedir e-mail, não pergunta aniversariante/idade e envia o orçamento por e-mail automaticamente.`
+        : `Voltar "${row.name}" para o fluxo Atual?\n\nO formulário volta a perguntar aniversariante e idade e para de enviar o orçamento automático.`,
+    );
+    if (!ok) return;
+    const { error } = await supabase
+      .from("forms")
+      .update({ flow_version: next })
+      .eq("id", row.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Versão do formulário atualizada");
+      load();
+    }
+  }
+
   function copy(text: string, label: string) {
     navigator.clipboard.writeText(text).then(
       () => toast.success(`${label} copiado`),
@@ -382,6 +413,7 @@ function FormulariosPage() {
               <TableHead>Nome</TableHead>
               <TableHead>Slug / URL</TableHead>
               <TableHead>Canal de origem</TableHead>
+              <TableHead>Versão</TableHead>
               <TableHead className="text-right">Leads</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -390,14 +422,14 @@ function FormulariosPage() {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                <TableCell colSpan={7} className="text-center text-slate-500 py-8">
                   Carregando...
                 </TableCell>
               </TableRow>
             )}
             {!loading && rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                <TableCell colSpan={7} className="text-center text-slate-500 py-8">
                   Nenhum formulário criado ainda.
                 </TableCell>
               </TableRow>
@@ -409,6 +441,22 @@ function FormulariosPage() {
                   <code className="text-xs text-slate-600">/f/{r.slug}</code>
                 </TableCell>
                 <TableCell className="text-sm">{SOURCE_LABELS[r.source]}</TableCell>
+                <TableCell>
+                  <Select
+                    value={r.flow_version || "atual"}
+                    onValueChange={(v) => changeFlowVersion(r, v)}
+                  >
+                    <SelectTrigger className="h-8 w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="atual">{FLOW_LABELS.atual}</SelectItem>
+                      <SelectItem value="orcamento_automatico">
+                        {FLOW_LABELS.orcamento_automatico}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
                 <TableCell className="text-right tabular-nums">{counts[r.id] ?? 0}</TableCell>
                 <TableCell>
                   <Badge variant={r.active ? "default" : "secondary"}>
@@ -526,6 +574,15 @@ function FormDialog({
   const [attendantOnline, setAttendantOnline] = useState<boolean>(initial?.attendant_online ?? true);
   const [privacyUrl, setPrivacyUrl] = useState(initial?.privacy_policy_url ?? "");
 
+  // Config de envio do orçamento (só usada na versão "orcamento_automatico")
+  const [whatsappEnabled, setWhatsappEnabled] = useState<boolean>(initial?.whatsapp_enabled ?? false);
+  const [chatguruDialogId, setChatguruDialogId] = useState(initial?.chatguru_dialog_id ?? "");
+  const [quoteUnitName, setQuoteUnitName] = useState(initial?.quote_unit_name ?? "");
+  const [quoteUnitAddress, setQuoteUnitAddress] = useState(initial?.quote_unit_address ?? "");
+  const [quoteUnitPhone, setQuoteUnitPhone] = useState(initial?.quote_unit_phone ?? "");
+  const [quoteWhatsappNumber, setQuoteWhatsappNumber] = useState(initial?.quote_whatsapp_number ?? "");
+  const isQuoteFlow = (initial?.flow_version ?? "atual") === "orcamento_automatico";
+
   const [saving, setSaving] = useState(false);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -573,6 +630,12 @@ function FormDialog({
       attendant_avatar_url: attendantAvatar.trim() || null,
       attendant_online: attendantOnline,
       privacy_policy_url: privacyUrl.trim() || null,
+      whatsapp_enabled: whatsappEnabled,
+      chatguru_dialog_id: chatguruDialogId.trim() || null,
+      quote_unit_name: quoteUnitName.trim() || null,
+      quote_unit_address: quoteUnitAddress.trim() || null,
+      quote_unit_phone: quoteUnitPhone.trim() || null,
+      quote_whatsapp_number: quoteWhatsappNumber.trim() || null,
     };
     let error;
     if (initial) {
@@ -692,6 +755,65 @@ function FormDialog({
               placeholder="https://seusite.com/privacidade"
             />
           </div>
+
+          {isQuoteFlow && (
+            <>
+              <Separator />
+              <h3 className="text-sm font-semibold text-slate-900">
+                Envio do orçamento (versão Orçamento automático)
+              </h3>
+              <div className="flex items-center justify-between">
+                <Label>WhatsApp ativo</Label>
+                <Switch checked={whatsappEnabled} onCheckedChange={setWhatsappEnabled} />
+              </div>
+              <p className="text-xs text-slate-500 -mt-2">
+                Desligado: o envio de WhatsApp fica registrado como "desligado" e só o e-mail é
+                enviado. Vale só para leads novos, sem envio retroativo.
+              </p>
+              <div>
+                <Label>Identificação do diálogo no ChatGuru (opcional)</Label>
+                <Input
+                  value={chatguruDialogId}
+                  onChange={(e) => setChatguruDialogId(e.target.value)}
+                  placeholder="Ex: dialog_id do ChatGuru"
+                />
+              </div>
+              <div>
+                <Label>Nome da unidade (usado no e-mail)</Label>
+                <Input
+                  value={quoteUnitName}
+                  onChange={(e) => setQuoteUnitName(e.target.value)}
+                  placeholder="Ex: Bosque da Saúde"
+                />
+              </div>
+              <div>
+                <Label>Endereço (usado no e-mail)</Label>
+                <Input
+                  value={quoteUnitAddress}
+                  onChange={(e) => setQuoteUnitAddress(e.target.value)}
+                  placeholder="Ex: Rua Tiquatira, 394"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Telefone (usado no e-mail)</Label>
+                  <Input
+                    value={quoteUnitPhone}
+                    onChange={(e) => setQuoteUnitPhone(e.target.value)}
+                    placeholder="(11) 91445-4455"
+                  />
+                </div>
+                <div>
+                  <Label>WhatsApp da unidade (só dígitos, com 55)</Label>
+                  <Input
+                    value={quoteWhatsappNumber}
+                    onChange={(e) => setQuoteWhatsappNumber(e.target.value)}
+                    placeholder="5511914454455"
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator />
           <h3 className="text-sm font-semibold text-slate-900">Widget flutuante</h3>

@@ -201,7 +201,9 @@ function MarketingPage() {
           .from("opportunities")
           .select("id, created_at, source, utm_medium, utm_campaign")
           .gte("created_at", `${start}T00:00:00`)
-          .lte("created_at", `${end}T23:59:59`);
+          .lte("created_at", `${end}T23:59:59`)
+          // formulário de teste do orçamento automático nunca entra nos relatórios
+          .or("form_slug.is.null,form_slug.neq.bs-orcamento-teste");
         if (unitFilter) q = q.eq("unit_id", unitFilter);
         const { data, error } = await q;
         if (error) console.error("[marketing] leads query failed", error);

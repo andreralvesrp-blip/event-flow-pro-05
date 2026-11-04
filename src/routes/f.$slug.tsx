@@ -9,6 +9,7 @@ export const Route = createFileRoute("/f/$slug")({
 });
 
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lead-intake`;
+const FN_URL_V2 = "/api/public/lead-intake-v2";
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 type FormCfg = {
@@ -19,6 +20,8 @@ type FormCfg = {
   attendant_avatar_url?: string | null;
   attendant_online?: boolean | null;
   privacy_policy_url?: string | null;
+  flow_version?: string | null;
+  whatsapp_enabled?: boolean | null;
 };
 type Msg = { from: "bot" | "user"; text: string };
 type Step =
@@ -123,6 +126,9 @@ function PublicForm() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { messages, typing, pushBot, pushUser } = useTypingMessages();
@@ -135,9 +141,9 @@ function PublicForm() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${FN_URL}?slug=${encodeURIComponent(slug)}`, {
-          headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
-        });
+        // Config vem da lead-intake-v2 (mesma origem): devolve também
+        // flow_version e whatsapp_enabled para a página escolher o fluxo.
+        const res = await fetch(`${FN_URL_V2}?slug=${encodeURIComponent(slug)}`);
         if (!res.ok) {
           setStep("unavailable");
           return;
@@ -168,8 +174,15 @@ function PublicForm() {
     }
   }
 
+  const isV2 = cfg?.flow_version === "orcamento_automatico";
+
   async function startConversation() {
     pushUser("Vamos lá");
+    if (isV2) {
+      setStep("date");
+      await pushBot("E qual a data para a festa?");
+      return;
+    }
     setStep("name");
     await pushBot("Qual o nome do(a) aniversariante?");
   }
@@ -200,15 +213,22 @@ function PublicForm() {
     pushUser(desiredDate);
     setStep("contact");
     await pushBot(
-      "Pra finalizar, me diz seu nome e WhatsApp para te enviarmos o orçamento.",
+      isV2
+        ? "Pra finalizar, me diz seu nome, WhatsApp e melhor e-mail para te enviarmos o orçamento."
+        : "Pra finalizar, me diz seu nome e WhatsApp para te enviarmos o orçamento.",
     );
+  }
+
+  function isValidEmail(input: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(input.trim());
   }
 
   async function submitContact(e: React.FormEvent) {
     e.preventDefault();
     if (!parentName.trim()) return;
     if (!isValidPhone(parentPhone)) return;
-    pushUser(`${parentName} · ${parentPhone}`);
+    if (isV2 && !isValidEmail(parentEmail)) return;
+    pushUser(isV2 ? `${parentName} · ${parentPhone} · ${parentEmail}` : `${parentName} · ${parentPhone}`);
     setStep("submitting");
     await pushBot("Preparando seu orçamento...");
 
@@ -239,36 +259,64 @@ function PublicForm() {
 
     try {
       await new Promise((r) => setTimeout(r, 2000));
-      const res = await fetch(FN_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: ANON,
-          Authorization: `Bearer ${ANON}`,
-        },
-        body: JSON.stringify({
-          form_slug: slug,
-          celebrant_name: celebrantName,
-          celebrant_age: parseInt(celebrantAge, 10),
-          desired_date: ddmmyyyyToISO(desiredDate),
-          parent_name: parentName,
-          parent_phone: parentPhone,
-          utm_source,
-          utm_medium,
-          utm_campaign,
-          utm_content,
-          utm_term,
-          gclid,
-          gbraid,
-          wbraid,
-          fbclid,
-          fbp,
-          fbc,
-          landing_page,
-          referrer,
-          marketing_event_id,
-        }),
-      });
+      const res = isV2
+        ? await fetch(FN_URL_V2, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              form_slug: slug,
+              desired_date: ddmmyyyyToISO(desiredDate),
+              parent_name: parentName,
+              parent_phone: parentPhone,
+              parent_email: parentEmail.trim(),
+              marketing_consent: marketingConsent,
+              website: honeypot,
+              utm_source,
+              utm_medium,
+              utm_campaign,
+              utm_content,
+              utm_term,
+              gclid,
+              gbraid,
+              wbraid,
+              fbclid,
+              fbp,
+              fbc,
+              landing_page,
+              referrer,
+              marketing_event_id,
+            }),
+          })
+        : await fetch(FN_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: ANON,
+              Authorization: `Bearer ${ANON}`,
+            },
+            body: JSON.stringify({
+              form_slug: slug,
+              celebrant_name: celebrantName,
+              celebrant_age: parseInt(celebrantAge, 10),
+              desired_date: ddmmyyyyToISO(desiredDate),
+              parent_name: parentName,
+              parent_phone: parentPhone,
+              utm_source,
+              utm_medium,
+              utm_campaign,
+              utm_content,
+              utm_term,
+              gclid,
+              gbraid,
+              wbraid,
+              fbclid,
+              fbp,
+              fbc,
+              landing_page,
+              referrer,
+              marketing_event_id,
+            }),
+          });
 
       if (!res.ok) {
         const t = await res.text();
@@ -328,7 +376,21 @@ function PublicForm() {
     error: 5,
     unavailable: 0,
   };
-  const progress = progressByStep[step];
+  // Fluxo v2 (orcamento_automatico) tem 3 etapas: intro, data, contato.
+  const progressByStepV2: Record<Step, number> = {
+    loading: 0,
+    intro: 1,
+    name: 1,
+    age: 1,
+    date: 2,
+    contact: 3,
+    submitting: 3,
+    done: 3,
+    error: 3,
+    unavailable: 0,
+  };
+  const progress = (isV2 ? progressByStepV2 : progressByStep)[step];
+  const progressBars = isV2 ? 3 : 5;
 
   const headerName = cfg?.name || "Kids Point";
   const attendantName = cfg?.attendant_name?.trim() || headerName;
@@ -515,7 +577,7 @@ function PublicForm() {
               </button>
             </div>
             <div className="flex gap-1.5 mt-3">
-              {[1, 2, 3, 4, 5].map((i) => (
+              {Array.from({ length: progressBars }, (_, idx) => idx + 1).map((i) => (
                 <div
                   key={i}
                   style={{
@@ -565,12 +627,24 @@ function PublicForm() {
                 <div
                   style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", marginBottom: 12 }}
                 >
-                  Orçamento a caminho, {parentName}!
+                  {isV2
+                    ? `Pronto, ${parentName.split(/\s+/)[0]}!`
+                    : `Orçamento a caminho, ${parentName}!`}
                 </div>
                 <div style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65 }}>
-                  Em instantes você recebe no WhatsApp as opções e valores para a data escolhida.
-                  <br />
-                  Fique de olho!
+                  {isV2 ? (
+                    cfg?.whatsapp_enabled ? (
+                      "Seu orçamento está a caminho do seu WhatsApp e e-mail."
+                    ) : (
+                      "Seu orçamento está a caminho do seu e-mail."
+                    )
+                  ) : (
+                    <>
+                      Em instantes você recebe no WhatsApp as opções e valores para a data escolhida.
+                      <br />
+                      Fique de olho!
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -769,13 +843,78 @@ function PublicForm() {
                         Informe um WhatsApp válido com DDD.
                       </div>
                     )}
+                    {isV2 && (
+                      <>
+                        <input
+                          type="email"
+                          className="f-input"
+                          placeholder="Seu melhor e-mail"
+                          value={parentEmail}
+                          onChange={(e) => setParentEmail(e.target.value)}
+                        />
+                        {parentEmail && !isValidEmail(parentEmail) && (
+                          <div style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4 }}>
+                            Informe um e-mail válido.
+                          </div>
+                        )}
+                        {/* Honeypot invisível anti-bot */}
+                        <input
+                          type="text"
+                          name="website"
+                          value={honeypot}
+                          onChange={(e) => setHoneypot(e.target.value)}
+                          tabIndex={-1}
+                          autoComplete="off"
+                          aria-hidden="true"
+                          style={{
+                            position: "absolute",
+                            left: "-9999px",
+                            width: 1,
+                            height: 1,
+                            opacity: 0,
+                          }}
+                        />
+                      </>
+                    )}
+                    {isV2 && (
+                      <p
+                        style={{
+                          fontSize: 11,
+                          color: "#94A3B8",
+                          textAlign: "center",
+                          lineHeight: 1.4,
+                          margin: 0,
+                        }}
+                      >
+                        Ao enviar, você concorda em receber este orçamento por WhatsApp e e-mail.
+                      </p>
+                    )}
                     <button
                       type="submit"
                       className="f-btn-primary f-btn-green"
-                      disabled={typing || !parentName.trim() || !isValidPhone(parentPhone)}
+                      disabled={
+                        typing ||
+                        !parentName.trim() ||
+                        !isValidPhone(parentPhone) ||
+                        (isV2 && !isValidEmail(parentEmail))
+                      }
                     >
                       Receber orçamento
                     </button>
+                    {isV2 && (
+                      <label
+                        className="flex items-center gap-2 justify-center"
+                        style={{ fontSize: 12, color: "#64748B", cursor: "pointer", paddingTop: 2 }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={marketingConsent}
+                          onChange={(e) => setMarketingConsent(e.target.checked)}
+                          style={{ width: 15, height: 15, accentColor: "#F97316" }}
+                        />
+                        Quero receber novidades e ofertas da Kids Point.
+                      </label>
+                    )}
                   </form>
                 )}
                 {step === "submitting" && (

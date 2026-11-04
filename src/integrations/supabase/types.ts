@@ -98,6 +98,7 @@ export type Database = {
           mother_name: string | null
           notes: string | null
           phone: string | null
+          phone_normalized: string | null
           source: Database["public"]["Enums"]["opportunity_source"] | null
           status: Database["public"]["Enums"]["client_status"]
           tenant_id: string
@@ -124,6 +125,7 @@ export type Database = {
           mother_name?: string | null
           notes?: string | null
           phone?: string | null
+          phone_normalized?: string | null
           source?: Database["public"]["Enums"]["opportunity_source"] | null
           status?: Database["public"]["Enums"]["client_status"]
           tenant_id: string
@@ -150,6 +152,7 @@ export type Database = {
           mother_name?: string | null
           notes?: string | null
           phone?: string | null
+          phone_normalized?: string | null
           source?: Database["public"]["Enums"]["opportunity_source"] | null
           status?: Database["public"]["Enums"]["client_status"]
           tenant_id?: string
@@ -671,11 +674,17 @@ export type Database = {
           attendant_avatar_url: string | null
           attendant_name: string | null
           attendant_online: boolean
+          chatguru_dialog_id: string | null
           created_at: string
           created_by: string | null
+          flow_version: string
           id: string
           name: string
           privacy_policy_url: string | null
+          quote_unit_address: string | null
+          quote_unit_name: string | null
+          quote_unit_phone: string | null
+          quote_whatsapp_number: string | null
           slug: string
           source: Database["public"]["Enums"]["opportunity_source"]
           tenant_id: string
@@ -683,6 +692,7 @@ export type Database = {
           updated_at: string
           utm_campaign: string | null
           welcome_message: string
+          whatsapp_enabled: boolean
           widget_avatar_url: string | null
           widget_delay: number | null
           widget_msg_1: string | null
@@ -694,11 +704,17 @@ export type Database = {
           attendant_avatar_url?: string | null
           attendant_name?: string | null
           attendant_online?: boolean
+          chatguru_dialog_id?: string | null
           created_at?: string
           created_by?: string | null
+          flow_version?: string
           id?: string
           name: string
           privacy_policy_url?: string | null
+          quote_unit_address?: string | null
+          quote_unit_name?: string | null
+          quote_unit_phone?: string | null
+          quote_whatsapp_number?: string | null
           slug: string
           source?: Database["public"]["Enums"]["opportunity_source"]
           tenant_id: string
@@ -706,6 +722,7 @@ export type Database = {
           updated_at?: string
           utm_campaign?: string | null
           welcome_message?: string
+          whatsapp_enabled?: boolean
           widget_avatar_url?: string | null
           widget_delay?: number | null
           widget_msg_1?: string | null
@@ -717,11 +734,17 @@ export type Database = {
           attendant_avatar_url?: string | null
           attendant_name?: string | null
           attendant_online?: boolean
+          chatguru_dialog_id?: string | null
           created_at?: string
           created_by?: string | null
+          flow_version?: string
           id?: string
           name?: string
           privacy_policy_url?: string | null
+          quote_unit_address?: string | null
+          quote_unit_name?: string | null
+          quote_unit_phone?: string | null
+          quote_whatsapp_number?: string | null
           slug?: string
           source?: Database["public"]["Enums"]["opportunity_source"]
           tenant_id?: string
@@ -729,6 +752,7 @@ export type Database = {
           updated_at?: string
           utm_campaign?: string | null
           welcome_message?: string
+          whatsapp_enabled?: boolean
           widget_avatar_url?: string | null
           widget_delay?: number | null
           widget_msg_1?: string | null
@@ -801,6 +825,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_intake_rate_log: {
+        Row: {
+          created_at: string
+          form_slug: string | null
+          id: string
+          ip_hash: string | null
+          phone_normalized: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          form_slug?: string | null
+          id?: string
+          ip_hash?: string | null
+          phone_normalized?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          form_slug?: string | null
+          id?: string
+          ip_hash?: string | null
+          phone_normalized?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: []
       }
       legacy_import_batches: {
         Row: {
@@ -1434,6 +1485,7 @@ export type Database = {
           created_by: string | null
           desired_date: string | null
           desired_slot: Database["public"]["Enums"]["event_slot"] | null
+          email: string | null
           estimated_value: number | null
           fbc: string | null
           fbclid: string | null
@@ -1451,6 +1503,8 @@ export type Database = {
           lost_from_stage:
             | Database["public"]["Enums"]["opportunity_stage"]
             | null
+          marketing_consent: boolean
+          marketing_consent_at: string | null
           marketing_event_id: string | null
           notes: string | null
           nps_response_id: string | null
@@ -1483,6 +1537,7 @@ export type Database = {
           created_by?: string | null
           desired_date?: string | null
           desired_slot?: Database["public"]["Enums"]["event_slot"] | null
+          email?: string | null
           estimated_value?: number | null
           fbc?: string | null
           fbclid?: string | null
@@ -1500,6 +1555,8 @@ export type Database = {
           lost_from_stage?:
             | Database["public"]["Enums"]["opportunity_stage"]
             | null
+          marketing_consent?: boolean
+          marketing_consent_at?: string | null
           marketing_event_id?: string | null
           notes?: string | null
           nps_response_id?: string | null
@@ -1532,6 +1589,7 @@ export type Database = {
           created_by?: string | null
           desired_date?: string | null
           desired_slot?: Database["public"]["Enums"]["event_slot"] | null
+          email?: string | null
           estimated_value?: number | null
           fbc?: string | null
           fbclid?: string | null
@@ -1549,6 +1607,8 @@ export type Database = {
           lost_from_stage?:
             | Database["public"]["Enums"]["opportunity_stage"]
             | null
+          marketing_consent?: boolean
+          marketing_consent_at?: string | null
           marketing_event_id?: string | null
           notes?: string | null
           nps_response_id?: string | null
@@ -1617,6 +1677,102 @@ export type Database = {
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_stage_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          from_stage: string | null
+          id: string
+          opportunity_id: string
+          tenant_id: string
+          to_stage: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          from_stage?: string | null
+          id?: string
+          opportunity_id: string
+          tenant_id: string
+          to_stage: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          from_stage?: string | null
+          id?: string
+          opportunity_id?: string
+          tenant_id?: string
+          to_stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_stage_history_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_stage_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_sends: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          opportunity_id: string
+          provider_response: string | null
+          recipient: string | null
+          sent_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          id?: string
+          opportunity_id: string
+          provider_response?: string | null
+          recipient?: string | null
+          sent_at?: string | null
+          status: string
+          tenant_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          opportunity_id?: string
+          provider_response?: string | null
+          recipient?: string | null
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_sends_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_sends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]

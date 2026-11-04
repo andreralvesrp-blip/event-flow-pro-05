@@ -95,7 +95,27 @@ type Opportunity = {
   created_at: string;
   form_slug: string | null;
   cliente_contactado: boolean;
+  email: string | null;
   client?: { id: string; full_name: string; phone: string | null; email: string | null } | null;
+};
+
+type QuoteSend = {
+  id: string;
+  opportunity_id: string;
+  channel: "email" | "whatsapp";
+  status: "pendente" | "enviado" | "falhou" | "desligado" | "sem_email";
+  recipient: string | null;
+  provider_response: string | null;
+  created_at: string;
+  sent_at: string | null;
+};
+
+const SEND_STATUS_LABELS: Record<QuoteSend["status"], string> = {
+  pendente: "pendente",
+  enviado: "enviado",
+  falhou: "falhou",
+  desligado: "desligado",
+  sem_email: "sem e-mail",
 };
 
 type FormLite = { slug: string; name: string };
@@ -225,6 +245,8 @@ function OportunidadesPage() {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [forms, setForms] = useState<FormLite[]>([]);
   const [formFilter, setFormFilter] = useState<string>("all");
+  const [sends, setSends] = useState<QuoteSend[]>([]);
+  const [onlyFailedSends, setOnlyFailedSends] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -259,6 +281,19 @@ function OportunidadesPage() {
 
     const { data: fs } = await supabase.from("forms").select("slug, name");
     setForms((fs ?? []) as FormLite[]);
+
+    // Envios de orçamento (e-mail/WhatsApp) das oportunidades listadas
+    const oppIds = rows.map((r) => r.id);
+    if (oppIds.length) {
+      const { data: qs } = await supabase
+        .from("quote_sends")
+        .select("id, opportunity_id, channel, status, recipient, provider_response, created_at, sent_at")
+        .in("opportunity_id", oppIds)
+        .order("created_at", { ascending: false });
+      setSends((qs ?? []) as QuoteSend[]);
+    } else {
+      setSends([]);
+    }
   }, [unitFilter]);
 
   useEffect(() => {
@@ -319,12 +354,28 @@ function OportunidadesPage() {
     [formsMap],
   );
 
+  const sendsByOp = useMemo(() => {
+    const m = new Map<string, QuoteSend[]>();
+    for (const s of sends) {
+      const a = m.get(s.opportunity_id) ?? [];
+      a.push(s);
+      m.set(s.opportunity_id, a);
+    }
+    return m;
+  }, [sends]);
+
   const filteredOps = useMemo(() => {
     if (!ops) return ops;
-    if (formFilter === "all") return ops;
-    if (formFilter === "__none") return ops.filter((o) => !o.form_slug);
-    return ops.filter((o) => o.form_slug === formFilter);
-  }, [ops, formFilter]);
+    let list = ops;
+    if (formFilter === "__none") list = list.filter((o) => !o.form_slug);
+    else if (formFilter !== "all") list = list.filter((o) => o.form_slug === formFilter);
+    if (onlyFailedSends) {
+      list = list.filter((o) =>
+        (sendsByOp.get(o.id) ?? []).some((s) => s.status === "falhou"),
+      );
+    }
+    return list;
+  }, [ops, formFilter, onlyFailedSends, sendsByOp]);
 
   const opsByStage = useMemo(() => {
     const map = new Map<Stage, Opportunity[]>();
@@ -358,6 +409,15 @@ function OportunidadesPage() {
               ))}
             </SelectContent>
           </Select>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={onlyFailedSends}
+              onChange={(e) => setOnlyFailedSends(e.target.checked)}
+              className="h-3.5 w-3.5 accent-red-600"
+            />
+            Só falhas de envio
+          </label>
           <Button onClick={() => setShowNew(true)}>
             <Plus className="w-4 h-4" /> Nova oportunidade
           </Button>
@@ -433,6 +493,7 @@ function OportunidadesPage() {
                   key={o.id}
                   op={o}
                   formLabel={formLabel}
+                  sends={sendsByOp.get(o.id) ?? []}
                   onClick={() => setSelected(o)}
                   onToggleContacted={async (next) => {
                     setOps((prev) =>
@@ -495,6 +556,8 @@ function OportunidadesPage() {
               tenantId={profile?.tenant_id ?? null}
               userId={user?.id ?? null}
               formLabel={formLabel}
+              sends={sendsByOp.get(selected.id) ?? []}
+              accessToken={session?.access_token ?? null}
               onChanged={loadAll}
             />
           )}
@@ -547,16 +610,19 @@ function ActionGroup({
 function OpCard({
   op,
   formLabel,
+  sends,
   onClick,
   onToggleContacted,
 }: {
   op: Opportunity;
   formLabel: (slug: string | null | undefined) => string;
+  sends: QuoteSend[];
   onClick: () => void;
   onToggleContacted: (next: boolean) => void;
 }) {
   const parado = daysSince(op.stage_changed_at);
   const contacted = !!op.cliente_contactado;
+  const displayEmail = op.email || op.client?.email || null;
   return (
     <div
       onClick={onClick}
@@ -607,9 +673,33 @@ function OpCard({
       )}
       <div className="text-xs text-slate-500 mt-1 space-y-0.5">
         {op.desired_date && <div>Data: {fmtDate(op.desired_date)}</div>}
+        {displayEmail && <div className="truncate" title={displayEmail}>{displayEmail}</div>}
         {op.source && <div>{SOURCE_LABELS[op.source]}</div>}
         {op.estimated_value != null && <div>{fmtBRL(op.estimated_value)}</div>}
       </div>
+      {sends.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {(["email", "whatsapp"] as const).map((ch) => {
+            const last = sends.find((s) => s.channel === ch);
+            if (!last) return null;
+            const cls =
+              last.status === "enviado"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : last.status === "falhou"
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : "bg-slate-50 text-slate-500 border-slate-200";
+            return (
+              <span
+                key={ch}
+                className={`text-[10px] px-1.5 py-0 rounded border ${cls}`}
+                title={`${ch === "email" ? "E-mail" : "WhatsApp"}: ${SEND_STATUS_LABELS[last.status]}`}
+              >
+                {ch === "email" ? "E-mail" : "WhatsApp"}: {SEND_STATUS_LABELS[last.status]}
+              </span>
+            );
+          })}
+        </div>
+      )}
       <div className="mt-1.5 flex items-center justify-between gap-2">
         <Badge
           variant="outline"
@@ -962,6 +1052,8 @@ function OpDetail({
   tenantId,
   userId,
   formLabel,
+  sends,
+  accessToken,
   onChanged,
 }: {
   op: Opportunity;
@@ -969,6 +1061,8 @@ function OpDetail({
   tenantId: string | null;
   userId: string | null;
   formLabel: (slug: string | null | undefined) => string;
+  sends: QuoteSend[];
+  accessToken: string | null;
   onChanged: () => void;
 }) {
   const [showLoss, setShowLoss] = useState(false);
@@ -1080,6 +1174,35 @@ function OpDetail({
     onChanged();
   }
 
+  const [resending, setResending] = useState(false);
+  async function resendQuote() {
+    if (!accessToken) {
+      alert("Sessão inválida. Entre novamente.");
+      return;
+    }
+    setResending(true);
+    try {
+      const res = await fetch("/api/public/quote-dispatch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ opportunity_id: op.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(`Falha no reenvio: ${data?.detail || data?.error || res.status}`);
+      }
+    } catch (e) {
+      alert(`Falha no reenvio: ${(e as Error).message}`);
+    }
+    setResending(false);
+    onChanged();
+  }
+
+  const hasFailedSend = sends.some((s) => s.status === "falhou");
+
   return (
     <>
       <SheetHeader>
@@ -1148,8 +1271,59 @@ function OpDetail({
         {/* Cliente */}
         <div className="border-t pt-3">
           <div className="text-xs text-slate-500">Contato</div>
-          <div className="text-sm">{op.client?.phone ?? "—"} · {op.client?.email ?? "—"}</div>
+          <div className="text-sm">
+            {op.client?.phone ?? "—"} · {op.email || op.client?.email || "—"}
+          </div>
         </div>
+
+        {/* Envios de orçamento */}
+        {sends.length > 0 && (
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-semibold">Envios de orçamento</div>
+              {hasFailedSend && (
+                <Button size="sm" variant="outline" onClick={resendQuote} disabled={resending}>
+                  {resending ? "Reenviando…" : "Reenviar"}
+                </Button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {sends.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between text-xs border rounded px-2 py-1.5"
+                >
+                  <div>
+                    <span className="font-medium">
+                      {s.channel === "email" ? "E-mail" : "WhatsApp"}
+                    </span>
+                    {s.recipient && <span className="text-slate-500"> · {s.recipient}</span>}
+                    {s.provider_response && s.status === "falhou" && (
+                      <div className="text-red-500 truncate max-w-[280px]" title={s.provider_response}>
+                        {s.provider_response}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <Badge
+                      variant="outline"
+                      className={
+                        s.status === "enviado"
+                          ? "text-emerald-700 border-emerald-300"
+                          : s.status === "falhou"
+                            ? "text-red-700 border-red-300"
+                            : "text-slate-500"
+                      }
+                    >
+                      {SEND_STATUS_LABELS[s.status]}
+                    </Badge>
+                    <div className="text-[10px] text-slate-400 mt-0.5">{fmtDateTime(s.created_at)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Mudar etapa */}
         <div className="border-t pt-3">
