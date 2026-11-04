@@ -396,6 +396,19 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
           let dispatch = "skipped";
           if (rateLimited) {
             dispatch = "rate_limited";
+            try {
+              const recipient = emailClean;
+              await supabaseAdmin.from("quote_sends").insert({
+                tenant_id: form.tenant_id,
+                opportunity_id: opp.id,
+                channel: "email",
+                status: "bloqueado_limite",
+                recipient,
+                provider_response: "Limite de envios atingido (IP/telefone)",
+              } as never);
+            } catch (e) {
+              console.error("[lead-intake-v2] rate_limit log error", e);
+            }
           } else {
             try {
               const result = await dispatchQuote(opp.id);
