@@ -389,9 +389,8 @@ function PublicForm() {
     error: 3,
     unavailable: 0,
   };
-  const isV2Flow = cfg?.flow_version === "orcamento_automatico";
-  const progress = (isV2Flow ? progressByStepV2 : progressByStep)[step];
-  const progressBars = isV2Flow ? 3 : 5;
+  const progress = (isV2 ? progressByStepV2 : progressByStep)[step];
+  const progressBars = isV2 ? 3 : 5;
 
   const headerName = cfg?.name || "Kids Point";
   const attendantName = cfg?.attendant_name?.trim() || headerName;
@@ -578,7 +577,7 @@ function PublicForm() {
               </button>
             </div>
             <div className="flex gap-1.5 mt-3">
-              {[1, 2, 3, 4, 5].map((i) => (
+              {Array.from({ length: progressBars }, (_, idx) => idx + 1).map((i) => (
                 <div
                   key={i}
                   style={{
