@@ -119,7 +119,7 @@ const SEND_STATUS_LABELS: Record<QuoteSend["status"], string> = {
   sem_email: "sem e-mail",
 };
 
-type FormLite = { slug: string; name: string };
+type FormLite = { slug: string; name: string; flow_version?: string | null };
 
 type Visit = {
   id: string;
@@ -280,7 +280,7 @@ function OportunidadesPage() {
     const { data: vs } = await visitsQ;
     setVisits((vs ?? []) as Visit[]);
 
-    const { data: fs } = await supabase.from("forms").select("slug, name");
+    const { data: fs } = await supabase.from("forms").select("slug, name, flow_version");
     setForms((fs ?? []) as FormLite[]);
 
     // Envios de orçamento (e-mail/WhatsApp) das oportunidades listadas
@@ -495,6 +495,7 @@ function OportunidadesPage() {
                   op={o}
                   formLabel={formLabel}
                   sends={sendsByOp.get(o.id) ?? []}
+                  isV2={forms.some((f) => f.slug === o.form_slug && f.flow_version === "orcamento_automatico")}
                   onClick={() => setSelected(o)}
                   onToggleContacted={async (next) => {
                     setOps((prev) =>
@@ -612,12 +613,14 @@ function OpCard({
   op,
   formLabel,
   sends,
+  isV2,
   onClick,
   onToggleContacted,
 }: {
   op: Opportunity;
   formLabel: (slug: string | null | undefined) => string;
   sends: QuoteSend[];
+  isV2: boolean;
   onClick: () => void;
   onToggleContacted: (next: boolean) => void;
 }) {
@@ -678,11 +681,16 @@ function OpCard({
         {op.source && <div>{SOURCE_LABELS[op.source]}</div>}
         {op.estimated_value != null && <div>{fmtBRL(op.estimated_value)}</div>}
       </div>
-      {sends.length > 0 && (
+      {isV2 && (
         <div className="mt-1 flex flex-wrap gap-1">
           {(["email", "whatsapp"] as const).map((ch) => {
             const last = sends.find((s) => s.channel === ch);
-            if (!last) return null;
+            if (!last)
+              return (
+                <span key={ch} className="text-[10px] px-1.5 py-0 rounded border bg-slate-50 text-slate-500 border-slate-200">
+                  {ch === "email" ? "E-mail" : "WhatsApp"}: sem envio
+                </span>
+              );
             const cls =
               last.status === "enviado"
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"

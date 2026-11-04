@@ -195,6 +195,46 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
             console.error("[lead-intake-v2] rate_log error", e);
           }
 
+          // b2) Duplicidade: mesmo telefone + mesmo formulário + mesma data em 24h
+          //     -> reaproveita a oportunidade, atualiza dados, NÃO dispara envio.
+          if (phoneNorm) {
+            const { data: dup } = await supabaseAdmin
+              .from("opportunities")
+              .select("id, client_id, email, marketing_consent, lead_event_id, clients!inner(full_name, phone_normalized)")
+              .eq("tenant_id", form.tenant_id)
+              .eq("form_slug", b.form_slug)
+              .eq("desired_date", b.desired_date)
+              .eq("clients.phone_normalized", phoneNorm)
+              .gte("created_at", oneDayAgo)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (dup?.id) {
+              const d = dup as any;
+              const consent = b.marketing_consent === true;
+              const oppUpd: Record<string, unknown> = {};
+              if (emailClean && emailClean !== d.email) oppUpd.email = emailClean;
+              if (consent !== !!d.marketing_consent) {
+                oppUpd.marketing_consent = consent;
+                oppUpd.marketing_consent_at = consent ? new Date().toISOString() : null;
+              }
+              if (Object.keys(oppUpd).length)
+                await supabaseAdmin.from("opportunities").update(oppUpd as never).eq("id", d.id);
+              if (b.parent_name && b.parent_name !== d.clients?.full_name)
+                await supabaseAdmin
+                  .from("clients")
+                  .update({ full_name: b.parent_name } as never)
+                  .eq("id", d.client_id);
+              return json({
+                success: true,
+                opportunity_id: d.id,
+                lead_event_id: d.lead_event_id,
+                duplicate: true,
+                dispatch: "duplicado",
+              });
+            }
+          }
+
           // c) Client by normalized phone
           let clientId: string | null = null;
           const { data: existing } = phoneNorm
