@@ -197,12 +197,14 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
 
           // c) Client by normalized phone
           let clientId: string | null = null;
-          const { data: existing } = await supabaseAdmin
-            .from("clients")
-            .select("id, email")
-            .eq("tenant_id", form.tenant_id)
-            .eq("phone_normalized", phoneNorm)
-            .maybeSingle();
+          const { data: existing } = phoneNorm
+            ? await supabaseAdmin
+                .from("clients")
+                .select("id, email")
+                .eq("tenant_id", form.tenant_id)
+                .eq("phone_normalized", phoneNorm)
+                .maybeSingle()
+            : { data: null };
 
           if (existing?.id) {
             clientId = existing.id;
@@ -246,7 +248,7 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
               _landing_page: b.landing_page || null,
               _gbraid: b.gbraid || null,
               _wbraid: b.wbraid || null,
-            },
+            } as never,
           );
           const leadSource = !clErr && classifiedSource ? classifiedSource : "outro";
 
