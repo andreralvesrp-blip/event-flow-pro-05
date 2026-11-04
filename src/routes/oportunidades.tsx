@@ -608,16 +608,19 @@ function ActionGroup({
 function OpCard({
   op,
   formLabel,
+  sends,
   onClick,
   onToggleContacted,
 }: {
   op: Opportunity;
   formLabel: (slug: string | null | undefined) => string;
+  sends: QuoteSend[];
   onClick: () => void;
   onToggleContacted: (next: boolean) => void;
 }) {
   const parado = daysSince(op.stage_changed_at);
   const contacted = !!op.cliente_contactado;
+  const displayEmail = op.email || op.client?.email || null;
   return (
     <div
       onClick={onClick}
@@ -668,9 +671,33 @@ function OpCard({
       )}
       <div className="text-xs text-slate-500 mt-1 space-y-0.5">
         {op.desired_date && <div>Data: {fmtDate(op.desired_date)}</div>}
+        {displayEmail && <div className="truncate" title={displayEmail}>{displayEmail}</div>}
         {op.source && <div>{SOURCE_LABELS[op.source]}</div>}
         {op.estimated_value != null && <div>{fmtBRL(op.estimated_value)}</div>}
       </div>
+      {sends.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {(["email", "whatsapp"] as const).map((ch) => {
+            const last = sends.find((s) => s.channel === ch);
+            if (!last) return null;
+            const cls =
+              last.status === "enviado"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : last.status === "falhou"
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : "bg-slate-50 text-slate-500 border-slate-200";
+            return (
+              <span
+                key={ch}
+                className={`text-[10px] px-1.5 py-0 rounded border ${cls}`}
+                title={`${ch === "email" ? "E-mail" : "WhatsApp"}: ${SEND_STATUS_LABELS[last.status]}`}
+              >
+                {ch === "email" ? "E-mail" : "WhatsApp"}: {SEND_STATUS_LABELS[last.status]}
+              </span>
+            );
+          })}
+        </div>
+      )}
       <div className="mt-1.5 flex items-center justify-between gap-2">
         <Badge
           variant="outline"
