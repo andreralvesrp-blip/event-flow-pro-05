@@ -59,6 +59,30 @@ export async function dispatchQuote(
     .eq("slug", opp.form_slug ?? "")
     .maybeSingle();
 
+  // --- Elegibilidade (verificada no servidor em todo disparo) ---
+  if (!form || form.flow_version !== "orcamento_automatico") {
+    return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "form_not_orcamento_automatico" };
+  }
+  const { data: prevEmail } = await supabaseAdmin
+    .from("quote_sends")
+    .select("status, created_at")
+    .eq("opportunity_id", opp.id)
+    .eq("channel", "email")
+    .order("created_at", { ascending: false });
+  const prev = prevEmail ?? [];
+  if (prev.some((s) => s.status === "enviado")) {
+    return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "already_sent" };
+  }
+  if (opts.force) {
+    // Reenviar só vale quando o último envio de e-mail falhou.
+    if (!prev.length || prev[0].status !== "falhou") {
+      return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "resend_only_after_failure" };
+    }
+  } else if (prev.length) {
+    // Disparo automático acontece uma única vez por oportunidade.
+    return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "already_dispatched" };
+  }
+
   // O e-mail informado no formulário (opportunities.email) tem sempre prioridade.
   const recipientEmail = opp.email || client?.email || null;
   const nome = firstName(client?.full_name);
