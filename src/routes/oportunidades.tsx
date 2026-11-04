@@ -281,6 +281,19 @@ function OportunidadesPage() {
 
     const { data: fs } = await supabase.from("forms").select("slug, name");
     setForms((fs ?? []) as FormLite[]);
+
+    // Envios de orçamento (e-mail/WhatsApp) das oportunidades listadas
+    const oppIds = rows.map((r) => r.id);
+    if (oppIds.length) {
+      const { data: qs } = await supabase
+        .from("quote_sends")
+        .select("id, opportunity_id, channel, status, recipient, provider_response, created_at, sent_at")
+        .in("opportunity_id", oppIds)
+        .order("created_at", { ascending: false });
+      setSends((qs ?? []) as QuoteSend[]);
+    } else {
+      setSends([]);
+    }
   }, [unitFilter]);
 
   useEffect(() => {
@@ -341,12 +354,28 @@ function OportunidadesPage() {
     [formsMap],
   );
 
+  const sendsByOp = useMemo(() => {
+    const m = new Map<string, QuoteSend[]>();
+    for (const s of sends) {
+      const a = m.get(s.opportunity_id) ?? [];
+      a.push(s);
+      m.set(s.opportunity_id, a);
+    }
+    return m;
+  }, [sends]);
+
   const filteredOps = useMemo(() => {
     if (!ops) return ops;
-    if (formFilter === "all") return ops;
-    if (formFilter === "__none") return ops.filter((o) => !o.form_slug);
-    return ops.filter((o) => o.form_slug === formFilter);
-  }, [ops, formFilter]);
+    let list = ops;
+    if (formFilter === "__none") list = list.filter((o) => !o.form_slug);
+    else if (formFilter !== "all") list = list.filter((o) => o.form_slug === formFilter);
+    if (onlyFailedSends) {
+      list = list.filter((o) =>
+        (sendsByOp.get(o.id) ?? []).some((s) => s.status === "falhou"),
+      );
+    }
+    return list;
+  }, [ops, formFilter, onlyFailedSends, sendsByOp]);
 
   const opsByStage = useMemo(() => {
     const map = new Map<Stage, Opportunity[]>();
