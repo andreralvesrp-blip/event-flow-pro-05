@@ -248,6 +248,69 @@ function addBusinessDays(from: Date, n: number): Date {
   return d;
 }
 
+// ----------- CSV export -----------
+const CSV_DELIMITER = ";";
+
+function csvCell(value: unknown): string {
+  if (value == null) return "";
+  const s = String(value);
+  return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function csvRow(cells: unknown[]): string {
+  return cells.map(csvCell).join(CSV_DELIMITER);
+}
+
+const EXPORT_HEADERS = [
+  "Nome do responsável",
+  "Telefone",
+  "Telefone padronizado",
+  "E-mail",
+  "Status e-mail",
+  "Status WhatsApp",
+  "ID oportunidade",
+  "ID cliente",
+  "Origem",
+  "Formulário (slug)",
+  "Data da festa",
+  "Nome do aniversariante",
+  "Idade do aniversariante",
+  "Etapa",
+  "Criada em",
+];
+
+function lastSendStatus(sends: QuoteSend[], channel: QuoteSend["channel"]): string {
+  const last = sends.find((s) => s.channel === channel);
+  return last ? SEND_STATUS_LABELS[last.status] : "sem envio";
+}
+
+function buildOpportunitiesCsv(rows: Opportunity[], sendsByOp: Map<string, QuoteSend[]>): string {
+  const lines = [csvRow(EXPORT_HEADERS)];
+  for (const o of rows) {
+    const sends = sendsByOp.get(o.id) ?? [];
+    lines.push(
+      csvRow([
+        o.client?.full_name ?? "",
+        o.client?.phone ?? "",
+        o.client?.phone_normalized ?? "",
+        o.email || o.client?.email || "",
+        lastSendStatus(sends, "email"),
+        lastSendStatus(sends, "whatsapp"),
+        o.id,
+        o.client_id,
+        o.source ?? "",
+        o.form_slug ?? "",
+        o.desired_date ? o.desired_date.slice(0, 10) : "",
+        o.celebrant_name ?? "",
+        o.celebrant_age ?? "",
+        o.stage,
+        o.created_at,
+      ]),
+    );
+  }
+  return lines.join("\r\n") + "\r\n";
+}
+
 export const Route = createFileRoute("/oportunidades")({
   component: OportunidadesPage,
   validateSearch: (s: Record<string, unknown>) => ({ op: typeof s.op === "string" ? s.op : undefined }),
