@@ -1182,18 +1182,8 @@ function OpDetail({
     }
     setResending(true);
     try {
-      const res = await fetch("/api/public/quote-dispatch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ opportunity_id: op.id }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(`Falha no reenvio: ${data?.detail || data?.error || res.status}`);
-      }
+      const r = await resendQuoteFn({ data: { opportunity_id: op.id } });
+      if (!r.ok) alert(`Falha no reenvio: ${r.detail ?? "erro"}`);
     } catch (e) {
       alert(`Falha no reenvio: ${(e as Error).message}`);
     }
