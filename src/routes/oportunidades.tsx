@@ -556,6 +556,8 @@ function OportunidadesPage() {
               tenantId={profile?.tenant_id ?? null}
               userId={user?.id ?? null}
               formLabel={formLabel}
+              sends={sendsByOp.get(selected.id) ?? []}
+              accessToken={session?.access_token ?? null}
               onChanged={loadAll}
             />
           )}
@@ -1050,6 +1052,8 @@ function OpDetail({
   tenantId,
   userId,
   formLabel,
+  sends,
+  accessToken,
   onChanged,
 }: {
   op: Opportunity;
@@ -1057,6 +1061,8 @@ function OpDetail({
   tenantId: string | null;
   userId: string | null;
   formLabel: (slug: string | null | undefined) => string;
+  sends: QuoteSend[];
+  accessToken: string | null;
   onChanged: () => void;
 }) {
   const [showLoss, setShowLoss] = useState(false);
