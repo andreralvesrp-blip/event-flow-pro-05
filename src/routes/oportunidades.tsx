@@ -95,7 +95,27 @@ type Opportunity = {
   created_at: string;
   form_slug: string | null;
   cliente_contactado: boolean;
+  email: string | null;
   client?: { id: string; full_name: string; phone: string | null; email: string | null } | null;
+};
+
+type QuoteSend = {
+  id: string;
+  opportunity_id: string;
+  channel: "email" | "whatsapp";
+  status: "pendente" | "enviado" | "falhou" | "desligado" | "sem_email";
+  recipient: string | null;
+  provider_response: string | null;
+  created_at: string;
+  sent_at: string | null;
+};
+
+const SEND_STATUS_LABELS: Record<QuoteSend["status"], string> = {
+  pendente: "pendente",
+  enviado: "enviado",
+  falhou: "falhou",
+  desligado: "desligado",
+  sem_email: "sem e-mail",
 };
 
 type FormLite = { slug: string; name: string };
@@ -225,6 +245,8 @@ function OportunidadesPage() {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [forms, setForms] = useState<FormLite[]>([]);
   const [formFilter, setFormFilter] = useState<string>("all");
+  const [sends, setSends] = useState<QuoteSend[]>([]);
+  const [onlyFailedSends, setOnlyFailedSends] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [showNew, setShowNew] = useState(false);
