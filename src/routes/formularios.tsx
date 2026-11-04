@@ -422,14 +422,14 @@ function FormulariosPage() {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                <TableCell colSpan={7} className="text-center text-slate-500 py-8">
                   Carregando...
                 </TableCell>
               </TableRow>
             )}
             {!loading && rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                <TableCell colSpan={7} className="text-center text-slate-500 py-8">
                   Nenhum formulário criado ainda.
                 </TableCell>
               </TableRow>
