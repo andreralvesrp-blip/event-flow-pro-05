@@ -1,4 +1,5 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { resendQuote as resendQuoteFn } from "@/lib/quote-resend.functions";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
@@ -1182,7 +1183,10 @@ function OpDetail({
     }
     setResending(true);
     try {
-      const r = await resendQuoteFn({ data: { opportunity_id: op.id } });
+      const r = await resendQuoteFn({
+        data: { opportunity_id: op.id },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (!r.ok) alert(`Falha no reenvio: ${r.detail ?? "erro"}`);
     } catch (e) {
       alert(`Falha no reenvio: ${(e as Error).message}`);
