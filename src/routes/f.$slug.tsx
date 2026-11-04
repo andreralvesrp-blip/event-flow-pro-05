@@ -227,7 +227,8 @@ function PublicForm() {
     e.preventDefault();
     if (!parentName.trim()) return;
     if (!isValidPhone(parentPhone)) return;
-    pushUser(`${parentName} · ${parentPhone}`);
+    if (isV2 && !isValidEmail(parentEmail)) return;
+    pushUser(isV2 ? `${parentName} · ${parentPhone} · ${parentEmail}` : `${parentName} · ${parentPhone}`);
     setStep("submitting");
     await pushBot("Preparando seu orçamento...");
 
@@ -258,36 +259,64 @@ function PublicForm() {
 
     try {
       await new Promise((r) => setTimeout(r, 2000));
-      const res = await fetch(FN_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: ANON,
-          Authorization: `Bearer ${ANON}`,
-        },
-        body: JSON.stringify({
-          form_slug: slug,
-          celebrant_name: celebrantName,
-          celebrant_age: parseInt(celebrantAge, 10),
-          desired_date: ddmmyyyyToISO(desiredDate),
-          parent_name: parentName,
-          parent_phone: parentPhone,
-          utm_source,
-          utm_medium,
-          utm_campaign,
-          utm_content,
-          utm_term,
-          gclid,
-          gbraid,
-          wbraid,
-          fbclid,
-          fbp,
-          fbc,
-          landing_page,
-          referrer,
-          marketing_event_id,
-        }),
-      });
+      const res = isV2
+        ? await fetch(FN_URL_V2, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              form_slug: slug,
+              desired_date: ddmmyyyyToISO(desiredDate),
+              parent_name: parentName,
+              parent_phone: parentPhone,
+              parent_email: parentEmail.trim(),
+              marketing_consent: marketingConsent,
+              website: honeypot,
+              utm_source,
+              utm_medium,
+              utm_campaign,
+              utm_content,
+              utm_term,
+              gclid,
+              gbraid,
+              wbraid,
+              fbclid,
+              fbp,
+              fbc,
+              landing_page,
+              referrer,
+              marketing_event_id,
+            }),
+          })
+        : await fetch(FN_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: ANON,
+              Authorization: `Bearer ${ANON}`,
+            },
+            body: JSON.stringify({
+              form_slug: slug,
+              celebrant_name: celebrantName,
+              celebrant_age: parseInt(celebrantAge, 10),
+              desired_date: ddmmyyyyToISO(desiredDate),
+              parent_name: parentName,
+              parent_phone: parentPhone,
+              utm_source,
+              utm_medium,
+              utm_campaign,
+              utm_content,
+              utm_term,
+              gclid,
+              gbraid,
+              wbraid,
+              fbclid,
+              fbp,
+              fbc,
+              landing_page,
+              referrer,
+              marketing_event_id,
+            }),
+          });
 
       if (!res.ok) {
         const t = await res.text();
