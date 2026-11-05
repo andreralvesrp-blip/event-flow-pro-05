@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
+import { Sun, Moon } from 'lucide-react';
 import { getPersonalDateView, type PersonalDateView } from '@/lib/personal-dates-view.functions';
-import type { House, Option, Slot, Turno } from '@/lib/personal-dates';
+import { whatsappUrl, type House, type Option, type Slot, type Turno } from '@/lib/personal-dates';
 import pageCss from '@/styles/datas-kids-point.css?url';
 
 const options = (token: string) => queryOptions({ queryKey: ['personal-dates', token], queryFn: () => getPersonalDateView({ data: { token } }), staleTime: 0, retry: false });
@@ -26,20 +27,21 @@ const C: Record<House, { n: string; a: string }> = { bosque: { n: 'Ud. Bosque', 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const asDate = (date: string) => new Date(`${date}T12:00:00-03:00`);
 const longDate = (date: string) => cap(new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' }).format(asDate(date)).replace('-feira', ''));
-const shortDate = (date: string) => { const d = asDate(date); const w = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'America/Sao_Paulo' }).format(d).replace('.', ''); return `${w}, ${Number(date.slice(8, 10))}/${Number(date.slice(5, 7))}`; };
+const shortDate = (date: string) => { const d = asDate(date); const w = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'America/Sao_Paulo' }).format(d).replace('-feira', ''); return `${w}, ${Number(date.slice(8, 10))}/${Number(date.slice(5, 7))}`; };
 const R = (n: number) => 'R$ ' + n.toLocaleString('pt-BR');
 const T = (slot: Slot) => (slot === 'almoco' ? 'Almoço' : 'Jantar');
 const t = (slot: Slot) => (slot === 'almoco' ? 'almoço' : 'jantar');
 const P = 3;
 
 type ViewName = 'res' | 'outra' | 'lista' | 'fim';
-type Final = { option: Option; turno: string; price: number; url: string; fila?: boolean };
+type Final = { option: Option; turno: string; slot: Turno; price: number; url: string; fila?: boolean };
 type State = { v: ViewName; casa: House; page: number; pick: Option | null; final: Final | null };
 
 const Pin = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" /><circle cx="12" cy="10" r="2.4" /></svg>
 );
 const Pill = ({ house }: { house: House }) => <p className="upill"><Pin />{C[house].n}</p>;
+const TurnLabel = ({ slot, label }: { slot: Turno; label?: string }) => <span className="turn-label">{slot !== 'jantar' && <Sun className="turn-icon sun" aria-hidden="true" />}{slot !== 'almoco' && <Moon className="turn-icon moon" aria-hidden="true" />}{label ?? (slot === 'ambos' ? 'Almoço ou jantar' : T(slot))}</span>;
 const Price = ({ n }: { n: number }) => <span className="price">A partir de <strong>{R(n)}</strong> para 40 pagantes</span>;
 
 function PersonalDatesPage() {
@@ -56,13 +58,15 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
   const requested = view.requested ?? [];
   const available = requested.filter(o => o.status === 'disponivel');
   const bothOccupied = requested.length > 0 && requested.every(o => o.status === 'ocupado');
-  const otherRequested = (view.options ?? []).filter(o => o.date === requestedDate && o.house === otherHouse);
+  const otherRequested = (view.options ?? []).filter(o => o.date === requestedDate && o.house === otherHouse && o.status === 'disponivel');
   const listFor = (h: House) => (view.options ?? []).filter(o => o.house === h && o.date !== requestedDate);
   const first: ViewName = requested.length === 0 ? 'lista' : bothOccupied ? (otherRequested.length > 0 ? 'outra' : 'lista') : 'res';
 
   const [S, setS] = useState<State>({ v: first, casa: house, page: 0, pick: null, final: null });
   const [hist, setHist] = useState<State[]>([]);
   const [busy, setBusy] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const openingRef = useRef(false);
   const [error, setError] = useState('');
   const seen = useRef(new Set<string>());
 
@@ -70,7 +74,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
   const back = () => { const prev = hist[hist.length - 1]; if (!prev) return; setHist(h => h.slice(0, -1)); setS(prev); setError(''); window.scrollTo(0, 0); };
 
   async function call(body: Record<string, unknown>) {
-    const response = await fetch('/api/public/personal-dates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }) });
+    const response = await fetch('/api/public/personal-dates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }), keepalive: true });
     const result = await response.json();
     if (!response.ok || result.error) throw new Error(result.error ?? 'Vamos confirmar com a equipe.');
     return result;
@@ -81,7 +85,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
   const pageOf = (h: House, page: number) => {
     const list = listFor(h);
     const days = [...new Set(list.map(o => o.date))];
-    return { days, shown: days.slice(page * P, page * P + P).map(d => ({ date: d, slots: list.filter(o => o.date === d) })) };
+    return { days, shown: days.slice(page * P, page * P + P).map(d => ({ date: d, slots: list.filter(o => o.date === d).sort((a, b) => Number(a.status === 'interesse') - Number(b.status === 'interesse')) })) };
   };
 
   // Registra "viu_opcao" para as opções visíveis na tela atual.
@@ -101,7 +105,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
     try {
       const result = await call({ action: 'escolheu_data', house: option.house, date: option.date, slot });
       if (!result.url) throw new Error('Vamos confirmar com a equipe.');
-      go('fim', { final: { option, turno, price, url: result.url } });
+      go('fim', { final: { option, turno, slot, price, url: result.url } });
     } catch (e) { setError(e instanceof Error ? e.message : 'Vamos confirmar com a equipe.'); }
     finally { setBusy(false); }
   }
@@ -111,23 +115,26 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
     try {
       const result = await call({ action: 'entrou_fila', house: option.house, date: option.date, slot: option.slot });
       if (!result.url) throw new Error('Vamos confirmar com a equipe.');
-      go('fim', { final: { option, turno: T(option.slot), price: option.price, url: result.url, fila: true } });
+      go('fim', { final: { option, turno: T(option.slot), slot: option.slot, price: option.price, url: result.url, fila: true } });
     } catch (e) { setError(e instanceof Error ? e.message : 'Vamos confirmar com a equipe.'); }
     finally { setBusy(false); }
   }
 
-  async function talk(target: House) {
-    // Abrir durante o clique evita bloqueio de janela após a consulta ao servidor.
-    const popup = window.open('about:blank', '_blank');
+  function openWhatsapp(target: House, final?: Final) {
+    if (openingRef.current) return;
+    openingRef.current = true;
+    setOpening(true);
+    const url = final?.url ?? whatsappUrl(view.firstName, target);
+    // Abrir no próprio clique, antes de qualquer chamada de registro.
+    const popup = window.open(url, '_blank');
     if (popup) popup.opener = null;
-    setBusy(true); setError('');
-    try {
-      const result = await call({ action: 'falou_equipe', house: target });
-      if (!result.url) throw new Error('Vamos confirmar com a equipe.');
-      if (popup) popup.location.replace(result.url); else window.location.assign(result.url);
-    } catch (e) { popup?.close(); setError(e instanceof Error ? e.message : 'Vamos confirmar com a equipe.'); }
-    finally { setBusy(false); }
+    else window.location.assign(url);
+    void call({ action: 'falou_equipe', house: target, date: final?.option.date, slot: final?.slot }).catch(() => undefined);
+    // O retorno ao aplicativo permite continuar a jornada, sem cliques repetidos na saída.
+    const reset = () => { openingRef.current = false; setOpening(false); };
+    window.addEventListener('focus', reset, { once: true });
   }
+  const talk = (target: House) => openWhatsapp(target);
 
   const page = (opts: { band: { t: string; u?: string }; m: React.ReactNode; f?: React.ReactNode; short?: boolean }) => (
     <div className="kpd">
@@ -154,7 +161,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
     return page({
       band: hi,
       m: <><Pill house={house} /><h1>{title}</h1>{view.state === 'unopened' && <p className="hi">Fale com a nossa equipe, que ajudamos a planejar a festa.</p>}</>,
-      f: <button type="button" className="btn w" disabled={busy} onClick={() => talk(house)}>Falar com a equipe</button>,
+      f: <button type="button" className="btn w" disabled={busy || opening} onClick={() => talk(house)}>{opening ? 'Abrindo o WhatsApp...' : 'Falar com a equipe'}</button>,
     });
   }
 
@@ -173,19 +180,19 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
           {both && samePrice && !noPrice && <p className="cap">A partir de <strong>{R(available[0].price)}</strong> para 40 pagantes</p>}
           <div className="rows">
             {requested.map(o => {
-              if (o.status === 'ocupado') return <div key={o.slot} className="row off"><b>{T(o.slot)}</b><span className="st off">Ocupado</span></div>;
+              if (o.status === 'ocupado') return <div key={o.slot} className="row off"><b><TurnLabel slot={o.slot} /></b><span className="st off">Ocupado</span></div>;
               if (o.status === 'interesse') return (
                 <div key={o.slot} className="row int">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><b>{T(o.slot)}</b><span className="st int">Pré-reservado</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><b><TurnLabel slot={o.slot} /></b><span className="st int">Pré-reservado</span></div>
                   <p>Outra família está com este turno em pré-reserva. Se ela não confirmar, ele pode ficar com você.</p>
                   <button type="button" className="btn s mini" disabled={busy} onClick={() => queue(o)}>Entrar na fila do {t(o.slot)}</button>
                 </div>
               );
               return (
                 <div key={o.slot} className={`row ${only ? 'sel' : ''}`}>
-                  <b>{T(o.slot)}</b><span className="st on">Disponível</span>
+                  <b><TurnLabel slot={o.slot} /></b><span className="st on">Disponível</span>
                   {!noPrice && !(both && samePrice) && <Price n={o.price} />}
-                  {both && <button type="button" className="btn p mini" disabled={busy} onClick={() => choose(o)}>Quero o {t(o.slot)}</button>}
+                  {both && <button type="button" className="btn p mini" disabled={busy} onClick={() => choose(o)}>Quero {shortDate(o.date)}, {t(o.slot)}</button>}
                 </div>
               );
             })}
@@ -194,7 +201,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
       ),
       f: (
         <>
-          {only && <button type="button" className="btn p" disabled={busy} onClick={() => choose(only)}>Quero o {t(only.slot)}</button>}
+          {only && <button type="button" className="btn p" disabled={busy} onClick={() => choose(only)}>Quero {shortDate(only.date)}, {t(only.slot)}</button>}
           <button type="button" className="btn s" disabled={busy} onClick={() => go('lista')}>Ver mais opções</button>
         </>
       ),
@@ -214,7 +221,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
           <div className="house">
             <h2>{C[otherHouse].n}</h2>
             <div className="addr">{C[otherHouse].a}</div>
-            <div className="line">{longDate(requestedDate)} · {turnos}</div>
+            <div className="line">{longDate(requestedDate)} · <TurnLabel slot={otherRequested.length === 2 ? 'ambos' : otherRequested[0].slot} label={turnos} /></div>
             {!noPrice && <Price n={cheapest.price} />}
           </div>
         </>
@@ -235,7 +242,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
       m: (
         <>
           <Pill house={q.option.house} />
-          <div className="sum"><strong>{longDate(q.option.date)}</strong>{q.turno}<br />{C[q.option.house].a}{!noPrice && <><br />A partir de <b>{R(q.price)}</b> para 40 pagantes</>}</div>
+          <div className="sum"><strong>{longDate(q.option.date)}</strong><TurnLabel slot={q.slot} label={q.turno} /><br />{C[q.option.house].a}{!noPrice && !q.fila && <><br />A partir de <b>{R(q.price)}</b> para 40 pagantes</>}</div>
           {q.fila ? (
             <>
               <ol className="steps"><li>Continue a conversa com a nossa equipe no WhatsApp.</li><li>Se a pré-reserva não for confirmada, nossa equipe vai te orientar.</li><li>Com o turno liberado, você garante a data com o sinal e o contrato.</li></ol>
@@ -246,7 +253,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
           )}
         </>
       ),
-      f: <button type="button" className="btn w" onClick={() => window.open(q.url, '_blank', 'noopener')}>Continuar no WhatsApp da {C[q.option.house].n}</button>,
+      f: <button type="button" className="btn w" disabled={opening} onClick={() => openWhatsapp(q.option.house, q)}>{opening ? 'Abrindo o WhatsApp...' : `Continuar no WhatsApp da ${C[q.option.house].n}`}</button>,
     });
   }
 
@@ -263,6 +270,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
     band: { t: 'Escolha uma data', u: bothOccupied && otherRequested.length === 0 ? 'Sua data está ocupada nas duas unidades' : 'Outras opções' },
     m: (
       <>
+        {!noPrice && <p className="values-notice">Valores para 40 pagantes</p>}
         <div className="seg" role="group" aria-label="Escolha a unidade">
           {(['bosque', 'vila'] as House[]).map(k => <button key={k} type="button" className={S.casa === k ? 'on' : ''} onClick={() => switchHouse(k)}>{C[k].n}</button>)}
         </div>
@@ -273,10 +281,10 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
               <h3>{longDate(d.date)}</h3>
               <div className="chips">
                 {d.slots.map(o => (
-                  <button key={o.slot} type="button" className={`chip ${q && q.date === o.date && q.slot === o.slot && q.house === o.house ? 'sel' : ''}`} onClick={() => setS({ ...S, pick: o })}>
-                    <b>{T(o.slot)}</b>
-                    {!noPrice && <span>{R(o.price)}</span>}
-                    {!noPrice && o.cheaper && <em>Menor investimento</em>}
+                  <button key={o.slot} type="button" className={`chip ${o.status === 'interesse' ? 'int' : ''} ${q && q.date === o.date && q.slot === o.slot && q.house === o.house ? 'sel' : ''}`} onClick={() => setS({ ...S, pick: o })}>
+                    <b><TurnLabel slot={o.slot} /></b>
+                    {o.status === 'interesse' ? <span className="queue-status">Pré-reservado</span> : !noPrice && <span>A partir de {R(o.price)}</span>}
+                    {!noPrice && o.status === 'disponivel' && o.cheaper && <em>Menor investimento</em>}
                   </button>
                 ))}
               </div>
@@ -285,13 +293,12 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
           {shown.length === 0 && <p className="cap">Vamos confirmar com a equipe.</p>}
         </div>
         {days.length > P && <button type="button" className="more" onClick={() => setS({ ...S, page: (S.page + 1) * P >= days.length ? 0 : S.page + 1, pick: null })}>Mostrar outras datas</button>}
-        <button type="button" className="more" disabled={busy} onClick={() => talk(S.casa)}>Nenhuma serve, falar com a equipe</button>
+        <button type="button" className="more" disabled={busy || opening} onClick={() => talk(S.casa)}>{opening ? 'Abrindo o WhatsApp...' : 'Nenhuma serve, falar com a equipe'}</button>
       </>
     ),
     f: (
       <>
-        {!noPrice && <p className="cap" style={{ textAlign: 'center' }}>Valores a partir de, para 40 pagantes</p>}
-        <button type="button" className="btn p" disabled={!q || busy} onClick={() => q && choose(q)}>{q ? `Quero ${shortDate(q.date)}, ${t(q.slot)}` : 'Escolha uma data'}</button>
+        <button type="button" className="btn p" disabled={!q || busy} onClick={() => q && (q.status === 'interesse' ? queue(q) : choose(q))}>{q ? `${q.status === 'interesse' ? 'Entrar na fila de' : 'Quero'} ${shortDate(q.date)}, ${t(q.slot)}` : 'Escolha uma data'}</button>
       </>
     ),
   });
