@@ -290,7 +290,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
               <div className={`chips ${d.slots.length === 1 ? 'one' : ''}`}>
                 {d.slots.map(o => {
                   const wide = d.slots.length === 1;
-                  const priceBlock = !noPrice && o.status === 'disponivel' && <span className="chip-price"><span className="from">A partir de {R(o.price)}</span><span className="per40">para 40 pagantes</span></span>;
+                  const priceBlock = !noPrice && o.status === 'disponivel' && <span className="chip-price"><span className="from">A partir de <span className="amt">{R(o.price)}</span></span><span className="per40">para 40 pagantes</span></span>;
                   return (
                   <button key={o.slot} type="button" className={`chip ${wide ? 'wide' : ''} ${o.status === 'interesse' ? 'int' : ''} ${q && q.date === o.date && q.slot === o.slot && q.house === o.house ? 'sel' : ''}`} onClick={() => setS({ ...S, pick: o })}>
                     <b><TurnLabel slot={o.slot} /></b>
