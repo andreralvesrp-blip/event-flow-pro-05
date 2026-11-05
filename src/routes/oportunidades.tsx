@@ -872,7 +872,7 @@ function OpCard({
         </Badge>
         <span className="text-[10px] text-slate-400 shrink-0">parado há {parado}d</span>
       </div>
-      {datesSummary(dateInteractions) && <div className="border-t border-border mt-2 pt-1.5 text-xs text-muted-foreground truncate" title={datesSummary(dateInteractions) ?? ''}>
+      {datesSummary(dateInteractions) && <div className="border-t border-border mt-2 pt-1.5 text-xs text-muted-foreground break-words" title={datesSummary(dateInteractions) ?? ''}>
         {datesSummary(dateInteractions)}
       </div>}
     </div>
