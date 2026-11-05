@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { getPersonalDateView, type PersonalDateView } from '@/lib/personal-dates-view.functions';
-import type { House, Option, Slot } from '@/lib/personal-dates';
+import type { House, Option, Slot, Turno } from '@/lib/personal-dates';
 import pageCss from '@/styles/datas-kids-point.css?url';
 
 const options = (token: string) => queryOptions({ queryKey: ['personal-dates', token], queryFn: () => getPersonalDateView({ data: { token } }), staleTime: 0, retry: false });
@@ -96,10 +96,10 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
     }
   }, [view, S.v, S.casa, S.page]);
 
-  async function choose(option: Option, turno = T(option.slot), price = option.price) {
+  async function choose(option: Option, turno = T(option.slot), price = option.price, slot: Turno = option.slot) {
     setBusy(true); setError('');
     try {
-      const result = await call({ action: 'escolheu_data', house: option.house, date: option.date, slot: option.slot });
+      const result = await call({ action: 'escolheu_data', house: option.house, date: option.date, slot });
       if (!result.url) throw new Error('Vamos confirmar com a equipe.');
       go('fim', { final: { option, turno, price, url: result.url } });
     } catch (e) { setError(e instanceof Error ? e.message : 'Vamos confirmar com a equipe.'); }
@@ -221,7 +221,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
       ),
       f: (
         <>
-          <button type="button" className="btn p" disabled={busy} onClick={() => { void call({ action: 'mudou_casa', mode: 'other' }).catch(() => undefined); void choose(otherRequested[0], otherRequested.length === 2 ? 'Almoço ou jantar' : T(otherRequested[0].slot), cheapest.price); }}>Quero na {C[otherHouse].n}</button>
+          <button type="button" className="btn p" disabled={busy} onClick={() => { void call({ action: 'mudou_casa', mode: 'other' }).catch(() => undefined); const both = otherRequested.length === 2; void choose(otherRequested[0], both ? 'Almoço ou jantar' : T(otherRequested[0].slot), cheapest.price, both ? 'ambos' : otherRequested[0].slot); }}>Quero na {C[otherHouse].n}</button>
           <button type="button" className="btn s" disabled={busy} onClick={() => go('lista', { casa: house, page: 0 })}>Ver datas na {C[house].n}</button>
         </>
       ),

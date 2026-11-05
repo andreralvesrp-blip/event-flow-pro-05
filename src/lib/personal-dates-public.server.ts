@@ -52,6 +52,8 @@ export async function handlePersonalDates(request: Request) {
     if (input.action === 'mudou_casa') await record('mudou_casa', input.mode === 'other' ? origin === 'bosque' ? 'vila' : 'bosque' : origin);
     if (input.action && ['viu_opcao','escolheu_data','entrou_fila'].includes(input.action)) {
       if (!input.house || !input.date || !input.slot || !inWindow(input.date, today)) return respond({ error: 'Opção indisponível' }, 409);
+      // "almoço ou jantar" só existe como escolha de data; fila e visualização são por turno.
+      if (input.slot === 'ambos' && input.action !== 'escolheu_data') return respond({ error: 'Opção indisponível' }, 409);
       const turns = availability(input.date, calendars[input.house].closed, calendars[input.house].interest);
       // "ambos" = almoço ou jantar: só vale quando os dois turnos estão livres na mesma data e casa.
       const slots: Slot[] = input.slot === 'ambos' ? ['almoco', 'jantar'] : [input.slot];
