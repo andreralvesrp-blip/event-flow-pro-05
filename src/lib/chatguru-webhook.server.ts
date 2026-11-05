@@ -47,8 +47,23 @@ export function buildChatguruPayload(input: {
   };
 }
 
+/** Cria o link pessoal de datas (só o hash do token fica gravado). Retorna null se falhar. */
+export async function createPersonalLink(tenantId: string, opportunityId: string, baseUrl: string): Promise<string | null> {
+  try {
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const { newPersonalToken, tokenHash } = await import("./personal-calendar.server");
+    const token = newPersonalToken();
+    const { error } = await db.from("date_personal_links").insert({ tenant_id: tenantId, opportunity_id: opportunityId, token_hash: await tokenHash(token) });
+    if (error) { console.error("[personal-link] error", error.message); return null; }
+    return `${baseUrl.replace(/\/$/, "")}/datas/${token}`;
+  } catch (e) {
+    console.error("[personal-link] error", (e as Error).message);
+    return null;
+  }
+}
+
 /** Envia uma única vez (sem nova tentativa automática) e registra em quote_sends. */
-export async function sendChatguruWebhook(opportunityId: string, baseUrl: string): Promise<"enviado" | "falhou"> {
+export async function sendChatguruWebhook(opportunityId: string, baseUrl: string, presetLink?: string | null): Promise<"enviado" | "falhou"> {
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   const { data: opp } = await db.from("opportunities")
     .select("id, tenant_id, unit_id, client_id, desired_date, email, form_slug, source, contact_name")
@@ -65,11 +80,8 @@ export async function sendChatguruWebhook(opportunityId: string, baseUrl: string
   let payload: ChatguruPayload | null = null;
   try {
     // Link pessoal de datas: token aleatório; só o hash fica gravado.
-    const { newPersonalToken, tokenHash } = await import("./personal-calendar.server");
-    const token = newPersonalToken();
-    const { error: linkErr } = await db.from("date_personal_links").insert({ tenant_id: opp.tenant_id, opportunity_id: opp.id, token_hash: await tokenHash(token) });
-    const link = linkErr ? null : `${baseUrl.replace(/\/$/, "")}/datas/${token}`;
-    if (linkErr) console.error("[chatguru] link error", linkErr.message);
+    // Se o disparo já gerou o link (o mesmo do e-mail), reutiliza; senão cria.
+    const link = presetLink !== undefined ? presetLink : await createPersonalLink(opp.tenant_id, opp.id, baseUrl);
     payload = buildChatguruPayload({
       opportunityId: opp.id, unitSlug: unit?.slug ?? null, fullName: (opp as any).contact_name || client?.full_name || null,
       phone: client?.phone_normalized ?? null, email: opp.email || client?.email || null,
