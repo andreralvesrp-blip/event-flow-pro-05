@@ -2,6 +2,8 @@ import { addDays, addMonths, format, parseISO, getDay } from 'date-fns';
 
 export type House = 'bosque' | 'vila';
 export type Slot = 'almoco' | 'jantar';
+/** "ambos" = almoço ou jantar: os dois turnos estão livres na mesma data e casa. */
+export type Turno = Slot | 'ambos';
 export type Availability = 'disponivel' | 'interesse' | 'ocupado';
 export type CalendarEvent = { start: { date?: string; dateTime?: string }; end: { date?: string; dateTime?: string }; status?: string };
 export type Option = { house: House; date: string; slot: Slot; status: Availability; price: number; cheaper: boolean };
@@ -103,8 +105,8 @@ export function buildOptions(requested: string, origin: House, calendars: Calend
   return options;
 }
 export function isAllowedForm(slug: string | null) { return slug === 'bs-orcamento-teste'; }
-export function whatsappUrl(firstName: string, house: House, date?: string | null, slot?: Slot | null, queue = false) {
+export function whatsappUrl(firstName: string, house: House, date?: string | null, slot?: Turno | null, queue = false) {
   const label = date ? format(parseISO(date), 'dd/MM/yyyy') : 'a confirmar';
-  const text = `Olá! Sou ${firstName}. ${queue ? 'Quero entrar na fila (não é reserva nem pré-reserva)' : 'Quero falar sobre uma data'}: ${label}, ${slot === 'almoco' ? 'almoço' : slot === 'jantar' ? 'jantar' : 'turno a confirmar'}, ${HOUSES[house].name}.`;
+  const text = `Olá! Sou ${firstName}. ${queue ? 'Quero entrar na fila (não é reserva nem pré-reserva)' : 'Quero falar sobre uma data'}: ${label}, ${slot === 'almoco' ? 'almoço' : slot === 'jantar' ? 'jantar' : slot === 'ambos' ? 'almoço ou jantar' : 'turno a confirmar'}, ${HOUSES[house].name}.`;
   return `https://wa.me/${HOUSES[house].whatsapp}?text=${encodeURIComponent(text)}`;
 }
