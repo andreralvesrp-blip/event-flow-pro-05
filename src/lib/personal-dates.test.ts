@@ -58,5 +58,5 @@ describe('Sugestões e segurança', () => {
     const s = seq('2027-01-23');
     expect(s.slice(s.indexOf('2027-02-07:almoco') + 1, s.indexOf('2027-02-07:almoco') + 4)).toEqual(['2027-01-22:almoco','2027-01-22:jantar','2027-01-24:jantar']);
   });
-  it('domingo jantar (intermediário) começa pelos nobres do mesmo fim de semana', () => expect(seq('2027-01-24').slice(0, 4)).toEqual(['2027-01-24:jantar','2027-01-24:almoco','2027-01-23:almoco','2027-01-23:jantar']));
+  it('domingo jantar (intermediário) começa pelos nobres do mesmo fim de semana', () => expect(seq('2027-01-24').slice(0, 4)).toEqual(['2027-01-24:almoco','2027-01-24:jantar','2027-01-23:almoco','2027-01-23:jantar']));
 });

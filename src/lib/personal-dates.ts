@@ -94,23 +94,24 @@ export function buildOptions(requested: string, origin: House, calendars: Calend
     // atendimento são pulados e a busca continua antes e depois deles.
     const saturday = addDays(base, weekday === 0 ? -1 : weekday === 5 ? 1 : weekday === 6 ? 0 : (6 - weekday));
     const dist = (d: Date) => Math.abs(differenceInCalendarDays(d, base));
-    const byNear = (a: { d: Date }, b: { d: Date }) => dist(a.d) - dist(b.d) || a.d.getTime() - b.d.getTime();
+    // "k" agrupa: nos fins de semana, sábado e domingo contam pela distância do sábado.
+    const byNear = (a: { d: Date; k?: Date }, b: { d: Date; k?: Date }) => dist(a.k ?? a.d) - dist(b.k ?? b.d) || (a.k ?? a.d).getTime() - (b.k ?? b.d).getTime() || a.d.getTime() - b.d.getTime();
     const open = (d: Date) => !closureFor(dayString(d), closures);
-    const level = (items: Array<{ d: Date; slots: Slot[] }>) => {
+    const level = (items: Array<{ d: Date; k?: Date; slots: Slot[] }>) => {
       for (const it of items.sort(byNear)) if (open(it.d)) push(dayString(it.d), [origin, other], it.slots);
     };
     const nobleOf = (sat: Date) => [{ d: sat, slots: ['almoco', 'jantar'] as Slot[] }, { d: addDays(sat, 1), slots: ['almoco'] as Slot[] }];
     // 1. Outro horário nobre do mesmo fim de semana.
     level(nobleOf(saturday));
     // 2. Nobres dos fins de semana anterior e seguinte, até 2 abertos para cada lado.
-    const weekends: Array<{ d: Date; slots: Slot[] }> = [];
+    const weekends: Array<{ d: Date; k?: Date; slots: Slot[] }> = [];
     for (const side of [-1, 1]) {
       let found = 0;
       for (let n = 1; n <= 12 && found < 2; n++) {
         const sat = addDays(saturday, side * n * 7);
         const items = nobleOf(sat).filter(it => open(it.d));
         if (!items.length) continue;
-        weekends.push(...items); found++;
+        weekends.push(...items.map(it => ({ ...it, k: sat }))); found++;
       }
     }
     level(weekends);
