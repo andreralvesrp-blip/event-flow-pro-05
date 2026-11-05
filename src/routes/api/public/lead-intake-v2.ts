@@ -92,6 +92,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // Rate limits (DB-backed, table lead_intake_rate_log)
 const IP_LIMIT_PER_HOUR = 5;
 const PHONE_LIMIT_PER_DAY = 3;
+// Formulário de teste: limite maior para permitir testes repetidos.
+const PHONE_LIMIT_PER_DAY_BY_FORM: Record<string, number> = { "bs-orcamento-teste": 20 };
 
 export const Route = createFileRoute("/api/public/lead-intake-v2")({
   server: {
@@ -184,7 +186,7 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
             ]);
             const phoneCount = phoneRes?.count ?? 0;
             rateLimited =
-              (ipCount ?? 0) >= IP_LIMIT_PER_HOUR || phoneCount >= PHONE_LIMIT_PER_DAY;
+              (ipCount ?? 0) >= IP_LIMIT_PER_HOUR || phoneCount >= (PHONE_LIMIT_PER_DAY_BY_FORM[b.form_slug] ?? PHONE_LIMIT_PER_DAY);
             await supabaseAdmin.from("lead_intake_rate_log").insert({
               tenant_id: form.tenant_id,
               form_slug: b.form_slug,
@@ -214,10 +216,9 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
               const consent = b.marketing_consent === true;
               const oppUpd: Record<string, unknown> = {};
               if (emailClean && emailClean !== d.email) oppUpd.email = emailClean;
-              if (consent !== !!d.marketing_consent) {
-                oppUpd.marketing_consent = consent;
-                oppUpd.marketing_consent_at = consent ? new Date().toISOString() : null;
-              }
+              // Registra sempre a escolha (marcado ou desmarcado) com data e hora.
+              oppUpd.marketing_consent = consent;
+              oppUpd.marketing_consent_at = new Date().toISOString();
               // Nome digitado fica na oportunidade; o cadastro do cliente não muda.
               if (b.parent_name) oppUpd.contact_name = b.parent_name;
               if (Object.keys(oppUpd).length)
@@ -339,7 +340,7 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
               email: emailClean,
               contact_name: b.parent_name || null,
               marketing_consent: consentGiven,
-              marketing_consent_at: consentGiven ? new Date().toISOString() : null,
+              marketing_consent_at: new Date().toISOString(),
               utm_source: b.utm_source || null,
               utm_medium: b.utm_medium || null,
               utm_campaign: finalCampaign,
