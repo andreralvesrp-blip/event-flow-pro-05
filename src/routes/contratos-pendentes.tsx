@@ -134,7 +134,7 @@ function PendingCard({ item, onDone }: { item: Item; onDone: () => void }) {
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           {item.file_name ?? "(sem nome de arquivo)"} · assinado em{" "}
-          {new Date(item.signed_at).toLocaleDateString("pt-BR")}
+          {new Date(item.signed_at).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}
           {item.client?.email ? ` · ${item.client.email}` : ""}
           {item.client?.phone ? ` · ${item.client.phone}` : ""}
         </p>

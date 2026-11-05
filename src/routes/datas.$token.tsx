@@ -162,9 +162,9 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
         </div>
         <div className="main">
           {opts.m}
-          {error && <p className="cap" role="alert">{error}</p>}
+          {error && !opts.f && <p className="cap" role="alert">{error}</p>}
         </div>
-        {opts.f && <div className="foot">{opts.f}</div>}
+        {opts.f && <div className="foot">{error && <p className="cap" role="alert" style={{ color: 'var(--red)', fontWeight: 700, margin: '0 0 8px' }}>{error}</p>}{opts.f}</div>}
       </div>
     </div>
   );

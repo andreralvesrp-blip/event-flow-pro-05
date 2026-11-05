@@ -540,7 +540,7 @@ function ImportPage() {
               <tbody>
                 {batches.map((b) => (
                   <tr key={b.id} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="px-4 py-2 text-xs text-slate-600">{new Date(b.created_at).toLocaleString("pt-BR")}</td>
+                    <td className="px-4 py-2 text-xs text-slate-600">{new Date(b.created_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td>
                     <td className="px-4 py-2 text-xs">{b.source_file_name}</td>
                     <td className="px-4 py-2">
                       <span className={`text-[10px] px-2 py-0.5 rounded ${b.status === "committed" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
