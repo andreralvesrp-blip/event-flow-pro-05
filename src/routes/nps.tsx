@@ -402,6 +402,7 @@ function LinkCard({ slug, name }: { slug: string; name: string }) {
 function formatDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
