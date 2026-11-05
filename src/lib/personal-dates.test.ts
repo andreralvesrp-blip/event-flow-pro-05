@@ -12,7 +12,7 @@ describe('Turnos', () => {
   it('duas festas fechadas esgotam ambos turnos', () => expect(availability('2027-01-23', [event('10:00','12:00'), event('13:00','14:00')], [])).toEqual({ almoco: 'ocupado', jantar: 'ocupado' }));
   it('pré-reserva aplica interesse nos mesmos limites', () => expect(availability('2027-01-23', [], [event('15:00','18:00')])).toEqual({ almoco: 'interesse', jantar: 'interesse' }));
   it('fechada prevalece sobre interesse', () => expect(availability('2027-01-23', [event('12:00','14:00')], [event('12:00','14:00')]).almoco).toBe('ocupado'));
-  it('evento dia inteiro preserva fim exclusivo', () => { const e = { start: { date: '2027-01-23' }, end: { date: '2027-01-24' } }; expect(availability('2027-01-23',[e],[]).jantar).toBe('ocupado'); expect(availability('2027-01-24',[e],[]).almoco).toBe('disponivel'); });
+  it('evento de dia todo não bloqueia nenhum turno', () => { const e = { start: { date: '2027-01-23' }, end: { date: '2027-01-24' } }; expect(availability('2027-01-23',[e],[e])).toEqual({ almoco: 'disponivel', jantar: 'disponivel' }); });
 });
 describe('Preços', () => {
   it('sábado almoço 11030', () => expect(priceFor('2027-01-23','almoco',[])).toBe(11030));
