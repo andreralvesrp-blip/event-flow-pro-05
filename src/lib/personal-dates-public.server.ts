@@ -80,8 +80,6 @@ export async function handlePersonalDates(request: Request) {
       const legal = slots.every(s => pool.some(o => o.house === input.house && o.date === input.date && o.slot === s));
        if (!legal || (input.action === 'escolheu_data' && status !== 'disponivel') || (input.action === 'entrou_fila' && status !== 'interesse')) return respond({ error: 'Esta opção mudou. Vamos confirmar com a equipe.' }, 409);
       // Fila: a mesma oportunidade não entra duas vezes na mesma data, turno e unidade; responde a confirmação normal.
-      // SIMULACAO_TEMPORARIA
-      if (input.action === 'entrou_fila' && op.form_slug === 'bs-orcamento-teste' && !(globalThis as any).__simFailDone) { (globalThis as any).__simFailDone = true; return respond({ error: 'Não conseguimos entrar na fila agora.' }, 503); }
       let already = false;
       if (input.action === 'entrou_fila') {
         const { data: dup } = await db.from('date_interactions').select('id').eq('opportunity_id', op.id).eq('action', 'entrou_fila').eq('house', input.house).eq('party_date', input.date).eq('slot', input.slot).limit(1);
