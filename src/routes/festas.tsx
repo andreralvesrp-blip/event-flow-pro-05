@@ -132,7 +132,7 @@ const fmtDateTime = (s: string | null | undefined) => {
   if (!s) return "—";
   const dt = new Date(s);
   if (isNaN(dt.getTime())) return s;
-  return dt.toLocaleString("pt-BR");
+  return dt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 };
 
 const fmtTime = (s: string | null | undefined) => {

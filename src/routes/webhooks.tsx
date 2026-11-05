@@ -102,7 +102,7 @@ function WebhooksPage() {
               {events.map((e) => (
                 <tr key={e.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
-                    {new Date(e.received_at).toLocaleString("pt-BR")}
+                    {new Date(e.received_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                   </td>
                   <td className="px-4 py-3 text-slate-700">{e.event_name ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-500 font-mono text-xs">
@@ -183,12 +183,12 @@ function PayloadDrawer({ event, onClose }: { event: Event; onClose: () => void }
         </div>
         <div className="p-5 space-y-4">
           <dl className="grid grid-cols-3 gap-y-2 text-sm">
-            <Info label="Recebido em" value={new Date(event.received_at).toLocaleString("pt-BR")} />
+            <Info label="Recebido em" value={new Date(event.received_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} />
             <Info label="Evento" value={event.event_name ?? "—"} />
             <Info label="Status bruto" value={event.status ?? "—"} />
             <Info label="Document key" value={event.document_key ?? "—"} mono />
             <Info label="Processado" value={event.processed ? "sim" : "não"} />
-            <Info label="Processado em" value={event.processed_at ? new Date(event.processed_at).toLocaleString("pt-BR") : "—"} />
+            <Info label="Processado em" value={event.processed_at ? new Date(event.processed_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—"} />
           </dl>
           {event.processing_error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded">
