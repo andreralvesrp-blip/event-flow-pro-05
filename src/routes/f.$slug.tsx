@@ -31,6 +31,10 @@ type Step =
   | "age"
   | "date"
   | "contact"
+  | "v2name"
+  | "v2phone"
+  | "v2email"
+  | "v2final"
   | "submitting"
   | "done"
   | "error"
@@ -127,7 +131,8 @@ function PublicForm() {
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
   const [parentEmail, setParentEmail] = useState("");
-  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(true);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -211,6 +216,11 @@ function PublicForm() {
     e.preventDefault();
     if (!isValidDateDDMMYYYY(desiredDate)) return;
     pushUser(desiredDate);
+    if (isV2) {
+      setStep("v2name");
+      await pushBot("Qual é o seu nome?");
+      return;
+    }
     setStep("contact");
     await pushBot(
       isV2
@@ -223,12 +233,37 @@ function PublicForm() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(input.trim());
   }
 
+  async function submitV2Name(e: React.FormEvent) {
+    e.preventDefault();
+    const n = parentName.trim();
+    if (n.length < 2) { setFieldError("Informe seu nome."); return; }
+    setFieldError(null);
+    pushUser(n);
+    setStep("v2phone");
+    await pushBot(`Prazer, ${n.split(/\s+/)[0]}! Qual é o seu WhatsApp?`);
+  }
+  async function submitV2Phone(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isValidPhone(parentPhone)) { setFieldError("Informe um WhatsApp válido com DDD."); return; }
+    setFieldError(null);
+    pushUser(parentPhone);
+    setStep("v2email");
+    await pushBot("Qual é o seu melhor e-mail para enviarmos o orçamento?");
+  }
+  async function submitV2Email(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isValidEmail(parentEmail)) { setFieldError("Informe um e-mail válido."); return; }
+    setFieldError(null);
+    pushUser(parentEmail.trim());
+    setStep("v2final");
+  }
+
   async function submitContact(e: React.FormEvent) {
     e.preventDefault();
     if (!parentName.trim()) return;
     if (!isValidPhone(parentPhone)) return;
     if (isV2 && !isValidEmail(parentEmail)) return;
-    pushUser(isV2 ? `${parentName} · ${parentPhone} · ${parentEmail}` : `${parentName} · ${parentPhone}`);
+    if (!isV2) pushUser(`${parentName} · ${parentPhone}`);
     setStep("submitting");
     await pushBot("Preparando seu orçamento...");
 
@@ -360,7 +395,7 @@ function PublicForm() {
 
 
   function retry() {
-    setStep("contact");
+    setStep(isV2 ? "v2final" : "contact");
     setErrorMsg(null);
   }
 
@@ -371,6 +406,10 @@ function PublicForm() {
     age: 3,
     date: 4,
     contact: 5,
+    v2name: 5,
+    v2phone: 5,
+    v2email: 5,
+    v2final: 5,
     submitting: 5,
     done: 5,
     error: 5,
@@ -384,6 +423,10 @@ function PublicForm() {
     age: 1,
     date: 2,
     contact: 3,
+    v2name: 3,
+    v2phone: 3,
+    v2email: 3,
+    v2final: 3,
     submitting: 3,
     done: 3,
     error: 3,
@@ -915,6 +958,52 @@ function PublicForm() {
                         Quero receber novidades e ofertas da Kids Point.
                       </label>
                     )}
+                  </form>
+                )}
+                {step === "v2name" && (
+                  <form onSubmit={submitV2Name} noValidate>
+                    <div className="flex gap-2">
+                      <input autoFocus className="f-input flex-1" placeholder="Seu nome" value={parentName} onChange={(e) => { setParentName(e.target.value); setFieldError(null); }} />
+                      <button type="submit" className="f-btn-inline" disabled={typing}>Enviar</button>
+                    </div>
+                    {fieldError && (
+                      <div role="alert" style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4, marginTop: 6 }}>{fieldError}</div>
+                    )}
+                  </form>
+                )}
+                {step === "v2phone" && (
+                  <form onSubmit={submitV2Phone} noValidate>
+                    <div className="flex gap-2">
+                      <input autoFocus type="tel" inputMode="numeric" className="f-input flex-1" placeholder="(11) 91234-5678" value={parentPhone} onChange={(e) => { setParentPhone(formatPhone(e.target.value)); setFieldError(null); }} />
+                      <button type="submit" className="f-btn-inline" disabled={typing}>Enviar</button>
+                    </div>
+                    {fieldError && (
+                      <div role="alert" style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4, marginTop: 6 }}>{fieldError}</div>
+                    )}
+                  </form>
+                )}
+                {step === "v2email" && (
+                  <form onSubmit={submitV2Email} noValidate>
+                    <div className="flex gap-2">
+                      <input autoFocus type="email" className="f-input flex-1" placeholder="seu@email.com" value={parentEmail} onChange={(e) => { setParentEmail(e.target.value); setFieldError(null); }} />
+                      <button type="submit" className="f-btn-inline" disabled={typing}>Enviar</button>
+                    </div>
+                    {fieldError && (
+                      <div role="alert" style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4, marginTop: 6 }}>{fieldError}</div>
+                    )}
+                  </form>
+                )}
+                {step === "v2final" && (
+                  <form onSubmit={submitContact} className="space-y-2">
+                    <input type="text" name="website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
+                    <p style={{ fontSize: 11, color: "#94A3B8", textAlign: "center", lineHeight: 1.4, margin: 0 }}>
+                      Ao enviar, você concorda em receber este orçamento por WhatsApp e e-mail.
+                    </p>
+                    <label className="flex items-center gap-2 justify-center" style={{ fontSize: 12, color: "#64748B", cursor: "pointer" }}>
+                      <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} style={{ width: 15, height: 15, accentColor: "#F97316" }} />
+                      Quero receber novidades e ofertas da Kids Point.
+                    </label>
+                    <button type="submit" className="f-btn-primary f-btn-green" disabled={typing}>Receber orçamento</button>
                   </form>
                 )}
                 {step === "submitting" && (
