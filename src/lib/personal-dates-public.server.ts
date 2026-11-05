@@ -79,7 +79,13 @@ export async function handlePersonalDates(request: Request) {
       const pool = [...buildOptions(requested, origin, calendars, holidays, today, 'all', op.desired_slot as Slot | null, closures), ...requestedOptions];
       const legal = slots.every(s => pool.some(o => o.house === input.house && o.date === input.date && o.slot === s));
        if (!legal || (input.action === 'escolheu_data' && status !== 'disponivel') || (input.action === 'entrou_fila' && status !== 'interesse')) return respond({ error: 'Esta opção mudou. Vamos confirmar com a equipe.' }, 409);
-      await record(input.action, input.house, input.date, input.slot);
+      // Fila: a mesma oportunidade não entra duas vezes na mesma data, turno e unidade; responde a confirmação normal.
+      let already = false;
+      if (input.action === 'entrou_fila') {
+        const { data: dup } = await db.from('date_interactions').select('id').eq('opportunity_id', op.id).eq('action', 'entrou_fila').eq('house', input.house).eq('party_date', input.date).eq('slot', input.slot).limit(1);
+        already = !!dup?.length;
+      }
+      if (!already) await record(input.action, input.house, input.date, input.slot);
       if (input.house !== origin && input.action === 'escolheu_data') await record('mudou_casa', input.house, input.date, input.slot);
       return respond({ ok: true, url: whatsappUrl(firstName, input.house, input.date, input.slot, input.action === 'entrou_fila') });
     }
