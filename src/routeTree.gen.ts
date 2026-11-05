@@ -29,6 +29,7 @@ import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 import { Route as ConfiguracoesIntegracoesRouteImport } from './routes/configuracoes.integracoes'
 import { Route as ConfiguracoesUnidadesRouteImport } from './routes/configuracoes.unidades'
+import { Route as DatasTokenRouteImport } from './routes/datas.$token'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as ApiPublicLeadIntakeV2RouteImport } from './routes/api/public/lead-intake-v2'
 import { Route as ApiPublicMarketingEventRouteImport } from './routes/api/public/marketing-event'
@@ -138,6 +139,11 @@ const ConfiguracoesUnidadesRoute = ConfiguracoesUnidadesRouteImport.update({
   path: '/unidades',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
+const DatasTokenRoute = DatasTokenRouteImport.update({
+  id: '/datas/$token',
+  path: '/datas/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FSlugRoute = FSlugRouteImport.update({
   id: '/f/$slug',
   path: '/f/$slug',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
   '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
+  '/datas/$token': typeof DatasTokenRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/api/public/lead-intake-v2': typeof ApiPublicLeadIntakeV2Route
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
   '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
+  '/datas/$token': typeof DatasTokenRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes': typeof ConfiguracoesIndexRoute
   '/api/public/lead-intake-v2': typeof ApiPublicLeadIntakeV2Route
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
   '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
   '/configuracoes/unidades': typeof ConfiguracoesUnidadesRoute
+  '/datas/$token': typeof DatasTokenRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/api/public/lead-intake-v2': typeof ApiPublicLeadIntakeV2Route
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/configuracoes/importacao-historica'
     | '/configuracoes/integracoes'
     | '/configuracoes/unidades'
+    | '/datas/$token'
     | '/f/$slug'
     | '/configuracoes/'
     | '/api/public/lead-intake-v2'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/configuracoes/importacao-historica'
     | '/configuracoes/integracoes'
     | '/configuracoes/unidades'
+    | '/datas/$token'
     | '/f/$slug'
     | '/configuracoes'
     | '/api/public/lead-intake-v2'
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/configuracoes/importacao-historica'
     | '/configuracoes/integracoes'
     | '/configuracoes/unidades'
+    | '/datas/$token'
     | '/f/$slug'
     | '/configuracoes/'
     | '/api/public/lead-intake-v2'
@@ -355,6 +367,7 @@ export interface RootRouteChildren {
   OportunidadesRoute: typeof OportunidadesRoute
   WebhooksRoute: typeof WebhooksRoute
   AvaliarSlugRoute: typeof AvaliarSlugRoute
+  DatasTokenRoute: typeof DatasTokenRoute
   FSlugRoute: typeof FSlugRoute
   ApiPublicLeadIntakeV2Route: typeof ApiPublicLeadIntakeV2Route
   ApiPublicMarketingEventRoute: typeof ApiPublicMarketingEventRoute
@@ -505,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesUnidadesRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
+    '/datas/$token': {
+      id: '/datas/$token'
+      path: '/datas/$token'
+      fullPath: '/datas/$token'
+      preLoaderRoute: typeof DatasTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/f/$slug': {
       id: '/f/$slug'
       path: '/f/$slug'
@@ -587,6 +607,7 @@ const rootRouteChildren: RootRouteChildren = {
   OportunidadesRoute: OportunidadesRoute,
   WebhooksRoute: WebhooksRoute,
   AvaliarSlugRoute: AvaliarSlugRoute,
+  DatasTokenRoute: DatasTokenRoute,
   FSlugRoute: FSlugRoute,
   ApiPublicLeadIntakeV2Route: ApiPublicLeadIntakeV2Route,
   ApiPublicMarketingEventRoute: ApiPublicMarketingEventRoute,
