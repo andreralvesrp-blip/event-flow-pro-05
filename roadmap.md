@@ -11,3 +11,12 @@
 - [x] Build OK; testes de endpoint (config, honeypot, wrong_flow_version, lead real) + Playwright (v2 e v1)
 - [x] Secret RESEND_API_KEY cadastrado pelo usuário
 - [ ] Pendente do usuário: publicar (PDF público + rotas novas) e verificar domínio kidspoint.com.br no Resend
+
+## Página pessoal de datas — sem publicação
+- [ ] Aprovar plano e esclarecer feriados/limite de liberação dos links.
+- [ ] Acrescentar configurações de Calendário, feriados, links pessoais e interações isolados.
+- [ ] Preparar Google Calendar somente leitura e orientar conta de serviço.
+- [ ] Implementar cálculo dos turnos, preços e ordenação com testes.
+- [ ] Criar página pública pessoal sem indexação nem links nos fluxos existentes.
+- [ ] Resumir interações nos cards e verificar página/isolamento.
+- [ ] Pendente do usuário: fornecer conta de serviço e IDs das quatro agendas para conferência real.
