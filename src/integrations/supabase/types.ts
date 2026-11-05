@@ -716,6 +716,33 @@ export type Database = {
         }
         Relationships: []
       }
+      date_closures: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       date_holidays: {
         Row: {
           holiday_date: string
