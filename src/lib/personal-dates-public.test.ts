@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-const mocks = vi.hoisted(() => ({ form: 'bs-orcamento-teste', inserts: [] as Array<Record<string,unknown>>, status: 'ready' }));
+const mocks = vi.hoisted(() => ({ form: 'bs-orcamento-teste', inserts: [] as Array<Record<string,unknown>>, status: 'ready', closed: [] as Array<{ start: { dateTime: string }; end: { dateTime: string } }> }));
 vi.mock('@/integrations/supabase/client.server', () => ({ supabaseAdmin: { from: (table: string) => {
   const results: Record<string,unknown> = {
     date_personal_links: { id: 'link', opportunity_id: 'op', tenant_id: 'tenant' },
@@ -11,13 +11,13 @@ vi.mock('@/integrations/supabase/client.server', () => ({ supabaseAdmin: { from:
 } } }));
 vi.mock('./personal-calendar.server', () => ({ tokenHash: async () => 'hash', loadCalendars: async () => {
   if (mocks.status === 'unavailable') throw new Error('missing account');
-  return { bosque: { closed: [], interest: [] }, vila: { closed: [], interest: [] } };
+  return { bosque: { closed: mocks.closed, interest: [] }, vila: { closed: [], interest: [] } };
 } }));
 import { handlePersonalDates } from './personal-dates-public.server';
 const token = 'a'.repeat(43);
 const request = (body: Record<string,unknown>) => new Request('https://example.com/api/public/personal-dates', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://example.com' }, body: JSON.stringify({ token, ...body }) });
 describe('Endpoint pessoal isolado', () => {
-  beforeEach(() => { mocks.form = 'bs-orcamento-teste'; mocks.inserts = []; mocks.status = 'ready'; vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-05T13:00:00Z')); });
+  beforeEach(() => { mocks.form = 'bs-orcamento-teste'; mocks.inserts = []; mocks.status = 'ready'; mocks.closed = []; vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-05T13:00:00Z')); });
   it('GET não registra ações', async () => { const r = await handlePersonalDates(new Request(`https://example.com/api/public/personal-dates?token=${token}&action=abriu`)); expect(r.status).toBe(405); expect(mocks.inserts.length).toBe(0); });
   it('formulário atual não permite página nem gravações', async () => { mocks.form = 'bs-landingprincipal'; const r = await handlePersonalDates(request({ action: 'abriu' })); expect(r.status).toBe(404); expect(mocks.inserts.length).toBe(0); });
   it('outra origem é rejeitada', async () => { const r = await handlePersonalDates(new Request('https://example.com/api/public/personal-dates', { method: 'POST', headers: { Origin: 'https://evil.test', 'Content-Type': 'application/json' }, body: JSON.stringify({ token, action: 'abriu' }) })); expect(r.status).toBe(403); expect(mocks.inserts.length).toBe(0); });
@@ -25,4 +25,7 @@ describe('Endpoint pessoal isolado', () => {
   it('escolha registra casa escolhida sem atualizar oportunidade', async () => { const body = await (await handlePersonalDates(request({ action: 'escolheu_data', house: 'vila', date: '2027-01-23', slot: 'jantar' }))).json(); expect(body.url).toContain('5511937123020'); expect(mocks.inserts.map(i => i.action)).toEqual(['escolheu_data','mudou_casa']); expect(mocks.inserts[0]?.house).toBe('vila'); });
   it('sem agenda não permite escolha', async () => { mocks.status = 'unavailable'; const body = await (await handlePersonalDates(request({ action: 'escolheu_data', house: 'bosque', date: '2027-01-23', slot: 'almoco' }))).json(); expect(body.state).toBe('unavailable'); expect(body.url).toBeUndefined(); expect(mocks.inserts).toHaveLength(0); });
   it('fila é rejeitada para turno disponível', async () => { const r = await handlePersonalDates(request({ action: 'entrou_fila', house: 'bosque', date: '2027-01-23', slot: 'almoco' })); expect(r.status).toBe(409); expect(mocks.inserts).toHaveLength(0); });
+  it('almoço ou jantar registra os dois turnos livres', async () => { const body = await (await handlePersonalDates(request({ action: 'escolheu_data', house: 'vila', date: '2027-01-23', slot: 'ambos' }))).json(); expect(decodeURIComponent(body.url)).toContain('almoço ou jantar'); expect(mocks.inserts[0]?.slot).toBe('ambos'); expect(mocks.inserts.map(i => i.action)).toEqual(['escolheu_data','mudou_casa']); });
+  it('almoço ou jantar é rejeitado quando um turno está ocupado', async () => { mocks.closed = [{ start: { dateTime: '2027-01-23T12:00:00-03:00' }, end: { dateTime: '2027-01-23T14:00:00-03:00' } }]; const r = await handlePersonalDates(request({ action: 'escolheu_data', house: 'bosque', date: '2027-01-23', slot: 'ambos' })); expect(r.status).toBe(409); expect(mocks.inserts).toHaveLength(0); });
+  it('fila e visualização não aceitam almoço ou jantar', async () => { const r = await handlePersonalDates(request({ action: 'entrou_fila', house: 'bosque', date: '2027-01-23', slot: 'ambos' })); const v = await handlePersonalDates(request({ action: 'viu_opcao', house: 'vila', date: '2027-01-23', slot: 'ambos' })); expect(r.status).toBe(409); expect(v.status).toBe(409); expect(mocks.inserts).toHaveLength(0); });
 });
