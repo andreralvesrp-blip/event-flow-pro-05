@@ -44,7 +44,11 @@ const Price = ({ n }: { n: number }) => <span className="price">A partir de <str
 
 function PersonalDatesPage() {
   const { token } = Route.useParams();
-  const { data: initial } = useSuspenseQuery(options(token));
+  const { data } = useSuspenseQuery(options(token));
+  return <DatesJourney token={token} initial={data} />;
+}
+
+export function DatesJourney({ token, initial }: { token: string; initial: PersonalDateView }) {
   const [view] = useState<PersonalDateView>(initial);
   const house: House = view.origin ?? 'bosque';
   const otherHouse: House = house === 'bosque' ? 'vila' : 'bosque';
