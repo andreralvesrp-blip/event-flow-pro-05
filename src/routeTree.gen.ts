@@ -24,6 +24,7 @@ import { Route as OportunidadesRouteImport } from './routes/oportunidades'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as AvaliarSlugRouteImport } from './routes/avaliar.$slug'
 import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
+import { Route as ConfiguracoesCalendarioRouteImport } from './routes/configuracoes.calendario'
 import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.equipe'
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 import { Route as ConfiguracoesIntegracoesRouteImport } from './routes/configuracoes.integracoes'
@@ -31,6 +32,7 @@ import { Route as ConfiguracoesUnidadesRouteImport } from './routes/configuracoe
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as ApiPublicLeadIntakeV2RouteImport } from './routes/api/public/lead-intake-v2'
 import { Route as ApiPublicMarketingEventRouteImport } from './routes/api/public/marketing-event'
+import { Route as ApiPublicPersonalDatesRouteImport } from './routes/api/public/personal-dates'
 import { Route as ApiPublicQuoteDispatchRouteImport } from './routes/api/public/quote-dispatch'
 import { Route as ApiPublicGa4OauthCallbackRouteImport } from './routes/api/public/ga4-oauth.callback'
 
@@ -109,6 +111,11 @@ const ConfiguracoesIndexRoute = ConfiguracoesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
+const ConfiguracoesCalendarioRoute = ConfiguracoesCalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => ConfiguracoesRoute,
+} as any)
 const ConfiguracoesEquipeRoute = ConfiguracoesEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -146,6 +153,11 @@ const ApiPublicMarketingEventRoute = ApiPublicMarketingEventRouteImport.update({
   path: '/api/public/marketing-event',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPersonalDatesRoute = ApiPublicPersonalDatesRouteImport.update({
+  id: '/api/public/personal-dates',
+  path: '/api/public/personal-dates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicQuoteDispatchRoute = ApiPublicQuoteDispatchRouteImport.update({
   id: '/api/public/quote-dispatch',
   path: '/api/public/quote-dispatch',
@@ -173,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/avaliar/$slug': typeof AvaliarSlugRoute
+  '/configuracoes/calendario': typeof ConfiguracoesCalendarioRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
   '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
@@ -181,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/api/public/lead-intake-v2': typeof ApiPublicLeadIntakeV2Route
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
+  '/api/public/personal-dates': typeof ApiPublicPersonalDatesRoute
   '/api/public/quote-dispatch': typeof ApiPublicQuoteDispatchRoute
   '/api/public/ga4-oauth/callback': typeof ApiPublicGa4OauthCallbackRoute
 }
@@ -198,6 +212,7 @@ export interface FileRoutesByTo {
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/avaliar/$slug': typeof AvaliarSlugRoute
+  '/configuracoes/calendario': typeof ConfiguracoesCalendarioRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
   '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
@@ -206,6 +221,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesIndexRoute
   '/api/public/lead-intake-v2': typeof ApiPublicLeadIntakeV2Route
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
+  '/api/public/personal-dates': typeof ApiPublicPersonalDatesRoute
   '/api/public/quote-dispatch': typeof ApiPublicQuoteDispatchRoute
   '/api/public/ga4-oauth/callback': typeof ApiPublicGa4OauthCallbackRoute
 }
@@ -225,6 +241,7 @@ export interface FileRoutesById {
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
   '/avaliar/$slug': typeof AvaliarSlugRoute
+  '/configuracoes/calendario': typeof ConfiguracoesCalendarioRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
   '/configuracoes/importacao-historica': typeof ConfiguracoesImportacaoHistoricaRoute
   '/configuracoes/integracoes': typeof ConfiguracoesIntegracoesRoute
@@ -233,6 +250,7 @@ export interface FileRoutesById {
   '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/api/public/lead-intake-v2': typeof ApiPublicLeadIntakeV2Route
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
+  '/api/public/personal-dates': typeof ApiPublicPersonalDatesRoute
   '/api/public/quote-dispatch': typeof ApiPublicQuoteDispatchRoute
   '/api/public/ga4-oauth/callback': typeof ApiPublicGa4OauthCallbackRoute
 }
@@ -253,6 +271,7 @@ export interface FileRouteTypes {
     | '/oportunidades'
     | '/webhooks'
     | '/avaliar/$slug'
+    | '/configuracoes/calendario'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
     | '/configuracoes/integracoes'
@@ -261,6 +280,7 @@ export interface FileRouteTypes {
     | '/configuracoes/'
     | '/api/public/lead-intake-v2'
     | '/api/public/marketing-event'
+    | '/api/public/personal-dates'
     | '/api/public/quote-dispatch'
     | '/api/public/ga4-oauth/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -278,6 +298,7 @@ export interface FileRouteTypes {
     | '/oportunidades'
     | '/webhooks'
     | '/avaliar/$slug'
+    | '/configuracoes/calendario'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
     | '/configuracoes/integracoes'
@@ -286,6 +307,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/api/public/lead-intake-v2'
     | '/api/public/marketing-event'
+    | '/api/public/personal-dates'
     | '/api/public/quote-dispatch'
     | '/api/public/ga4-oauth/callback'
   id:
@@ -304,6 +326,7 @@ export interface FileRouteTypes {
     | '/oportunidades'
     | '/webhooks'
     | '/avaliar/$slug'
+    | '/configuracoes/calendario'
     | '/configuracoes/equipe'
     | '/configuracoes/importacao-historica'
     | '/configuracoes/integracoes'
@@ -312,6 +335,7 @@ export interface FileRouteTypes {
     | '/configuracoes/'
     | '/api/public/lead-intake-v2'
     | '/api/public/marketing-event'
+    | '/api/public/personal-dates'
     | '/api/public/quote-dispatch'
     | '/api/public/ga4-oauth/callback'
   fileRoutesById: FileRoutesById
@@ -334,6 +358,7 @@ export interface RootRouteChildren {
   FSlugRoute: typeof FSlugRoute
   ApiPublicLeadIntakeV2Route: typeof ApiPublicLeadIntakeV2Route
   ApiPublicMarketingEventRoute: typeof ApiPublicMarketingEventRoute
+  ApiPublicPersonalDatesRoute: typeof ApiPublicPersonalDatesRoute
   ApiPublicQuoteDispatchRoute: typeof ApiPublicQuoteDispatchRoute
   ApiPublicGa4OauthCallbackRoute: typeof ApiPublicGa4OauthCallbackRoute
 }
@@ -445,6 +470,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesIndexRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
+    '/configuracoes/calendario': {
+      id: '/configuracoes/calendario'
+      path: '/calendario'
+      fullPath: '/configuracoes/calendario'
+      preLoaderRoute: typeof ConfiguracoesCalendarioRouteImport
+      parentRoute: typeof ConfiguracoesRoute
+    }
     '/configuracoes/equipe': {
       id: '/configuracoes/equipe'
       path: '/equipe'
@@ -494,6 +526,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMarketingEventRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/personal-dates': {
+      id: '/api/public/personal-dates'
+      path: '/api/public/personal-dates'
+      fullPath: '/api/public/personal-dates'
+      preLoaderRoute: typeof ApiPublicPersonalDatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/quote-dispatch': {
       id: '/api/public/quote-dispatch'
       path: '/api/public/quote-dispatch'
@@ -512,6 +551,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface ConfiguracoesRouteChildren {
+  ConfiguracoesCalendarioRoute: typeof ConfiguracoesCalendarioRoute
   ConfiguracoesEquipeRoute: typeof ConfiguracoesEquipeRoute
   ConfiguracoesImportacaoHistoricaRoute: typeof ConfiguracoesImportacaoHistoricaRoute
   ConfiguracoesIntegracoesRoute: typeof ConfiguracoesIntegracoesRoute
@@ -520,6 +560,7 @@ interface ConfiguracoesRouteChildren {
 }
 
 const ConfiguracoesRouteChildren: ConfiguracoesRouteChildren = {
+  ConfiguracoesCalendarioRoute: ConfiguracoesCalendarioRoute,
   ConfiguracoesEquipeRoute: ConfiguracoesEquipeRoute,
   ConfiguracoesImportacaoHistoricaRoute: ConfiguracoesImportacaoHistoricaRoute,
   ConfiguracoesIntegracoesRoute: ConfiguracoesIntegracoesRoute,
@@ -549,6 +590,7 @@ const rootRouteChildren: RootRouteChildren = {
   FSlugRoute: FSlugRoute,
   ApiPublicLeadIntakeV2Route: ApiPublicLeadIntakeV2Route,
   ApiPublicMarketingEventRoute: ApiPublicMarketingEventRoute,
+  ApiPublicPersonalDatesRoute: ApiPublicPersonalDatesRoute,
   ApiPublicQuoteDispatchRoute: ApiPublicQuoteDispatchRoute,
   ApiPublicGa4OauthCallbackRoute: ApiPublicGa4OauthCallbackRoute,
 }

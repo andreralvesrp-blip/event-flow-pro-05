@@ -63,6 +63,9 @@
   --color-kpi-volume-border: var(--kpi-volume-border);
   --color-kpi-conversion-bg: var(--kpi-conversion-bg);
   --color-kpi-conversion-border: var(--kpi-conversion-border);
+  --color-date-available: var(--date-available);
+  --color-date-other: var(--date-other);
+  --color-date-other-soft: var(--date-other-soft);
 }
 
 :root {
@@ -103,6 +106,9 @@
   --kpi-volume-border: oklch(0.82 0.04 245);
   --kpi-conversion-bg: oklch(0.97 0.015 150);
   --kpi-conversion-border: oklch(0.82 0.04 150);
+  --date-available: oklch(0.44 0.12 155);
+  --date-other: oklch(0.48 0.17 10);
+  --date-other-soft: oklch(0.97 0.02 10);
 }
 
 .dark {
@@ -142,6 +148,9 @@
   --kpi-volume-border: oklch(0.35 0.05 245);
   --kpi-conversion-bg: oklch(0.20 0.03 150);
   --kpi-conversion-border: oklch(0.35 0.05 150);
+  --date-available: oklch(0.78 0.12 155);
+  --date-other: oklch(0.78 0.12 10);
+  --date-other-soft: oklch(0.23 0.03 10);
 }
 
 @layer base {
