@@ -60,35 +60,47 @@ export function availability(date: string, closed: CalendarEvent[], interest: Ca
   if (parties.length >= 2) result.almoco = result.jantar = 'ocupado';
   return result;
 }
+export type Closure = { start_date: string; end_date: string; name: string };
+/** Período sem atendimento, com início e fim inclusive. */
+export const closureFor = (date: string, closures: Closure[] = []) => closures.find(c => date >= c.start_date && date <= c.end_date) ?? null;
 export type CalendarSet = Record<House, { closed: CalendarEvent[]; interest: CalendarEvent[] }>;
-export function buildOptions(requested: string, origin: House, calendars: CalendarSet, holidays: string[], today: string, mode: 'all' | 'origin' | 'other' = 'all', requestedSlot?: Slot | null) {
+export function buildOptions(requested: string, origin: House, calendars: CalendarSet, holidays: string[], today: string, mode: 'all' | 'origin' | 'other' = 'all', requestedSlot?: Slot | null, closures: Closure[] = []) {
   const other: House = origin === 'bosque' ? 'vila' : 'bosque';
   const weekday = getDay(parseISO(requested));
   const isWeek = weekday >= 1 && weekday <= 4;
   const baseline = priceFor(requested, requestedSlot ?? 'almoco', holidays);
   const candidate: Array<{ date: string; house: House; slot: Slot }> = [];
-  const push = (date: string, houses: House[], slots: Slot[] = ['almoco', 'jantar']) => {
-    for (const house of houses) for (const slot of slots) candidate.push({ date, house, slot });
+  // Datas dentro de um período sem atendimento pulam semana a semana (mesmo dia da semana) para além dele.
+  const skip = (date: string, side: number) => {
+    let d = parseISO(date);
+    for (let i = 0; i < 60 && closureFor(dayString(d), closures); i++) d = addDays(d, (side < 0 ? -1 : 1) * 7);
+    return dayString(d);
+  };
+  const push = (date: string, houses: House[], slots: Slot[] = ['almoco', 'jantar'], side = 1) => {
+    const real = date === requested ? date : skip(date, side);
+    if (closureFor(real, closures)) return;
+    for (const house of houses) for (const slot of slots) candidate.push({ date: real, house, slot });
   };
   push(requested, [origin, other]);
   const base = parseISO(requested);
   if (isWeek) {
     for (let n = 1; n <= 14; n++) for (const delta of [-n, n]) {
       const d = addDays(base, delta), w = getDay(d);
-      if (w >= 1 && w <= 4) push(dayString(d), [origin, other]);
+      if (w >= 1 && w <= 4) push(dayString(d), [origin, other], undefined, delta);
     }
   } else {
     const saturday = addDays(base, weekday === 0 ? -1 : weekday === 5 ? 1 : weekday === 6 ? 0 : (6 - weekday));
-    for (const d of [saturday, addDays(saturday, 1)]) if (dayString(d) !== requested) push(dayString(d), [origin, other]);
+    const inRecess = Boolean(closureFor(requested, closures));
+    for (const d of [saturday, addDays(saturday, 1)]) if (dayString(d) !== requested) { push(dayString(d), [origin, other], undefined, 1); if (inRecess) push(dayString(d), [origin, other], undefined, -1); }
     for (let n = 1; n <= 2; n++) for (const side of [-1, 1]) {
       const sat = addDays(saturday, side * n * 7);
-      push(dayString(sat), [origin, other]);
-      push(dayString(addDays(sat, 1)), [origin, other], ['almoco']);
+      push(dayString(sat), [origin, other], undefined, side);
+      push(dayString(addDays(sat, 1)), [origin, other], ['almoco'], side);
     }
     for (let n = 0; n <= 21; n++) for (const side of n === 0 ? [1] : [-1, 1]) {
       const d = addDays(base, side * n), w = getDay(d);
-      if (w === 5) push(dayString(d), [origin, other]);
-      if (w === 0) push(dayString(d), [origin, other], ['jantar']);
+      if (w === 5) push(dayString(d), [origin, other], undefined, side);
+      if (w === 0) push(dayString(d), [origin, other], ['jantar'], side);
     }
   }
   const seen = new Set<string>();

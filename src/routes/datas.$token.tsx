@@ -33,7 +33,7 @@ const T = (slot: Slot) => (slot === 'almoco' ? 'Almoço' : 'Jantar');
 const t = (slot: Slot) => (slot === 'almoco' ? 'almoço' : 'jantar');
 const P = 3;
 
-type ViewName = 'res' | 'outra' | 'lista' | 'fim';
+type ViewName = 'recesso' | 'res' | 'outra' | 'lista' | 'fim';
 type Final = { option: Option; turno: string; slot: Turno; price: number; url: string; fila?: boolean };
 type State = { v: ViewName; casa: House; page: number; pick: Option | null; final: Final | null };
 
@@ -60,7 +60,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
   const bothOccupied = requested.length > 0 && requested.every(o => o.status === 'ocupado');
   const otherRequested = (view.options ?? []).filter(o => o.date === requestedDate && o.house === otherHouse && o.status === 'disponivel');
   const listFor = (h: House) => (view.options ?? []).filter(o => o.house === h && o.date !== requestedDate);
-  const first: ViewName = requested.length === 0 ? 'lista' : bothOccupied ? (otherRequested.length > 0 ? 'outra' : 'lista') : 'res';
+  const first: ViewName = view.closure ? 'recesso' : requested.length === 0 ? 'lista' : bothOccupied ? (otherRequested.length > 0 ? 'outra' : 'lista') : 'res';
 
   const [S, setS] = useState<State>({ v: first, casa: house, page: 0, pick: null, final: null });
   const [hist, setHist] = useState<State[]>([]);
@@ -162,6 +162,15 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
       band: hi,
       m: <><Pill house={house} /><h1>{title}</h1>{view.state === 'unopened' && <p className="hi">Fale com a nossa equipe, que ajudamos a planejar a festa.</p>}</>,
       f: <button type="button" className="btn w" disabled={busy || opening} onClick={() => talk(house)}>{opening ? 'Abrindo o WhatsApp...' : 'Falar com a equipe'}</button>,
+    });
+  }
+
+  if (S.v === 'recesso' && view.closure) {
+    const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+    return page({
+      band: hi,
+      m: <><Pill house={house} /><h1>Não atendemos nessa data</h1><p className="hi" style={{ color: 'var(--ink)' }}>Estamos em recesso de {dm(view.closure.start_date)} a {dm(view.closure.end_date)}. Separei outras datas para você.</p></>,
+      f: <button type="button" className="btn p" onClick={() => go('lista', { casa: house, page: 0 })}>Ver datas disponíveis</button>,
     });
   }
 
@@ -270,7 +279,6 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
     band: { t: 'Escolha uma data', u: bothOccupied && otherRequested.length === 0 ? 'Sua data está ocupada nas duas unidades' : 'Outras opções' },
     m: (
       <>
-        {!noPrice && <p className="values-notice">Valores para 40 pagantes</p>}
         <div className="seg" role="group" aria-label="Escolha a unidade">
           {(['bosque', 'vila'] as House[]).map(k => <button key={k} type="button" className={S.casa === k ? 'on' : ''} onClick={() => switchHouse(k)}>{C[k].n}</button>)}
         </div>
@@ -279,14 +287,18 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
           {shown.map(d => (
             <div key={d.date} className="day">
               <h3>{longDate(d.date)}</h3>
-              <div className="chips">
-                {d.slots.map(o => (
-                  <button key={o.slot} type="button" className={`chip ${o.status === 'interesse' ? 'int' : ''} ${q && q.date === o.date && q.slot === o.slot && q.house === o.house ? 'sel' : ''}`} onClick={() => setS({ ...S, pick: o })}>
+              <div className={`chips ${d.slots.length === 1 ? 'one' : ''}`}>
+                {d.slots.map(o => {
+                  const wide = d.slots.length === 1;
+                  const priceBlock = !noPrice && o.status === 'disponivel' && <span className="chip-price"><span className="from">A partir de <span className="amt">{R(o.price)}</span></span><span className="per40">para 40 pagantes</span></span>;
+                  return (
+                  <button key={o.slot} type="button" className={`chip ${wide ? 'wide' : ''} ${o.status === 'interesse' ? 'int' : ''} ${q && q.date === o.date && q.slot === o.slot && q.house === o.house ? 'sel' : ''}`} onClick={() => setS({ ...S, pick: o })}>
                     <b><TurnLabel slot={o.slot} /></b>
-                    {o.status === 'interesse' ? <span className="queue-status">Pré-reservado</span> : !noPrice && <span>A partir de {R(o.price)}</span>}
+                    {o.status === 'interesse' ? <span className="queue-status">Pré-reservado</span> : priceBlock}
                     {!noPrice && o.status === 'disponivel' && o.cheaper && <em>Menor investimento</em>}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}

@@ -22,3 +22,4 @@
 - [x] Resumo de interações nos cards; Calendário conferido com sessão real.
 - [x] Conector Google Calendar e quatro agendas conferidos; sem conta de serviço adicional.
 - [x] Link de oportunidade teste verificado com dados reais; fila de 04/12/2026 jantar Bosque registrada e lida no card.
+- [x] Cartões com preço/'para 40 pagantes', aviso amarelo removido; períodos sem atendimento (recesso 21/12/2026–05/01/2027) em Calendário e na página.
