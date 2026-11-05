@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { availability, buildOptions, HOUSES, inWindow, isAllowedForm, priceFor, saoPauloToday, horizon, whatsappUrl, type House, type Slot } from './personal-dates';
+import { availability, buildOptions, inWindow, isAllowedForm, priceFor, saoPauloToday, horizon, whatsappUrl, type House, type Slot } from './personal-dates';
 import { loadCalendars, tokenHash } from './personal-calendar.server';
 
 const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
@@ -10,6 +10,7 @@ export async function handlePersonalDates(request: Request) {
   const parsed = inputSchema.safeParse(request.method === 'GET' ? Object.fromEntries(new URL(request.url).searchParams) : await request.json().catch(() => null));
   if (!parsed.success) return respond({ error: 'Link indisponível' }, 400);
   const input = parsed.data;
+  if (request.method === 'GET' && input.action) return respond({ error: 'Não autorizado' }, 405);
   if (request.method === 'POST') {
     const origin = request.headers.get('origin');
     if (origin && origin !== new URL(request.url).origin) return respond({ error: 'Não autorizado' }, 403);
