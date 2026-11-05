@@ -2,12 +2,13 @@
 // Chamado pela rota pública lead-intake-v2 (após salvar o lead) e pela rota
 // quote-dispatch (botão "Reenviar" do CRM, com JWT de usuário).
 // Nunca importar em código de cliente.
+import { CHATGURU_FORM, sendChatguruWebhook } from "./chatguru-webhook.server";
 
 export type DispatchResult = {
   ok: boolean;
   deduped?: boolean;
   email_status: "pendente" | "enviado" | "falhou" | "sem_email" | "dedupado";
-  whatsapp_status: "pendente" | "desligado";
+  whatsapp_status: "pendente" | "desligado" | "enviado" | "falhou" | "nao_reenviado";
   detail?: string;
 };
 
@@ -31,7 +32,7 @@ function escapeHtml(s: string): string {
 
 export async function dispatchQuote(
   opportunityId: string,
-  opts: { force?: boolean } = {},
+  opts: { force?: boolean; baseUrl?: string } = {},
 ): Promise<DispatchResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -70,17 +71,35 @@ export async function dispatchQuote(
     .eq("channel", "email")
     .order("created_at", { ascending: false });
   const prev = prevEmail ?? [];
-  if (prev.some((s) => s.status === "enviado")) {
-    return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "already_sent" };
-  }
+  const { data: prevWaRows } = await supabaseAdmin
+    .from("quote_sends")
+    .select("status, created_at")
+    .eq("opportunity_id", opp.id)
+    .eq("channel", "whatsapp")
+    .order("created_at", { ascending: false });
+  const prevWa = prevWaRows ?? [];
+  // Webhook do ChatGuru: somente bs-orcamento-teste com WhatsApp ativo.
+  const waEnabled = form.whatsapp_enabled === true && opp.form_slug === CHATGURU_FORM;
+  const failed = (s?: { status: string }) => !!s && ["falhou", "bloqueado_limite"].includes(s.status);
+  let doEmail: boolean;
+  let doWa: boolean;
   if (opts.force) {
-    // Reenviar só vale quando o último envio de e-mail falhou ou foi bloqueado pelo limite.
-    if (!prev.length || !["falhou", "bloqueado_limite"].includes(prev[0].status)) {
+    // Reenviar só vale para o canal cujo último envio falhou ou foi bloqueado pelo limite.
+    doEmail = failed(prev[0]) && !prev.some((s) => s.status === "enviado");
+    doWa = waEnabled && !prevWa.some((s) => s.status === "enviado") && (prevWa.length === 0 ? failed(prev[0]) : failed(prevWa[0]));
+    if (!doEmail && !doWa) {
       return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "resend_only_after_failure" };
     }
-  } else if (prev.length) {
-    // Disparo automático acontece uma única vez por oportunidade.
-    return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "already_dispatched" };
+  } else {
+    if (prev.some((s) => s.status === "enviado")) {
+      return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "already_sent" };
+    }
+    if (prev.length) {
+      // Disparo automático acontece uma única vez por oportunidade.
+      return { ok: false, email_status: "falhou", whatsapp_status: "desligado", detail: "already_dispatched" };
+    }
+    doEmail = true;
+    doWa = waEnabled;
   }
 
   // O e-mail informado no formulário (opportunities.email) tem sempre prioridade.
@@ -121,12 +140,20 @@ export async function dispatchQuote(
     }
   }
 
+  // --- Webhook ChatGuru: em paralelo ao e-mail, uma única tentativa ---
+  const baseUrl = (opts.baseUrl || process.env.PUBLIC_APP_URL || "https://kids-point-hub.lovable.app").replace(/\/$/, "");
+  const waPromise = doWa
+    ? sendChatguruWebhook(opp.id, baseUrl).catch((e) => { console.error("[dispatch] chatguru", e); return "falhou" as const; })
+    : null;
+
   // --- E-mail (Resend) ---
   const resendKey = process.env.RESEND_API_KEY;
   let emailStatus: DispatchResult["email_status"] = "pendente";
   let emailDetail: string | null = null;
 
-  if (!recipientEmail) {
+  if (!doEmail) {
+    emailStatus = "dedupado";
+  } else if (!recipientEmail) {
     emailStatus = "sem_email";
   } else if (!resendKey) {
     emailStatus = "falhou";
@@ -203,7 +230,7 @@ export async function dispatchQuote(
     }
   }
 
-  await supabaseAdmin.from("quote_sends").insert({
+  if (doEmail) await supabaseAdmin.from("quote_sends").insert({
     tenant_id: opp.tenant_id,
     opportunity_id: opp.id,
     channel: "email",
@@ -213,22 +240,25 @@ export async function dispatchQuote(
     sent_at: emailStatus === "enviado" ? new Date().toISOString() : null,
   } as never);
 
-  // --- WhatsApp (preparado, sem chamada externa) ---
-  const waEnabled = form?.whatsapp_enabled === true;
-  const waStatus: DispatchResult["whatsapp_status"] = waEnabled ? "pendente" : "desligado";
-  await supabaseAdmin.from("quote_sends").insert({
-    tenant_id: opp.tenant_id,
-    opportunity_id: opp.id,
-    channel: "whatsapp",
-    status: waStatus,
-    recipient: client?.phone_normalized ?? null,
-    provider_response: waEnabled
-      ? "envio de WhatsApp ainda não conectado a provedor"
-      : null,
-  } as never);
+  // --- WhatsApp ---
+  let waStatus: DispatchResult["whatsapp_status"] = "desligado";
+  if (waPromise) {
+    waStatus = await waPromise;
+  } else if (!opts.force) {
+    await supabaseAdmin.from("quote_sends").insert({
+      tenant_id: opp.tenant_id,
+      opportunity_id: opp.id,
+      channel: "whatsapp",
+      status: "desligado",
+      recipient: client?.phone_normalized ?? null,
+      provider_response: null,
+    } as never);
+  } else {
+    waStatus = "nao_reenviado";
+  }
 
   return {
-    ok: emailStatus === "enviado" || emailStatus === "sem_email",
+    ok: doEmail ? emailStatus === "enviado" || emailStatus === "sem_email" : waStatus === "enviado",
     email_status: emailStatus,
     whatsapp_status: waStatus,
     detail: emailDetail ?? undefined,

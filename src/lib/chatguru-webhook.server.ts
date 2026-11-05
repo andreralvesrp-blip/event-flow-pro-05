@@ -98,7 +98,7 @@ export async function sendChatguruWebhook(opportunityId: string, baseUrl: string
     channel: "whatsapp",
     status,
     recipient: client?.phone_normalized ?? null,
-    provider_response: JSON.stringify({ resposta: response, erro: error, enviado: payload }),
+    provider_response: JSON.stringify({ resposta: response, erro: error, enviado: payload && { ...payload, link_datas: payload.link_datas ? "(link pessoal gerado)" : null } }),
     sent_at: status === "enviado" ? new Date().toISOString() : null,
   } as never);
   if (logErr) console.error("[chatguru] log error", logErr.message);

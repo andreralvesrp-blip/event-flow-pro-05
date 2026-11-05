@@ -435,7 +435,7 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
             }
           } else {
             try {
-              const result = await dispatchQuote(opp.id);
+              const result = await dispatchQuote(opp.id, { baseUrl: request.headers.get("origin") || undefined });
               dispatch = result.email_status;
             } catch (e) {
               dispatch = "error";
