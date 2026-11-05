@@ -60,7 +60,7 @@ export async function handlePersonalDates(request: Request) {
       const status: Availability = slots.every(s => turns[s] === 'disponivel') ? 'disponivel' : slots.some(s => turns[s] === 'interesse') ? 'interesse' : 'ocupado';
       const pool = [...buildOptions(requested, origin, calendars, holidays, today, 'all', op.desired_slot as Slot | null), ...requestedOptions];
       const legal = slots.every(s => pool.some(o => o.house === input.house && o.date === input.date && o.slot === s));
-      if (!legal || (input.action === 'escolheu_data' && status !== 'disponivel') || (input.action === 'entrou_fila' && (input.date !== requested || input.house !== origin || status !== 'interesse'))) return respond({ error: 'Esta opção mudou. Vamos confirmar com a equipe.' }, 409);
+       if (!legal || (input.action === 'escolheu_data' && status !== 'disponivel') || (input.action === 'entrou_fila' && status !== 'interesse')) return respond({ error: 'Esta opção mudou. Vamos confirmar com a equipe.' }, 409);
       await record(input.action, input.house, input.date, input.slot);
       if (input.house !== origin && input.action === 'escolheu_data') await record('mudou_casa', input.house, input.date, input.slot);
       if (input.action !== 'viu_opcao') return respond({ ok: true, url: whatsappUrl(firstName, input.house, input.date, input.slot, input.action === 'entrou_fila') });
