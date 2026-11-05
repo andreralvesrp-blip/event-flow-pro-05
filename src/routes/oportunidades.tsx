@@ -105,6 +105,7 @@ type Opportunity = {
   form_slug: string | null;
   cliente_contactado: boolean;
   email: string | null;
+  contact_name?: string | null;
   client?: {
     id: string;
     full_name: string;
@@ -136,6 +137,29 @@ const SEND_STATUS_LABELS: Record<QuoteSend["status"], string> = {
 
 type FormLite = { slug: string; name: string; flow_version?: string | null };
 type DateInteraction = { opportunity_id: string; action: string; house: string | null; party_date: string | null; slot: string | null; created_at: string };
+
+/** Nome do pedido: o digitado no formulário (contact_name) quando existir; senão, o do cadastro. */
+function displayName(o: { contact_name?: string | null; client?: { full_name: string } | null } | null | undefined): string {
+  return o?.contact_name?.trim() || o?.client?.full_name || "";
+}
+const HOUSE_LABEL = (h: string | null) => (h === 'vila' ? 'Vila Mariana' : h === 'bosque' ? 'Bosque da Saúde' : '—');
+const SLOT_TXT = (s: string | null) => (s === 'almoco' ? 'almoço' : s === 'jantar' ? 'jantar' : s === 'ambos' ? 'almoço ou jantar' : s ?? '');
+const ddmm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+/** Linha curta do Kanban com a ação mais relevante e recente da página de datas. */
+function datesSummary(list: DateInteraction[]): string | null {
+  if (!list.length) return null;
+  const latest = (a: string) => list.filter(i => i.action === a).sort((x, y) => y.created_at.localeCompare(x.created_at))[0];
+  const q = latest('entrou_fila');
+  if (q) return `Entrou na fila${q.party_date ? ` ${ddmm(q.party_date)}` : ''}${q.slot ? `, ${SLOT_TXT(q.slot)}` : ''}`;
+  const c = latest('escolheu_data');
+  if (c) return `Escolheu${c.party_date ? ` ${ddmm(c.party_date)}` : ''}${c.slot ? `, ${SLOT_TXT(c.slot)}` : ''}`;
+  const t = latest('falou_equipe');
+  if (t) return 'Chamou a equipe no WhatsApp';
+  const o = latest('abriu');
+  const n = list.filter(i => i.action === 'abriu').length;
+  if (o) return `Abriu a página de datas${n > 1 ? ` ${n}x` : ''}`;
+  return null;
+}
 
 type Visit = {
   id: string;
@@ -291,7 +315,7 @@ function buildOpportunitiesCsv(rows: Opportunity[], sendsByOp: Map<string, Quote
     const sends = sendsByOp.get(o.id) ?? [];
     lines.push(
       csvRow([
-        o.client?.full_name ?? "",
+        displayName(o),
         o.client?.phone ?? "",
         o.client?.phone_normalized ?? "",
         o.email || o.client?.email || "",
@@ -560,7 +584,7 @@ function OportunidadesPage() {
           icon={<Clock className="w-4 h-4 text-amber-600" />}
           items={actions.conversasParadas.map((o) => ({
             id: o.id,
-            primary: o.client?.full_name ?? "—",
+            primary: displayName(o) || "—",
             secondary: `parado há ${daysSince(o.stage_changed_at)}d`,
           }))}
           onClick={openOp}
@@ -573,7 +597,7 @@ function OportunidadesPage() {
             const o = (ops ?? []).find((x) => x.id === v.opportunity_id);
             return {
               id: v.opportunity_id,
-              primary: o?.client?.full_name ?? "—",
+              primary: displayName(o) || "—",
               secondary: fmtDateTime(v.scheduled_at),
             };
           })}
@@ -585,7 +609,7 @@ function OportunidadesPage() {
           icon={<AlertTriangle className="w-4 h-4 text-orange-600" />}
           items={actions.posVisita.map((o) => ({
             id: o.id,
-            primary: o.client?.full_name ?? "—",
+            primary: displayName(o) || "—",
             secondary: `há ${daysSince(o.stage_changed_at)}d sem decisão`,
           }))}
           onClick={openOp}
@@ -596,7 +620,7 @@ function OportunidadesPage() {
           icon={<CheckCircle2 className="w-4 h-4 text-red-600" />}
           items={actions.preReservaVencendo.map((o) => ({
             id: o.id,
-            primary: o.client?.full_name ?? "—",
+            primary: displayName(o) || "—",
             secondary: `expira ${fmtDateTime(o.pre_reserva_expires_at)}`,
           }))}
           onClick={openOp}
@@ -685,6 +709,7 @@ function OportunidadesPage() {
               userId={user?.id ?? null}
               formLabel={formLabel}
               sends={sendsByOp.get(selected.id) ?? []}
+              dateInteractions={dateInteractions.filter(i => i.opportunity_id === selected.id)}
               accessToken={session?.access_token ?? null}
               onChanged={loadAll}
             />
@@ -789,7 +814,7 @@ function OpCard({
         <CheckCircle2 className="h-4 w-4" strokeWidth={3} />
       </button>
       <div className="text-sm font-medium text-slate-900 truncate pr-8">
-        {op.client?.full_name ?? "—"}
+        {displayName(op) || "—"}
       </div>
       {op.client?.phone && (
         <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-600">
@@ -847,11 +872,8 @@ function OpCard({
         </Badge>
         <span className="text-[10px] text-slate-400 shrink-0">parado há {parado}d</span>
       </div>
-      {dateInteractions.length > 0 && <div className="border-t border-border mt-2 pt-2 text-xs text-muted-foreground space-y-1">
-        <p>Datas: {dateInteractions.filter(i => i.action === 'abriu').length} abertura(s) · {dateInteractions.filter(i => i.action === 'viu_opcao').length} opção(ões) vista(s)</p>
-        {dateInteractions.filter(i => ['escolheu_data','entrou_fila','mudou_casa','falou_equipe'].includes(i.action)).map((i, index) => <p key={`${i.created_at}${index}`}>
-          {i.action === 'escolheu_data' ? 'Escolheu' : i.action === 'entrou_fila' ? 'Fila (não é reserva)' : i.action === 'mudou_casa' ? 'Casa escolhida' : 'Falou com a equipe'}: {i.house === 'vila' ? 'Vila Mariana' : i.house === 'bosque' ? 'Bosque da Saúde' : '—'}{i.party_date ? ` · ${fmtDate(i.party_date)}` : ''}{i.slot ? ` · ${i.slot === 'almoco' ? 'almoço' : i.slot === 'jantar' ? 'jantar' : i.slot === 'ambos' ? 'almoço ou jantar' : i.slot}` : ''}
-        </p>)}
+      {datesSummary(dateInteractions) && <div className="border-t border-border mt-2 pt-1.5 text-xs text-muted-foreground break-words" title={datesSummary(dateInteractions) ?? ''}>
+        {datesSummary(dateInteractions)}
       </div>}
     </div>
   );
@@ -1196,10 +1218,12 @@ function OpDetail({
   userId,
   formLabel,
   sends,
+  dateInteractions,
   accessToken,
   onChanged,
 }: {
   op: Opportunity;
+  dateInteractions: DateInteraction[];
   visits: Visit[];
   tenantId: string | null;
   userId: string | null;
@@ -1343,7 +1367,7 @@ function OpDetail({
     <>
       <SheetHeader>
         <SheetTitle>
-          {op.client?.full_name ?? "—"}{" "}
+          {displayName(op) || "—"}{" "}
           <Badge className="ml-2">{STAGE_LABELS[op.stage]}</Badge>
         </SheetTitle>
       </SheetHeader>
@@ -1411,6 +1435,9 @@ function OpDetail({
             {op.client?.phone ?? "—"} · {op.email || op.client?.email || "—"}
           </div>
         </div>
+
+        {/* Página de datas */}
+        <DatesSection list={dateInteractions} />
 
         {/* Envios de orçamento */}
         {sends.length > 0 && (
@@ -1580,5 +1607,25 @@ function OpDetail({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function DatesSection({ list }: { list: DateInteraction[] }) {
+  const opens = list.filter(i => i.action === 'abriu').sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const byAction = (a: string) => list.filter(i => i.action === a).sort((x, y) => y.created_at.localeCompare(x.created_at));
+  const chosen = byAction('escolheu_data'), queued = byAction('entrou_fila'), moved = byAction('mudou_casa');
+  const line = (i: DateInteraction) => `${i.party_date ? fmtDate(i.party_date) : '—'}${i.slot ? ` · ${SLOT_TXT(i.slot)}` : ''} · ${HOUSE_LABEL(i.house)} (${fmtDateTime(i.created_at)})`;
+  return (
+    <div className="border-t pt-3">
+      <div className="text-sm font-semibold mb-2">Página de datas</div>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div><div className="text-xs text-muted-foreground">Abriu?</div><div>{opens.length ? 'Sim' : 'Não'}</div></div>
+        <div><div className="text-xs text-muted-foreground">Vezes que abriu</div><div>{opens.length}</div></div>
+        <div className="col-span-2"><div className="text-xs text-muted-foreground">Última abertura</div><div>{opens[0] ? fmtDateTime(opens[0].created_at) : '—'}</div></div>
+        <div className="col-span-2"><div className="text-xs text-muted-foreground">Datas escolhidas</div>{chosen.length ? chosen.map((i, k) => <div key={k}>{line(i)}</div>) : <div>—</div>}</div>
+        <div className="col-span-2"><div className="text-xs text-muted-foreground">Entrada na fila (não é reserva)</div>{queued.length ? queued.map((i, k) => <div key={k}>{line(i)}</div>) : <div>—</div>}</div>
+        <div className="col-span-2"><div className="text-xs text-muted-foreground">Mudança de unidade</div>{moved.length ? moved.map((i, k) => <div key={k}>Para {HOUSE_LABEL(i.house)} ({fmtDateTime(i.created_at)})</div>) : <div>—</div>}</div>
+      </div>
+    </div>
   );
 }
