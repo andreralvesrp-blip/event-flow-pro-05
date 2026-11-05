@@ -55,11 +55,14 @@ export async function handlePersonalDates(request: Request) {
       return respond({ ok: true, url: whatsappUrl(firstName, house, date, input.slot) });
     }
     if (!requested || requested > horizon(today)) return respond({ ...base, state: 'unopened', requested: [], options: [] });
-    const calendars = await loadCalendars(db, link.tenant_id, today);
-    const { data: holidayRows, error: holidayError } = await db.from('date_holidays').select('holiday_date').eq('tenant_id', link.tenant_id);
+    // Agendas, feriados e recessos em paralelo para reduzir a espera (ex.: "Entrar na fila").
+    const [calendars, { data: holidayRows, error: holidayError }, { data: closureRows, error: closureError }] = await Promise.all([
+      loadCalendars(db, link.tenant_id, today),
+      db.from('date_holidays').select('holiday_date').eq('tenant_id', link.tenant_id),
+      db.from('date_closures').select('start_date,end_date,name').eq('tenant_id', link.tenant_id),
+    ]);
     if (holidayError) throw new Error('Falha ao ler feriados');
     const holidays = (holidayRows ?? []).map(h => h.holiday_date);
-    const { data: closureRows, error: closureError } = await db.from('date_closures').select('start_date,end_date,name').eq('tenant_id', link.tenant_id);
     if (closureError) throw new Error('Falha ao ler períodos sem atendimento');
     const closures: Closure[] = closureRows ?? [];
     const closure = closureFor(requested, closures);
