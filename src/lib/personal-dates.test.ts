@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { availability, priceFor, horizon, inWindow, buildOptions, isAllowedForm, whatsappUrl, type CalendarEvent, type CalendarSet } from './personal-dates';
+import { availability, priceFor, horizon, inWindow, buildOptions, isAllowedForm, whatsappUrl, orderDaySlots, type CalendarEvent, type CalendarSet } from './personal-dates';
 const event = (start: string, end: string): CalendarEvent => ({ start: { dateTime: `2027-01-23T${start}:00-03:00` }, end: { dateTime: `2027-01-23T${end}:00-03:00` } });
 const empty: CalendarSet = { bosque: { closed: [], interest: [] }, vila: { closed: [], interest: [] } };
 describe('Turnos', () => {
@@ -25,6 +25,7 @@ describe('Preços', () => {
   it('feriado sábado mantém 11030', () => expect(priceFor('2027-05-01','jantar',['2027-05-01'])).toBe(11030));
 });
 describe('Sugestões e segurança', () => {
+  it('turno disponível vem antes da pré-reserva no mesmo dia', () => { const options = buildOptions('2027-01-23','bosque',{...empty,bosque:{closed:[],interest:[event('12:00','14:00')]}},[],'2026-11-05').filter(o => o.house === 'bosque' && o.date === '2027-01-23'); expect(orderDaySlots(options).map(o => `${o.slot}:${o.status}`)).toEqual(['jantar:disponivel','almoco:interesse']); });
   it('limite de dez meses', () => expect(horizon('2026-11-05')).toBe('2027-09-05'));
   it('exclui hoje e passado', () => { expect(inWindow('2026-11-05','2026-11-05')).toBe(false); expect(inWindow('2026-11-04','2026-11-05')).toBe(false); });
   it('exclui além de dez meses', () => expect(inWindow('2027-09-06','2026-11-05')).toBe(false));

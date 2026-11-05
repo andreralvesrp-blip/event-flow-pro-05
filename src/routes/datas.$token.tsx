@@ -3,7 +3,7 @@ import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { getPersonalDateView, type PersonalDateView } from '@/lib/personal-dates-view.functions';
-import { whatsappUrl, type House, type Option, type Slot, type Turno } from '@/lib/personal-dates';
+import { orderDaySlots, whatsappUrl, type House, type Option, type Slot, type Turno } from '@/lib/personal-dates';
 import pageCss from '@/styles/datas-kids-point.css?url';
 
 const options = (token: string) => queryOptions({ queryKey: ['personal-dates', token], queryFn: () => getPersonalDateView({ data: { token } }), staleTime: 0, retry: false });
@@ -85,7 +85,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
   const pageOf = (h: House, page: number) => {
     const list = listFor(h);
     const days = [...new Set(list.map(o => o.date))];
-    return { days, shown: days.slice(page * P, page * P + P).map(d => ({ date: d, slots: list.filter(o => o.date === d).sort((a, b) => Number(a.status === 'interesse') - Number(b.status === 'interesse')) })) };
+    return { days, shown: days.slice(page * P, page * P + P).map(d => ({ date: d, slots: orderDaySlots(list.filter(o => o.date === d)) })) };
   };
 
   // Registra "viu_opcao" para as opções visíveis na tela atual.
