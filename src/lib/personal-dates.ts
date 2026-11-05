@@ -89,19 +89,39 @@ export function buildOptions(requested: string, origin: House, calendars: Calend
       if (w >= 1 && w <= 4) push(dayString(d), [origin, other], undefined, delta);
     }
   } else {
+    // Níveis em sequência; dentro do nível, da data mais próxima da pedida para a
+    // mais distante e, na mesma distância, a anterior primeiro. Períodos sem
+    // atendimento são pulados e a busca continua antes e depois deles.
     const saturday = addDays(base, weekday === 0 ? -1 : weekday === 5 ? 1 : weekday === 6 ? 0 : (6 - weekday));
-    const inRecess = Boolean(closureFor(requested, closures));
-    for (const d of [saturday, addDays(saturday, 1)]) if (dayString(d) !== requested) { push(dayString(d), [origin, other], undefined, 1); if (inRecess) push(dayString(d), [origin, other], undefined, -1); }
-    for (let n = 1; n <= 2; n++) for (const side of [-1, 1]) {
-      const sat = addDays(saturday, side * n * 7);
-      push(dayString(sat), [origin, other], undefined, side);
-      push(dayString(addDays(sat, 1)), [origin, other], ['almoco'], side);
+    const dist = (d: Date) => Math.abs(differenceInCalendarDays(d, base));
+    const byNear = (a: { d: Date }, b: { d: Date }) => dist(a.d) - dist(b.d) || a.d.getTime() - b.d.getTime();
+    const open = (d: Date) => !closureFor(dayString(d), closures);
+    const level = (items: Array<{ d: Date; slots: Slot[] }>) => {
+      for (const it of items.sort(byNear)) if (open(it.d)) push(dayString(it.d), [origin, other], it.slots);
+    };
+    const nobleOf = (sat: Date) => [{ d: sat, slots: ['almoco', 'jantar'] as Slot[] }, { d: addDays(sat, 1), slots: ['almoco'] as Slot[] }];
+    // 1. Outro horário nobre do mesmo fim de semana.
+    level(nobleOf(saturday));
+    // 2. Nobres dos fins de semana anterior e seguinte, até 2 abertos para cada lado.
+    const weekends: Array<{ d: Date; slots: Slot[] }> = [];
+    for (const side of [-1, 1]) {
+      let found = 0;
+      for (let n = 1; n <= 12 && found < 2; n++) {
+        const sat = addDays(saturday, side * n * 7);
+        const items = nobleOf(sat).filter(it => open(it.d));
+        if (!items.length) continue;
+        weekends.push(...items); found++;
+      }
     }
-    for (let n = 0; n <= 21; n++) for (const side of n === 0 ? [1] : [-1, 1]) {
-      const d = addDays(base, side * n), w = getDay(d);
-      if (w === 5) push(dayString(d), [origin, other], undefined, side);
-      if (w === 0) push(dayString(d), [origin, other], ['jantar'], side);
+    level(weekends);
+    // 3. Sexta e domingo jantar, do mais próximo para o mais distante.
+    const inter: Array<{ d: Date; slots: Slot[] }> = [];
+    for (let n = -42; n <= 42; n++) {
+      const d = addDays(base, n), w = getDay(d);
+      if (w === 5) inter.push({ d, slots: ['almoco', 'jantar'] });
+      if (w === 0) inter.push({ d, slots: ['jantar'] });
     }
+    level(inter);
   }
   const seen = new Set<string>();
   const options: Option[] = [];
