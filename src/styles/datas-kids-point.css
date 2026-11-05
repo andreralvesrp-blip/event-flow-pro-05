@@ -133,3 +133,5 @@
 .kpd{margin:0;min-height:100dvh}
 .kpd ol{list-style:decimal}
 .kpd .app{min-height:100dvh}
+/* Botões desativados: fundo cinza, texto acinzentado, sem aparência de clicável. */
+.kpd .btn:disabled,.kpd .btn.p:disabled,.kpd .btn.s:disabled,.kpd .btn.w:disabled{background:#e6e9ea;color:#667;border-color:#e6e9ea;box-shadow:none;cursor:default}

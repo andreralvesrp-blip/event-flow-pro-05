@@ -850,7 +850,7 @@ function OpCard({
       {dateInteractions.length > 0 && <div className="border-t border-border mt-2 pt-2 text-xs text-muted-foreground space-y-1">
         <p>Datas: {dateInteractions.filter(i => i.action === 'abriu').length} abertura(s) · {dateInteractions.filter(i => i.action === 'viu_opcao').length} opção(ões) vista(s)</p>
         {dateInteractions.filter(i => ['escolheu_data','entrou_fila','mudou_casa','falou_equipe'].includes(i.action)).map((i, index) => <p key={`${i.created_at}${index}`}>
-          {i.action === 'escolheu_data' ? 'Escolheu' : i.action === 'entrou_fila' ? 'Fila (não é reserva)' : i.action === 'mudou_casa' ? 'Casa escolhida' : 'Falou com a equipe'}: {i.house === 'vila' ? 'Vila Mariana' : i.house === 'bosque' ? 'Bosque da Saúde' : '—'}{i.party_date ? ` · ${fmtDate(i.party_date)}` : ''}{i.slot ? ` · ${i.slot === 'almoco' ? 'almoço' : 'jantar'}` : ''}
+          {i.action === 'escolheu_data' ? 'Escolheu' : i.action === 'entrou_fila' ? 'Fila (não é reserva)' : i.action === 'mudou_casa' ? 'Casa escolhida' : 'Falou com a equipe'}: {i.house === 'vila' ? 'Vila Mariana' : i.house === 'bosque' ? 'Bosque da Saúde' : '—'}{i.party_date ? ` · ${fmtDate(i.party_date)}` : ''}{i.slot ? ` · ${i.slot === 'almoco' ? 'almoço' : i.slot === 'jantar' ? 'jantar' : i.slot === 'ambos' ? 'almoço ou jantar' : i.slot}` : ''}
         </p>)}
       </div>}
     </div>

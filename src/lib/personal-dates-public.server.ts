@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { availability, buildOptions, inWindow, isAllowedForm, priceFor, saoPauloToday, horizon, whatsappUrl, type House, type Slot } from './personal-dates';
+import { availability, buildOptions, inWindow, isAllowedForm, priceFor, saoPauloToday, horizon, whatsappUrl, type Availability, type House, type Slot, type Turno } from './personal-dates';
 import { loadCalendars, tokenHash } from './personal-calendar.server';
 
 const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
-const inputSchema = z.object({ token: tokenSchema, mode: z.enum(['all','origin','other']).default('all'), action: z.enum(['abriu','viu_opcao','escolheu_data','entrou_fila','mudou_casa','falou_equipe']).optional(), house: z.enum(['bosque','vila']).optional(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), slot: z.enum(['almoco','jantar']).optional() });
+const inputSchema = z.object({ token: tokenSchema, mode: z.enum(['all','origin','other']).default('all'), action: z.enum(['abriu','viu_opcao','escolheu_data','entrou_fila','mudou_casa','falou_equipe']).optional(), house: z.enum(['bosque','vila']).optional(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), slot: z.enum(['almoco','jantar','ambos']).optional() });
 export async function handlePersonalDates(request: Request) {
   const headers = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow, noarchive', 'Referrer-Policy': 'no-referrer' };
   const respond = (body: unknown, status = 200) => Response.json(body, { status, headers });
@@ -29,7 +29,7 @@ export async function handlePersonalDates(request: Request) {
   const today = saoPauloToday();
   const requested = op.desired_date;
   const base = { firstName, origin, requestedDate: requested && requested > today ? requested : null, noPrice: String(op.form_slug) === 'bs-kids-day', today, horizon: horizon(today) };
-  const record = async (action: NonNullable<typeof input.action>, house?: House, date?: string, slot?: Slot) => {
+  const record = async (action: NonNullable<typeof input.action>, house?: House, date?: string, slot?: Turno) => {
     const { error } = await db.from('date_interactions').insert({ tenant_id: link.tenant_id, opportunity_id: op.id, link_id: link.id, action, house: house ?? null, party_date: date ?? null, slot: slot ?? null });
     if (error) throw new Error('Falha ao registrar interação');
   };
@@ -52,8 +52,14 @@ export async function handlePersonalDates(request: Request) {
     if (input.action === 'mudou_casa') await record('mudou_casa', input.mode === 'other' ? origin === 'bosque' ? 'vila' : 'bosque' : origin);
     if (input.action && ['viu_opcao','escolheu_data','entrou_fila'].includes(input.action)) {
       if (!input.house || !input.date || !input.slot || !inWindow(input.date, today)) return respond({ error: 'Opção indisponível' }, 409);
-      const status = availability(input.date, calendars[input.house].closed, calendars[input.house].interest)[input.slot];
-      const legal = [...buildOptions(requested, origin, calendars, holidays, today, 'all', op.desired_slot as Slot | null), ...requestedOptions].some(o => o.house === input.house && o.date === input.date && o.slot === input.slot);
+      // "almoço ou jantar" só existe como escolha de data; fila e visualização são por turno.
+      if (input.slot === 'ambos' && input.action !== 'escolheu_data') return respond({ error: 'Opção indisponível' }, 409);
+      const turns = availability(input.date, calendars[input.house].closed, calendars[input.house].interest);
+      // "ambos" = almoço ou jantar: só vale quando os dois turnos estão livres na mesma data e casa.
+      const slots: Slot[] = input.slot === 'ambos' ? ['almoco', 'jantar'] : [input.slot];
+      const status: Availability = slots.every(s => turns[s] === 'disponivel') ? 'disponivel' : slots.some(s => turns[s] === 'interesse') ? 'interesse' : 'ocupado';
+      const pool = [...buildOptions(requested, origin, calendars, holidays, today, 'all', op.desired_slot as Slot | null), ...requestedOptions];
+      const legal = slots.every(s => pool.some(o => o.house === input.house && o.date === input.date && o.slot === s));
       if (!legal || (input.action === 'escolheu_data' && status !== 'disponivel') || (input.action === 'entrou_fila' && (input.date !== requested || input.house !== origin || status !== 'interesse'))) return respond({ error: 'Esta opção mudou. Vamos confirmar com a equipe.' }, 409);
       await record(input.action, input.house, input.date, input.slot);
       if (input.house !== origin && input.action === 'escolheu_data') await record('mudou_casa', input.house, input.date, input.slot);

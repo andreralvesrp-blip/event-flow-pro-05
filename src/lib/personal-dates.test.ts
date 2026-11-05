@@ -36,4 +36,5 @@ describe('Sugestões e segurança', () => {
   it('mais barato respeita pedido domingo jantar', () => expect(buildOptions('2027-01-24','bosque',empty,[],'2026-11-05','all','jantar').some(o => o.cheaper)).toBe(false));
   it('links somente formulário teste', () => { expect(isAllowedForm('bs-orcamento-teste')).toBe(true); expect(isAllowedForm('bs-kids-day')).toBe(false); expect(isAllowedForm('bs-landingprincipal')).toBe(false); });
   it('WhatsApp da casa escolhida', () => { expect(whatsappUrl('André','bosque')).toContain('5511914454455'); expect(whatsappUrl('André','vila')).toContain('5511937123020'); });
+  it('almoço ou jantar vem por extenso na mensagem', () => { const url = whatsappUrl('André','vila','2027-01-23','ambos'); expect(decodeURIComponent(url.slice(url.indexOf('text=') + 5))).toBe('Olá! Sou André. Quero falar sobre uma data: 23/01/2027, almoço ou jantar, Vila Mariana.'); });
 });
