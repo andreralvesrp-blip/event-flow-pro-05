@@ -541,7 +541,7 @@ function PublicForm() {
         @media (max-width: 640px) {
           .kp-page { background: white !important; }
           .kp-shell-wrap { padding: 0 !important; align-items: stretch !important; }
-          .kp-shell {
+          .kp-shell:not(.kp-vv) {
             max-width: none !important;
             width: 100% !important;
             height: 100vh !important;
@@ -554,12 +554,12 @@ function PublicForm() {
 
       <div className="flex-1 flex items-center justify-center p-4 kp-shell-wrap">
         <div
-          className="kp-shell w-full max-w-[480px] flex flex-col bg-white rounded-3xl overflow-hidden"
+          className={`kp-shell ${vv ? "kp-vv" : ""} w-full max-w-[480px] flex flex-col bg-white rounded-3xl overflow-hidden`}
           style={{
             boxShadow: "0 20px 60px -10px rgba(236, 72, 153, 0.25), 0 8px 24px -8px rgba(0,0,0,0.1)",
             height: "min(720px, calc(100vh - 32px))",
             ...(vv
-              ? { position: "fixed", left: 0, right: 0, top: vv.top, height: `${vv.h}px`, zIndex: 10 }
+              ? { position: "fixed", left: 0, right: 0, top: vv.top, height: `${vv.h}px`, zIndex: 10, maxWidth: "none", borderRadius: 0, boxShadow: "none" }
               : {}),
           }}
         >
@@ -736,7 +736,7 @@ function PublicForm() {
           ) : (
             <>
               {/* MESSAGES */}
-              <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5 space-y-3">
+              <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-5 space-y-3">
                 {messages.map((m, i) => (
                   <Bubble
                     key={i}
