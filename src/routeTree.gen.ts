@@ -22,6 +22,7 @@ import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as NpsRouteImport } from './routes/nps'
 import { Route as OportunidadesRouteImport } from './routes/oportunidades'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
+import { Route as ZzTmpDatasPreviewRouteImport } from './routes/zz-tmp-datas-preview'
 import { Route as AvaliarSlugRouteImport } from './routes/avaliar.$slug'
 import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
 import { Route as ConfiguracoesCalendarioRouteImport } from './routes/configuracoes.calendario'
@@ -100,6 +101,11 @@ const OportunidadesRoute = OportunidadesRouteImport.update({
 const WebhooksRoute = WebhooksRouteImport.update({
   id: '/webhooks',
   path: '/webhooks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZzTmpDatasPreviewRoute = ZzTmpDatasPreviewRouteImport.update({
+  id: '/zz-tmp-datas-preview',
+  path: '/zz-tmp-datas-preview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AvaliarSlugRoute = AvaliarSlugRouteImport.update({
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/nps': typeof NpsRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
+  '/zz-tmp-datas-preview': typeof ZzTmpDatasPreviewRoute
   '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/calendario': typeof ConfiguracoesCalendarioRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/nps': typeof NpsRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
+  '/zz-tmp-datas-preview': typeof ZzTmpDatasPreviewRoute
   '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/calendario': typeof ConfiguracoesCalendarioRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/nps': typeof NpsRoute
   '/oportunidades': typeof OportunidadesRoute
   '/webhooks': typeof WebhooksRoute
+  '/zz-tmp-datas-preview': typeof ZzTmpDatasPreviewRoute
   '/avaliar/$slug': typeof AvaliarSlugRoute
   '/configuracoes/calendario': typeof ConfiguracoesCalendarioRoute
   '/configuracoes/equipe': typeof ConfiguracoesEquipeRoute
@@ -279,6 +288,7 @@ export interface FileRouteTypes {
     | '/nps'
     | '/oportunidades'
     | '/webhooks'
+    | '/zz-tmp-datas-preview'
     | '/avaliar/$slug'
     | '/configuracoes/calendario'
     | '/configuracoes/equipe'
@@ -307,6 +317,7 @@ export interface FileRouteTypes {
     | '/nps'
     | '/oportunidades'
     | '/webhooks'
+    | '/zz-tmp-datas-preview'
     | '/avaliar/$slug'
     | '/configuracoes/calendario'
     | '/configuracoes/equipe'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/nps'
     | '/oportunidades'
     | '/webhooks'
+    | '/zz-tmp-datas-preview'
     | '/avaliar/$slug'
     | '/configuracoes/calendario'
     | '/configuracoes/equipe'
@@ -366,6 +378,7 @@ export interface RootRouteChildren {
   NpsRoute: typeof NpsRoute
   OportunidadesRoute: typeof OportunidadesRoute
   WebhooksRoute: typeof WebhooksRoute
+  ZzTmpDatasPreviewRoute: typeof ZzTmpDatasPreviewRoute
   AvaliarSlugRoute: typeof AvaliarSlugRoute
   DatasTokenRoute: typeof DatasTokenRoute
   FSlugRoute: typeof FSlugRoute
@@ -467,6 +480,13 @@ declare module '@tanstack/react-router' {
       path: '/webhooks'
       fullPath: '/webhooks'
       preLoaderRoute: typeof WebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zz-tmp-datas-preview': {
+      id: '/zz-tmp-datas-preview'
+      path: '/zz-tmp-datas-preview'
+      fullPath: '/zz-tmp-datas-preview'
+      preLoaderRoute: typeof ZzTmpDatasPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/avaliar/$slug': {
@@ -606,6 +626,7 @@ const rootRouteChildren: RootRouteChildren = {
   NpsRoute: NpsRoute,
   OportunidadesRoute: OportunidadesRoute,
   WebhooksRoute: WebhooksRoute,
+  ZzTmpDatasPreviewRoute: ZzTmpDatasPreviewRoute,
   AvaliarSlugRoute: AvaliarSlugRoute,
   DatasTokenRoute: DatasTokenRoute,
   FSlugRoute: FSlugRoute,
