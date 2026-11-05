@@ -4,7 +4,7 @@
 // Nunca importar em código de cliente.
 // Só origens deste projeto podem compor o link pessoal enviado à cliente.
 const ALLOWED_ORIGIN = /^https:\/\/(kids-point-hub\.lovable\.app|[a-z0-9-]*e25b8b15-a9da-421a-b551-371c2a0fbe15[a-z0-9.-]*\.(lovable\.app|lovableproject\.com))$/;
-import { CHATGURU_FORM, sendChatguruWebhook } from "./chatguru-webhook.server";
+import { CHATGURU_FORM, createPersonalLink, sendChatguruWebhook } from "./chatguru-webhook.server";
 
 export type DispatchResult = {
   ok: boolean;
@@ -144,8 +144,13 @@ export async function dispatchQuote(
 
   // --- Webhook ChatGuru: em paralelo ao e-mail, uma única tentativa ---
   const baseUrl = ((opts.baseUrl && ALLOWED_ORIGIN.test(opts.baseUrl) ? opts.baseUrl : "") || process.env.PUBLIC_APP_URL || "https://kids-point-hub.lovable.app").replace(/\/$/, "");
+  // Link pessoal de datas: um só por disparo, usado no botão do e-mail e no link_datas do Guru.
+  const { isAllowedForm } = await import("./personal-dates");
+  const personalLink = (doEmail || doWa) && isAllowedForm(opp.form_slug ?? null)
+    ? await createPersonalLink(opp.tenant_id, opp.id, baseUrl)
+    : null;
   const waPromise = doWa
-    ? sendChatguruWebhook(opp.id, baseUrl).catch((e) => { console.error("[dispatch] chatguru", e); return "falhou" as const; })
+    ? sendChatguruWebhook(opp.id, baseUrl, personalLink).catch((e) => { console.error("[dispatch] chatguru", e); return "falhou" as const; })
     : null;
 
   // --- E-mail (Resend) ---
@@ -193,7 +198,9 @@ export async function dispatchQuote(
     <p style="font-size:16px;line-height:1.6;">Oi, ${escapeHtml(nome)}! Tudo bem?</p>
     <p style="font-size:16px;line-height:1.6;">Recebemos seu pedido de orçamento para a festa de <strong>${escapeHtml(dateBR)}</strong>. Nosso cardápio e os valores estão no PDF anexo.</p>
     <p style="text-align:center;margin:28px 0;">
-      <a href="${waUrl}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:14px 28px;border-radius:12px;">Verificar disponibilidade de data</a>
+      ${personalLink
+        ? `<a href="${escapeHtml(personalLink)}" style="display:inline-block;background:#d9482b;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:14px 28px;border-radius:12px;">Ver datas disponíveis</a>`
+        : `<a href="${waUrl}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:14px 28px;border-radius:12px;">Verificar disponibilidade de data</a>`}
     </p>
     <p style="font-size:16px;line-height:1.6;">Qualquer dúvida, é só responder este e-mail ou chamar a gente no WhatsApp.</p>
     <p style="font-size:16px;line-height:1.6;margin-top:28px;">
