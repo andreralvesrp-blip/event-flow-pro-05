@@ -329,7 +329,7 @@ function buildOpportunitiesCsv(rows: Opportunity[], sendsByOp: Map<string, Quote
         o.celebrant_name ?? "",
         o.celebrant_age ?? "",
         o.stage,
-        o.created_at,
+        fmtDateTime(o.created_at),
       ]),
     );
   }
