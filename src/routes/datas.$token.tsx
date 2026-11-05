@@ -276,7 +276,7 @@ function RequestedLine({ option, noPrice, selected, onSelect, onQueue, busy }: {
   );
 }
 
-function SimpleMessage({ title, whatsapp = false, onTalk, busy = false, house }: { title: string; whatsapp?: boolean; onTalk?: () => void; busy?: boolean; house: House }) {
+function SimpleMessage({ title, whatsapp = false, onTalk, busy = false, house = 'bosque' }: { title: string; whatsapp?: boolean; onTalk?: () => void; busy?: boolean; house?: House }) {
   return (
     <section className="flex flex-1 flex-col">
       <h1 className="font-journey-display text-2xl font-semibold leading-tight">{title}</h1>
