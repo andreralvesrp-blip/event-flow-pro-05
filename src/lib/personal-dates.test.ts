@@ -45,4 +45,18 @@ describe('Sugestões e segurança', () => {
   it('recesso: pedido 26/12/2026 não oferece nenhuma data entre 21/12 e 05/01 e acha datas antes e depois', () => { const o = buildOptions('2026-12-26','bosque',empty,[],'2026-11-05','all',null,recesso); expect(o.some(x => inRecess(x.date))).toBe(false); expect(o.some(x => x.date < '2026-12-21')).toBe(true); expect(o.some(x => x.date > '2027-01-05')).toBe(true); });
   it('recesso: 05/01/2027 é bloqueado e 06/01/2027 volta ao normal', () => { expect(buildOptions('2027-01-05','vila',empty,[],'2026-11-05','all',null,recesso).some(x => inRecess(x.date))).toBe(false); expect(buildOptions('2027-01-06','vila',empty,[],'2026-11-05','all',null,recesso).filter(x => x.date === '2027-01-06')).toHaveLength(4); });
   it('recesso bloqueia mesmo com pré-reserva na agenda', () => { const cal = { ...empty, bosque: { closed: [], interest: [{start:{dateTime:'2026-12-19T12:00:00-03:00'},end:{dateTime:'2026-12-19T16:00:00-03:00'}}, {start:{dateTime:'2026-12-26T12:00:00-03:00'},end:{dateTime:'2026-12-26T16:00:00-03:00'}}] } }; expect(buildOptions('2026-12-19','bosque',cal,[],'2026-11-05','all',null,recesso).some(x => inRecess(x.date))).toBe(false); });
+});describe('Ordem das sugestões em data nobre', () => {
+  const seq = (req: string) => [...new Set(buildOptions(req,'bosque',empty,[],'2026-11-05').filter(o => o.house === 'bosque').map(o => `${o.date}:${o.slot}`))];
+  it('sábado: mesmo fim de semana, depois nobres ±1 e ±2 (anterior antes no empate), depois sexta/domingo jantar', () => {
+    expect(seq('2027-01-23').slice(0, 14)).toEqual([
+      '2027-01-23:almoco','2027-01-23:jantar','2027-01-24:almoco',
+      '2027-01-16:almoco','2027-01-16:jantar','2027-01-17:almoco',
+      '2027-01-30:almoco','2027-01-30:jantar','2027-01-31:almoco',
+      '2027-01-09:almoco','2027-01-09:jantar','2027-01-10:almoco',
+      '2027-02-06:almoco','2027-02-06:jantar',
+    ]);
+    const s = seq('2027-01-23');
+    expect(s.slice(s.indexOf('2027-02-07:almoco') + 1, s.indexOf('2027-02-07:almoco') + 4)).toEqual(['2027-01-22:almoco','2027-01-22:jantar','2027-01-24:jantar']);
+  });
+  it('domingo jantar (intermediário) começa pelos nobres do mesmo fim de semana', () => expect(seq('2027-01-24').slice(0, 4)).toEqual(['2027-01-24:almoco','2027-01-24:jantar','2027-01-23:almoco','2027-01-23:jantar']));
 });
