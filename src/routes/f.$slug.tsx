@@ -143,6 +143,33 @@ function PublicForm() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing, step]);
 
+  // Teclado no celular (só versão orcamento_automatico): a conversa ocupa a
+  // altura visível real (visualViewport) e fica fixa nela; mensagens rolam por dentro.
+  const [vv, setVv] = useState<{ h: number; top: number } | null>(null);
+  useEffect(() => {
+    if (cfg?.flow_version !== "orcamento_automatico") return;
+    const v = window.visualViewport;
+    if (!v) return;
+    const mq = window.matchMedia("(max-width: 640px)");
+    const update = () => {
+      if (!mq.matches) { setVv(null); return; }
+      setVv({ h: v.height, top: v.offsetTop });
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+      });
+    };
+    update();
+    v.addEventListener("resize", update);
+    v.addEventListener("scroll", update);
+    mq.addEventListener("change", update);
+    return () => {
+      v.removeEventListener("resize", update);
+      v.removeEventListener("scroll", update);
+      mq.removeEventListener("change", update);
+    };
+  }, [cfg?.flow_version]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -255,7 +282,7 @@ function PublicForm() {
     if (!isValidEmail(parentEmail)) { setFieldError("Informe um e-mail válido."); return; }
     setFieldError(null);
     pushUser(parentEmail.trim());
-    setStep("v2final");
+    await submitContact(e);
   }
 
   async function submitContact(e: React.FormEvent) {
@@ -395,7 +422,7 @@ function PublicForm() {
 
 
   function retry() {
-    setStep(isV2 ? "v2final" : "contact");
+    setStep(isV2 ? "v2email" : "contact");
     setErrorMsg(null);
   }
 
@@ -531,6 +558,9 @@ function PublicForm() {
           style={{
             boxShadow: "0 20px 60px -10px rgba(236, 72, 153, 0.25), 0 8px 24px -8px rgba(0,0,0,0.1)",
             height: "min(720px, calc(100vh - 32px))",
+            ...(vv
+              ? { position: "fixed", left: 0, right: 0, top: vv.top, height: `${vv.h}px`, zIndex: 10 }
+              : {}),
           }}
         >
           {/* HEADER */}
@@ -983,14 +1013,20 @@ function PublicForm() {
                   </form>
                 )}
                 {step === "v2email" && (
-                  <form onSubmit={submitV2Email} noValidate>
-                    <div className="flex gap-2">
-                      <input autoFocus type="email" className="f-input flex-1" placeholder="seu@email.com" value={parentEmail} onChange={(e) => { setParentEmail(e.target.value); setFieldError(null); }} />
-                      <button type="submit" className="f-btn-inline" disabled={typing}>Enviar</button>
-                    </div>
+                  <form onSubmit={submitV2Email} noValidate className="space-y-2">
+                    <input type="text" name="website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
+                    <input autoFocus type="email" inputMode="email" autoComplete="email" className="f-input" placeholder="seu@email.com" value={parentEmail} onChange={(e) => { setParentEmail(e.target.value); setFieldError(null); }} />
                     {fieldError && (
-                      <div role="alert" style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4, marginTop: 6 }}>{fieldError}</div>
+                      <div role="alert" style={{ fontSize: 12, color: "#DC2626", paddingLeft: 4 }}>{fieldError}</div>
                     )}
+                    <p style={{ fontSize: 11, color: "#94A3B8", textAlign: "center", lineHeight: 1.4, margin: 0 }}>
+                      Ao enviar, você concorda em receber este orçamento por WhatsApp e e-mail.
+                    </p>
+                    <label className="flex items-center gap-2 justify-center" style={{ fontSize: 12, color: "#64748B", cursor: "pointer" }}>
+                      <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} style={{ width: 15, height: 15, accentColor: "#F97316" }} />
+                      Quero receber novidades e ofertas da Kids Point.
+                    </label>
+                    <button type="submit" className="f-btn-primary f-btn-green" disabled={typing}>Receber orçamento</button>
                   </form>
                 )}
                 {step === "v2final" && (
