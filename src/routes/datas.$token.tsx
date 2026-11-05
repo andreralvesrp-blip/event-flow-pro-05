@@ -69,6 +69,8 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
   const openingRef = useRef(false);
   const [error, setError] = useState('');
   const seen = useRef(new Set<string>());
+  const [queuing, setQueuing] = useState<string | null>(null);
+  const qk = (o: Option) => `${o.house}:${o.date}:${o.slot}`;
 
   const go = (v: ViewName, patch: Partial<State> = {}) => { setHist(h => [...h, S]); setS({ ...S, ...patch, v, pick: null }); setError(''); window.scrollTo(0, 0); };
   const back = () => { const prev = hist[hist.length - 1]; if (!prev) return; setHist(h => h.slice(0, -1)); setS(prev); setError(''); window.scrollTo(0, 0); };
@@ -80,7 +82,15 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
     return result;
   }
 
-  useEffect(() => { if (!initial.error) void call({ action: 'abriu' }).catch(() => undefined); }, [token]);
+  // Uma abertura por carregamento da página (o servidor também ignora repetições em poucos segundos).
+  useEffect(() => {
+    if (initial.error) return;
+    const w = window as unknown as { __kpdOpened?: Set<string> };
+    w.__kpdOpened ??= new Set();
+    if (w.__kpdOpened.has(token)) return;
+    w.__kpdOpened.add(token);
+    void call({ action: 'abriu' }).catch(() => undefined);
+  }, [token]);
 
   const pageOf = (h: House, page: number) => {
     const list = listFor(h);
@@ -94,8 +104,13 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
     const visible: Option[] = S.v === 'res' ? requested : S.v === 'outra' ? otherRequested : S.v === 'lista' ? pageOf(S.casa, S.page).shown.flatMap(d => d.slots) : [];
     for (const option of visible) {
       const key = `${option.house}:${option.date}:${option.slot}`;
-      if (seen.current.has(key)) continue;
+      // No máximo uma vez por opção em cada sessão do navegador (sobrevive a recarregar a página).
+      const storeKey = `kpd-seen:${token}`;
+      let stored: string[] = [];
+      try { stored = JSON.parse(sessionStorage.getItem(storeKey) ?? '[]'); } catch { stored = []; }
+      if (seen.current.has(key) || stored.includes(key)) { seen.current.add(key); continue; }
       seen.current.add(key);
+      try { sessionStorage.setItem(storeKey, JSON.stringify([...stored, key])); } catch { /* sessão indisponível */ }
       void call({ action: 'viu_opcao', house: option.house, date: option.date, slot: option.slot }).catch(() => undefined);
     }
   }, [view, S.v, S.casa, S.page]);
@@ -111,13 +126,14 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
   }
 
   async function queue(option: Option) {
-    setBusy(true); setError('');
+    if (queuing) return;
+    setQueuing(qk(option)); setBusy(true); setError('');
     try {
       const result = await call({ action: 'entrou_fila', house: option.house, date: option.date, slot: option.slot });
       if (!result.url) throw new Error('Vamos confirmar com a equipe.');
       go('fim', { final: { option, turno: T(option.slot), slot: option.slot, price: option.price, url: result.url, fila: true } });
-    } catch (e) { setError(e instanceof Error ? e.message : 'Vamos confirmar com a equipe.'); }
-    finally { setBusy(false); }
+    } catch (e) { setError(e instanceof Error && e.message !== 'Failed to fetch' ? `${e.message} Toque de novo para tentar.` : 'Não conseguimos entrar na fila agora. Verifique a internet e toque de novo.'); }
+    finally { setBusy(false); setQueuing(null); }
   }
 
   function openWhatsapp(target: House, final?: Final) {
@@ -194,7 +210,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
                 <div key={o.slot} className="row int">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><b><TurnLabel slot={o.slot} /></b><span className="st int">Pré-reservado</span></div>
                   <p>Outra família está com este turno em pré-reserva. Se ela não confirmar, ele pode ficar com você.</p>
-                  <button type="button" className="btn s mini" disabled={busy} onClick={() => queue(o)}>Entrar na fila do {t(o.slot)}</button>
+                  <button type="button" className={`btn s mini${queuing === qk(o) ? ' queuing' : ''}`} disabled={busy} aria-busy={queuing === qk(o)} onClick={() => queue(o)}>{queuing === qk(o) ? 'Entrando na fila...' : `Entrar na fila do ${t(o.slot)}`}</button>
                 </div>
               );
               return (
@@ -310,7 +326,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
     ),
     f: (
       <>
-        <button type="button" className="btn p" disabled={!q || busy} onClick={() => q && (q.status === 'interesse' ? queue(q) : choose(q))}>{q ? `${q.status === 'interesse' ? 'Entrar na fila de' : 'Quero'} ${shortDate(q.date)}, ${t(q.slot)}` : 'Escolha uma data'}</button>
+        <button type="button" className={`btn p${q && queuing === qk(q) ? ' queuing' : ''}`} disabled={!q || busy} aria-busy={!!q && queuing === qk(q)} onClick={() => q && (q.status === 'interesse' ? queue(q) : choose(q))}>{q && queuing === qk(q) ? 'Entrando na fila...' : q ? `${q.status === 'interesse' ? 'Entrar na fila de' : 'Quero'} ${shortDate(q.date)}, ${t(q.slot)}` : 'Escolha uma data'}</button>
       </>
     ),
   });

@@ -159,3 +159,4 @@
 .kpd .chip.wide b{grid-column:1;grid-row:1}
 .kpd .chip.wide em{grid-column:1/-1}
 .kpd .chip .chip-price .amt{white-space:nowrap;font-size:inherit;color:inherit}
+.kpd .btn.queuing,.kpd .btn.queuing:disabled{background:var(--coral);color:#fff;border-color:var(--coral);cursor:progress}
