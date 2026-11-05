@@ -2,6 +2,8 @@
 // Chamado pela rota pública lead-intake-v2 (após salvar o lead) e pela rota
 // quote-dispatch (botão "Reenviar" do CRM, com JWT de usuário).
 // Nunca importar em código de cliente.
+// Só origens deste projeto podem compor o link pessoal enviado à cliente.
+const ALLOWED_ORIGIN = /^https:\/\/(kids-point-hub\.lovable\.app|[a-z0-9-]*e25b8b15-a9da-421a-b551-371c2a0fbe15[a-z0-9.-]*\.(lovable\.app|lovableproject\.com))$/;
 import { CHATGURU_FORM, sendChatguruWebhook } from "./chatguru-webhook.server";
 
 export type DispatchResult = {
@@ -141,7 +143,7 @@ export async function dispatchQuote(
   }
 
   // --- Webhook ChatGuru: em paralelo ao e-mail, uma única tentativa ---
-  const baseUrl = (opts.baseUrl || process.env.PUBLIC_APP_URL || "https://kids-point-hub.lovable.app").replace(/\/$/, "");
+  const baseUrl = ((opts.baseUrl && ALLOWED_ORIGIN.test(opts.baseUrl) ? opts.baseUrl : "") || process.env.PUBLIC_APP_URL || "https://kids-point-hub.lovable.app").replace(/\/$/, "");
   const waPromise = doWa
     ? sendChatguruWebhook(opp.id, baseUrl).catch((e) => { console.error("[dispatch] chatguru", e); return "falhou" as const; })
     : null;

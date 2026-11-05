@@ -79,7 +79,7 @@ export const Route = createFileRoute("/api/public/quote-dispatch")({
             }
           }
 
-          const result = await dispatchQuote(opp.id, { force: parsed.data.mode === "resend" });
+          const result = await dispatchQuote(opp.id, { force: parsed.data.mode === "resend", baseUrl: new URL(request.url).origin });
           return json(result, result.ok ? 200 : 409);
         } catch (err) {
           console.error("[quote-dispatch] server_error", err);
