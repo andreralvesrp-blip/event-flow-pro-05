@@ -20,8 +20,9 @@ export const Route = createFileRoute('/datas/$token')({
   component: PersonalDatesPage,
 });
 
-const dateLabel = (date: string) => new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }).format(new Date(`${date}T12:00:00-03:00`));
-const shortDate = (date: string) => new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(new Date(`${date}T12:00:00-03:00`));
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const dateLabel = (date: string) => cap(new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }).format(new Date(`${date}T12:00:00-03:00`)));
+const shortDate = (date: string) => cap(new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(new Date(`${date}T12:00:00-03:00`)));
 const priceLabel = (price: number) => price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 const slotLabel = (slot: Slot) => (slot === 'almoco' ? 'Almoço' : 'Jantar');
 
@@ -137,7 +138,7 @@ function PersonalDatesPage() {
           <h1 className="font-journey-display text-2xl font-semibold leading-tight">
             {requestedAvailable.length > 0 ? `${view.firstName}, temos uma opção nessa data` : 'Sua data na Kids Point'}
           </h1>
-          <p className="mt-2 text-sm capitalize text-journey-ink/70">{requestedDate ? dateLabel(requestedDate) : ''} · {HOUSES[house].name}</p>
+          <p className="mt-2 text-sm text-journey-ink/70">{requestedDate ? dateLabel(requestedDate) : ''} · {HOUSES[house].name}</p>
           <div className="mt-5 flex flex-col gap-3">
             {requested.map(option => (
               <RequestedLine key={option.slot} option={option} noPrice={view.noPrice} selected={selectedSlot === option.slot} onSelect={() => setSelectedSlot(option.slot)} onQueue={() => openWhatsApp('entrou_fila', house, option)} busy={busy} />
@@ -163,7 +164,7 @@ function PersonalDatesPage() {
           <article className="mt-5 rounded-2xl border-2 border-journey-mint-border bg-journey-mint p-5">
             <p className="text-lg font-bold">{HOUSES[otherHouse].name}</p>
             <p className="mt-1 flex items-center gap-1 text-sm text-journey-ink/70"><MapPin className="size-3.5 shrink-0" />{HOUSES[otherHouse].address}</p>
-            <p className="mt-3 text-sm font-semibold capitalize">{requestedDate ? dateLabel(requestedDate) : ''}</p>
+            <p className="mt-3 text-sm font-semibold">{requestedDate ? dateLabel(requestedDate) : ''}</p>
             <div className="mt-2 flex flex-col gap-1">
               {otherRequested.map(o => (
                 <p key={o.slot} className="flex items-center gap-2 text-sm">
@@ -194,7 +195,7 @@ function PersonalDatesPage() {
               return (
                 <button key={`${option.house}${option.date}${option.slot}`} type="button" onClick={() => setSelectedNearby(index)} className={`flex min-h-11 items-center gap-3 rounded-xl border px-4 py-3 text-left ${selected ? 'border-journey-coral bg-journey-mint' : alternate ? 'border-journey-mint-border bg-journey-mint/50' : 'border-journey-ink/15 bg-card'}`}>
                   <span className="flex-1">
-                    <span className="block text-sm font-bold capitalize">{shortDate(option.date)} · {slotLabel(option.slot)}</span>
+                    <span className="block text-sm font-bold">{shortDate(option.date)} · {slotLabel(option.slot)}</span>
                     {alternate && <span className="block text-xs font-semibold text-journey-ink/70">{HOUSES[option.house].name}</span>}
                   </span>
                   {!view.noPrice && <span className="text-sm font-bold">{priceLabel(option.price)}</span>}
@@ -223,7 +224,7 @@ function PersonalDatesPage() {
         <section className="flex flex-1 flex-col">
           <h1 className="font-journey-display text-2xl font-semibold leading-tight">Boa escolha, {view.firstName}!</h1>
           <article className="mt-5 rounded-2xl border border-journey-ink/15 bg-card p-5">
-            <p className="text-lg font-bold capitalize">{dateLabel(chosen.option.date)}</p>
+            <p className="text-lg font-bold">{dateLabel(chosen.option.date)}</p>
             <p className="mt-1 flex items-center gap-2 text-sm font-semibold">{chosen.option.slot === 'almoco' ? <Sun className="size-4" /> : <Moon className="size-4" />}{slotLabel(chosen.option.slot)}</p>
             <p className="mt-3 text-sm font-bold">{HOUSES[chosen.option.house].name}</p>
             <p className="mt-1 flex items-center gap-1 text-sm text-journey-ink/70"><MapPin className="size-3.5 shrink-0" />{HOUSES[chosen.option.house].address}</p>
