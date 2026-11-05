@@ -43,7 +43,7 @@ export async function handlePersonalDates(request: Request) {
       return respond({ ok: true, url: whatsappUrl(firstName, house, date, input.slot) });
     }
     if (!requested || requested > horizon(today)) return respond({ ...base, state: 'unopened', requested: [], options: [] });
-    const calendars = await loadCalendars(db, link.tenant_id, process.env['GOOGLE_SERVICE_ACCOUNT_JSON'], today);
+    const calendars = await loadCalendars(db, link.tenant_id, today);
     const { data: holidayRows, error: holidayError } = await db.from('date_holidays').select('holiday_date').eq('tenant_id', link.tenant_id);
     if (holidayError) throw new Error('Falha ao ler feriados');
     const holidays = (holidayRows ?? []).map(h => h.holiday_date);
