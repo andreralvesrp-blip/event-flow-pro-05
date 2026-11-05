@@ -13,10 +13,11 @@
 - [ ] Pendente do usuário: publicar (PDF público + rotas novas) e verificar domínio kidspoint.com.br no Resend
 
 ## Página pessoal de datas — sem publicação
-- [ ] Aprovar plano e esclarecer feriados/limite de liberação dos links.
-- [ ] Acrescentar configurações de Calendário, feriados, links pessoais e interações isolados.
-- [ ] Preparar Google Calendar somente leitura e orientar conta de serviço.
-- [ ] Implementar cálculo dos turnos, preços e ordenação com testes.
-- [ ] Criar página pública pessoal sem indexação nem links nos fluxos existentes.
-- [ ] Resumir interações nos cards e verificar página/isolamento.
-- [ ] Pendente do usuário: fornecer conta de serviço e IDs das quatro agendas para conferência real.
+- [x] Plano aprovado; cinco feriados nacionais incluídos.
+- [x] Configurações de Calendário, feriados, links pessoais, cache e interações isolados.
+- [x] Leitura Google Calendar preparada; instruções de conta de serviço fornecidas.
+- [x] Turnos, preços, ordenação e proteção com testes controlados.
+- [x] Página pessoal sem indexação e sem links nos fluxos existentes; link inexistente rejeitado.
+- [x] Resumo de interações nos cards; Calendário conferido com sessão real.
+- [ ] Pendente do usuário: chave Google recusada nesta etapa e IDs das quatro agendas ausentes; leitura real e escolha com agenda real não verificadas.
+- [ ] Pendente do usuário: não existe oportunidade de bs-orcamento-teste no banco; fornecer/criar uma para gerar link e verificar página com dados reais e resumo no card.
