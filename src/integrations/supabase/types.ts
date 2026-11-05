@@ -1662,6 +1662,7 @@ export type Database = {
           client_id: string
           cliente_contactado: boolean
           closed_at: string | null
+          contact_name: string | null
           contract_id: string | null
           created_at: string
           created_by: string | null
@@ -1714,6 +1715,7 @@ export type Database = {
           client_id: string
           cliente_contactado?: boolean
           closed_at?: string | null
+          contact_name?: string | null
           contract_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1766,6 +1768,7 @@ export type Database = {
           client_id?: string
           cliente_contactado?: boolean
           closed_at?: string | null
+          contact_name?: string | null
           contract_id?: string | null
           created_at?: string
           created_by?: string | null

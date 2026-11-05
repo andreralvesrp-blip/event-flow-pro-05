@@ -51,7 +51,7 @@ export function buildChatguruPayload(input: {
 export async function sendChatguruWebhook(opportunityId: string, baseUrl: string): Promise<"enviado" | "falhou"> {
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   const { data: opp } = await db.from("opportunities")
-    .select("id, tenant_id, unit_id, client_id, desired_date, email, form_slug, source")
+    .select("id, tenant_id, unit_id, client_id, desired_date, email, form_slug, source, contact_name")
     .eq("id", opportunityId).maybeSingle();
   if (!opp || opp.form_slug !== CHATGURU_FORM) return "falhou";
   const [{ data: client }, { data: unit }] = await Promise.all([
@@ -71,7 +71,7 @@ export async function sendChatguruWebhook(opportunityId: string, baseUrl: string
     const link = linkErr ? null : `${baseUrl.replace(/\/$/, "")}/datas/${token}`;
     if (linkErr) console.error("[chatguru] link error", linkErr.message);
     payload = buildChatguruPayload({
-      opportunityId: opp.id, unitSlug: unit?.slug ?? null, fullName: client?.full_name ?? null,
+      opportunityId: opp.id, unitSlug: unit?.slug ?? null, fullName: (opp as any).contact_name || client?.full_name || null,
       phone: client?.phone_normalized ?? null, email: opp.email || client?.email || null,
       desiredDate: opp.desired_date, link, source: opp.source ?? null,
     });
