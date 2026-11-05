@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { availability, buildOptions, inWindow, isAllowedForm, priceFor, saoPauloToday, horizon, whatsappUrl, type Availability, type House, type Slot, type Turno } from './personal-dates';
+import { availability, buildOptions, closureFor, type Closure, inWindow, isAllowedForm, priceFor, saoPauloToday, horizon, whatsappUrl, type Availability, type House, type Slot, type Turno } from './personal-dates';
 import { loadCalendars, tokenHash } from './personal-calendar.server';
 
 const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
@@ -47,8 +47,12 @@ export async function handlePersonalDates(request: Request) {
     const { data: holidayRows, error: holidayError } = await db.from('date_holidays').select('holiday_date').eq('tenant_id', link.tenant_id);
     if (holidayError) throw new Error('Falha ao ler feriados');
     const holidays = (holidayRows ?? []).map(h => h.holiday_date);
-    const allOptions = buildOptions(requested, origin, calendars, holidays, today, input.mode, op.desired_slot as Slot | null);
-    const requestedOptions = inWindow(requested, today) ? (['almoco','jantar'] as const).map(slot => ({ house: origin, date: requested, slot, status: availability(requested, calendars[origin].closed, calendars[origin].interest)[slot], price: priceFor(requested, slot, holidays), cheaper: false })) : [];
+    const { data: closureRows, error: closureError } = await db.from('date_closures').select('start_date,end_date,name').eq('tenant_id', link.tenant_id);
+    if (closureError) throw new Error('Falha ao ler períodos sem atendimento');
+    const closures: Closure[] = closureRows ?? [];
+    const closure = closureFor(requested, closures);
+    const allOptions = buildOptions(requested, origin, calendars, holidays, today, input.mode, op.desired_slot as Slot | null, closures);
+    const requestedOptions = inWindow(requested, today) && !closure ? (['almoco','jantar'] as const).map(slot => ({ house: origin, date: requested, slot, status: availability(requested, calendars[origin].closed, calendars[origin].interest)[slot], price: priceFor(requested, slot, holidays), cheaper: false })) : [];
     if (input.action === 'mudou_casa') await record('mudou_casa', input.mode === 'other' ? origin === 'bosque' ? 'vila' : 'bosque' : origin);
     if (input.action && ['viu_opcao','escolheu_data','entrou_fila'].includes(input.action)) {
       if (!input.house || !input.date || !input.slot || !inWindow(input.date, today)) return respond({ error: 'Opção indisponível' }, 409);
@@ -58,14 +62,14 @@ export async function handlePersonalDates(request: Request) {
       // "ambos" = almoço ou jantar: só vale quando os dois turnos estão livres na mesma data e casa.
       const slots: Slot[] = input.slot === 'ambos' ? ['almoco', 'jantar'] : [input.slot];
       const status: Availability = slots.every(s => turns[s] === 'disponivel') ? 'disponivel' : slots.some(s => turns[s] === 'interesse') ? 'interesse' : 'ocupado';
-      const pool = [...buildOptions(requested, origin, calendars, holidays, today, 'all', op.desired_slot as Slot | null), ...requestedOptions];
+      const pool = [...buildOptions(requested, origin, calendars, holidays, today, 'all', op.desired_slot as Slot | null, closures), ...requestedOptions];
       const legal = slots.every(s => pool.some(o => o.house === input.house && o.date === input.date && o.slot === s));
        if (!legal || (input.action === 'escolheu_data' && status !== 'disponivel') || (input.action === 'entrou_fila' && status !== 'interesse')) return respond({ error: 'Esta opção mudou. Vamos confirmar com a equipe.' }, 409);
       await record(input.action, input.house, input.date, input.slot);
       if (input.house !== origin && input.action === 'escolheu_data') await record('mudou_casa', input.house, input.date, input.slot);
       if (input.action !== 'viu_opcao') return respond({ ok: true, url: whatsappUrl(firstName, input.house, input.date, input.slot, input.action === 'entrou_fila') });
     }
-    return respond({ ...base, state: 'ready', requested: requestedOptions, options: allOptions });
+    return respond({ ...base, state: 'ready', closure, requested: requestedOptions, options: allOptions });
   } catch {
     return respond({ ...base, state: 'unavailable', requested: [], options: [], message: 'Vamos confirmar com a equipe.' });
   }
