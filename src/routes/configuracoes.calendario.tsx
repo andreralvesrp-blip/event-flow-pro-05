@@ -6,7 +6,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getDateSettings, saveDateSettings, saveDateHoliday, deleteDateHoliday, checkDateCalendars } from '@/lib/personal-dates.functions';
+import { getDateSettings, saveDateSettings, saveDateHoliday, deleteDateHoliday, checkDateCalendars, saveDateClosure, deleteDateClosure } from '@/lib/personal-dates.functions';
 import { useAuth } from '@/hooks/useAuth';
 
 export const Route = createFileRoute('/configuracoes/calendario')({
@@ -15,14 +15,18 @@ export const Route = createFileRoute('/configuracoes/calendario')({
 });
 const empty = { bosque_closed: '', bosque_interest: '', vila_closed: '', vila_interest: '' };
 type Holiday = { id: string; name: string; holiday_date: string };
+type Closure = { id: string; name: string; start_date: string; end_date: string };
+const br = (d: string) => d.split('-').reverse().join('/');
 function CalendarSettingsPage() {
   const { profile } = useAuth();
-  const get = useServerFn(getDateSettings), save = useServerFn(saveDateSettings), saveHoliday = useServerFn(saveDateHoliday), remove = useServerFn(deleteDateHoliday), check = useServerFn(checkDateCalendars);
+  const get = useServerFn(getDateSettings), save = useServerFn(saveDateSettings), saveHoliday = useServerFn(saveDateHoliday), remove = useServerFn(deleteDateHoliday), check = useServerFn(checkDateCalendars), saveClosure = useServerFn(saveDateClosure), removeClosure = useServerFn(deleteDateClosure);
+  const [closures, setClosures] = useState<Closure[]>([]), [cEditing, setCEditing] = useState<string | undefined>(), [cStart, setCStart] = useState(''), [cEnd, setCEnd] = useState(''), [cName, setCName] = useState('');
+  const resetClosure = () => { setCEditing(undefined); setCStart(''); setCEnd(''); setCName(''); };
   const [settings, setSettings] = useState(empty), [holidays, setHolidays] = useState<Holiday[]>([]);
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const [editing, setEditing] = useState<string | undefined>(), [date, setDate] = useState(''), [name, setName] = useState('');
   async function refresh() {
-    try { const result = await get(); setSettings(result.settings ?? empty); setHolidays(result.holidays); setReady(result.serviceAccountReady); }
+    try { const result = await get(); setSettings(result.settings ?? empty); setHolidays(result.holidays); setClosures(result.closures); setReady(result.serviceAccountReady); }
     catch (e) { setMessage(e instanceof Error ? e.message : 'Não foi possível carregar'); }
   }
   useEffect(() => { if (profile?.tenant_role === 'owner') void refresh(); }, [profile]);
@@ -36,6 +40,9 @@ function CalendarSettingsPage() {
       </section>
       <section><h2 className="text-lg font-semibold mb-4">Feriados</h2><div className="divide-y divide-border">{holidays.map(h => <div key={h.id} className="flex items-center gap-3 py-3"><time className="text-sm shrink-0">{h.holiday_date.split('-').reverse().join('/')}</time><span className="text-sm flex-1">{h.name}</span><Button size="icon" variant="ghost" title="Editar feriado" aria-label={`Editar ${h.name}`} onClick={() => { setEditing(h.id); setDate(h.holiday_date); setName(h.name); }}><Pencil className="size-4"/></Button><Button size="icon" variant="ghost" disabled={busy} aria-label={`Excluir ${h.name}`} title="Excluir feriado" onClick={() => { if (confirm(`Excluir ${h.name} da lista de feriados?`)) void run(() => remove({ data: { id: h.id } }), 'Feriado excluído'); }}><Trash2 className="size-4"/></Button></div>)}</div>
         <form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={e => { e.preventDefault(); void run(async () => { await saveHoliday({ data: { id: editing, holiday_date: date, name } }); setEditing(undefined); setDate(''); setName(''); }, 'Feriado salvo'); }}><div><Label htmlFor="holiday-date">Data</Label><Input id="holiday-date" type="date" required value={date} onChange={e => setDate(e.target.value)}/></div><div className="flex-1 min-w-40"><Label htmlFor="holiday-name">Feriado</Label><Input id="holiday-name" required maxLength={120} value={name} onChange={e => setName(e.target.value)}/></div><Button disabled={busy} type="submit"><Plus className="size-4"/>{editing ? 'Salvar edição' : 'Incluir'}</Button>{editing && <Button variant="outline" onClick={() => { setEditing(undefined); setDate(''); setName(''); }}>Cancelar</Button>}</form>
+      </section>
+      <section><h2 className="text-lg font-semibold mb-1">Períodos sem atendimento</h2><p className="text-sm text-muted-foreground mb-4">Valem para as duas unidades, com início e fim inclusive. Nenhum turno aparece para a cliente nesses dias.</p><div className="divide-y divide-border">{closures.map(c => <div key={c.id} className="flex items-center gap-3 py-3"><time className="text-sm shrink-0">{br(c.start_date)} a {br(c.end_date)}</time><span className="text-sm flex-1">{c.name}</span><Button size="icon" variant="ghost" title="Editar período" aria-label={`Editar ${c.name}`} onClick={() => { setCEditing(c.id); setCStart(c.start_date); setCEnd(c.end_date); setCName(c.name); }}><Pencil className="size-4"/></Button><Button size="icon" variant="ghost" disabled={busy} aria-label={`Excluir ${c.name}`} title="Excluir período" onClick={() => { if (confirm(`Excluir ${c.name}?`)) void run(() => removeClosure({ data: { id: c.id } }), 'Período excluído'); }}><Trash2 className="size-4"/></Button></div>)}{closures.length === 0 && <p className="py-3 text-sm text-muted-foreground">Nenhum período cadastrado.</p>}</div>
+        <form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={e => { e.preventDefault(); if (cEnd < cStart) { setMessage('O fim deve ser igual ou depois do início'); return; } void run(async () => { await saveClosure({ data: { id: cEditing, start_date: cStart, end_date: cEnd, name: cName } }); resetClosure(); }, 'Período salvo'); }}><div><Label htmlFor="closure-start">Início</Label><Input id="closure-start" type="date" required value={cStart} onChange={e => setCStart(e.target.value)}/></div><div><Label htmlFor="closure-end">Fim</Label><Input id="closure-end" type="date" required value={cEnd} onChange={e => setCEnd(e.target.value)}/></div><div className="flex-1 min-w-40"><Label htmlFor="closure-name">Nome</Label><Input id="closure-name" required maxLength={120} value={cName} onChange={e => setCName(e.target.value)}/></div><Button disabled={busy} type="submit"><Plus className="size-4"/>{cEditing ? 'Salvar edição' : 'Incluir'}</Button>{cEditing && <Button type="button" variant="outline" onClick={resetClosure}>Cancelar</Button>}</form>
       </section>
       {message && <p role="status" className="text-sm">{message}</p>}
     </>}
