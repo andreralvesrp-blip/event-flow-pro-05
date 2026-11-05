@@ -1,4 +1,4 @@
-import { addDays, addMonths, format, parseISO, getDay } from 'date-fns';
+import { addDays, addMonths, differenceInCalendarDays, format, parseISO, getDay } from 'date-fns';
 
 export type House = 'bosque' | 'vila';
 export type Slot = 'almoco' | 'jantar';
