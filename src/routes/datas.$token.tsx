@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, MapPin, MessageCircle, Moon, Sun } from 'lucide-react';
 import { getPersonalDateView, type PersonalDateView } from '@/lib/personal-dates-view.functions';
-import { HOUSES, type House, type Option, type Slot } from '@/lib/personal-dates';
+import type { House, Option, Slot } from '@/lib/personal-dates';
+import pageCss from '@/styles/datas-kids-point.css?url';
 
 const options = (token: string) => queryOptions({ queryKey: ['personal-dates', token], queryFn: () => getPersonalDateView({ data: { token } }), staleTime: 0, retry: false });
 
@@ -14,46 +14,56 @@ export const Route = createFileRoute('/datas/$token')({
     links: [
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-      { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap' },
+      { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito+Sans:wght@400;600;700;800&display=swap' },
+      { rel: 'stylesheet', href: pageCss },
     ],
   }),
   component: PersonalDatesPage,
 });
 
+// Nomes e endereços exibidos na página da cliente.
+const C: Record<House, { n: string; a: string }> = { bosque: { n: 'Ud. Bosque', a: 'Rua Tiquatira, 394' }, vila: { n: 'Ud. Vila Mariana', a: 'Rua Padre Machado, 1161' } };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const dateLabel = (date: string) => cap(new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }).format(new Date(`${date}T12:00:00-03:00`)));
-const shortDate = (date: string) => cap(new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(new Date(`${date}T12:00:00-03:00`)));
-const priceLabel = (price: number) => price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
-const slotLabel = (slot: Slot) => (slot === 'almoco' ? 'Almoço' : 'Jantar');
+const asDate = (date: string) => new Date(`${date}T12:00:00-03:00`);
+const longDate = (date: string) => cap(new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' }).format(asDate(date)).replace('-feira', ''));
+const shortDate = (date: string) => { const d = asDate(date); const w = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'America/Sao_Paulo' }).format(d).replace('.', ''); return `${w}, ${Number(date.slice(8, 10))}/${Number(date.slice(5, 7))}`; };
+const R = (n: number) => 'R$ ' + n.toLocaleString('pt-BR');
+const T = (slot: Slot) => (slot === 'almoco' ? 'Almoço' : 'Jantar');
+const t = (slot: Slot) => (slot === 'almoco' ? 'almoço' : 'jantar');
+const P = 3;
 
-type Step = 1 | 2 | 3 | 4;
+type ViewName = 'res' | 'outra' | 'lista' | 'fim';
+type Final = { option: Option; turno: string; price: number; url: string; fila?: boolean };
+type State = { v: ViewName; casa: House; page: number; pick: Option | null; final: Final | null };
+
+const Pin = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" /><circle cx="12" cy="10" r="2.4" /></svg>
+);
+const Pill = ({ house }: { house: House }) => <p className="upill"><Pin />{C[house].n}</p>;
+const Price = ({ n }: { n: number }) => <span className="price">A partir de <strong>{R(n)}</strong> para 40 pagantes</span>;
 
 function PersonalDatesPage() {
   const { token } = Route.useParams();
   const { data: initial } = useSuspenseQuery(options(token));
   const [view] = useState<PersonalDateView>(initial);
-  const [history, setHistory] = useState<Step[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-  const [selectedNearby, setSelectedNearby] = useState<number | null>(null);
-  const [nearbyCount, setNearbyCount] = useState(3);
-  const [chosen, setChosen] = useState<{ option: Option; url: string } | null>(null);
-  const seen = useRef(new Set<string>());
-
-  const house = view.origin ?? 'bosque';
+  const house: House = view.origin ?? 'bosque';
   const otherHouse: House = house === 'bosque' ? 'vila' : 'bosque';
   const requestedDate = view.requestedDate;
   const requested = view.requested ?? [];
-  const requestedAvailable = requested.filter(o => o.status === 'disponivel');
+  const available = requested.filter(o => o.status === 'disponivel');
   const bothOccupied = requested.length > 0 && requested.every(o => o.status === 'ocupado');
   const otherRequested = (view.options ?? []).filter(o => o.date === requestedDate && o.house === otherHouse);
-  const nearby = (view.options ?? []).filter(o => o.date !== requestedDate);
+  const listFor = (h: House) => (view.options ?? []).filter(o => o.house === h && o.date !== requestedDate);
+  const first: ViewName = requested.length === 0 ? 'lista' : bothOccupied ? (otherRequested.length > 0 ? 'outra' : 'lista') : 'res';
 
-  const firstStep: Step = requested.length === 0 ? 3 : bothOccupied ? (otherRequested.length > 0 ? 2 : 3) : 1;
-  const [step, setStep] = useState<Step>(firstStep);
-  const goTo = (next: Step) => { setHistory(h => [...h, step]); setStep(next); setError(''); };
-  const goBack = () => { const prev = history[history.length - 1]; if (!prev) return; setHistory(h => h.slice(0, -1)); setStep(prev); setError(''); };
+  const [S, setS] = useState<State>({ v: first, casa: house, page: 0, pick: null, final: null });
+  const [hist, setHist] = useState<State[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const seen = useRef(new Set<string>());
+
+  const go = (v: ViewName, patch: Partial<State> = {}) => { setHist(h => [...h, S]); setS({ ...S, ...patch, v, pick: null }); setError(''); window.scrollTo(0, 0); };
+  const back = () => { const prev = hist[hist.length - 1]; if (!prev) return; setHist(h => h.slice(0, -1)); setS(prev); setError(''); window.scrollTo(0, 0); };
 
   async function call(body: Record<string, unknown>) {
     const response = await fetch('/api/public/personal-dates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }) });
@@ -64,230 +74,221 @@ function PersonalDatesPage() {
 
   useEffect(() => { if (!initial.error) void call({ action: 'abriu' }).catch(() => undefined); }, [token]);
 
-  // Registra "viu_opcao" para as opções visíveis na etapa atual.
+  const pageOf = (h: House, page: number) => {
+    const list = listFor(h);
+    const days = [...new Set(list.map(o => o.date))];
+    return { days, shown: days.slice(page * P, page * P + P).map(d => ({ date: d, slots: list.filter(o => o.date === d) })) };
+  };
+
+  // Registra "viu_opcao" para as opções visíveis na tela atual.
   useEffect(() => {
     if (view.state !== 'ready') return;
-    const visible: Option[] = step === 1 ? requested : step === 2 ? otherRequested : step === 3 ? nearby.slice(0, nearbyCount) : [];
+    const visible: Option[] = S.v === 'res' ? requested : S.v === 'outra' ? otherRequested : S.v === 'lista' ? pageOf(S.casa, S.page).shown.flatMap(d => d.slots) : [];
     for (const option of visible) {
       const key = `${option.house}:${option.date}:${option.slot}`;
       if (seen.current.has(key)) continue;
       seen.current.add(key);
       void call({ action: 'viu_opcao', house: option.house, date: option.date, slot: option.slot }).catch(() => undefined);
     }
-  }, [view, step, nearbyCount]);
+  }, [view, S.v, S.casa, S.page]);
 
-  async function chooseDate(option: Option) {
+  async function choose(option: Option, turno = T(option.slot), price = option.price) {
     setBusy(true); setError('');
     try {
       const result = await call({ action: 'escolheu_data', house: option.house, date: option.date, slot: option.slot });
       if (!result.url) throw new Error('Vamos confirmar com a equipe.');
-      setChosen({ option, url: result.url });
-      goTo(4);
+      go('fim', { final: { option, turno, price, url: result.url } });
     } catch (e) { setError(e instanceof Error ? e.message : 'Vamos confirmar com a equipe.'); }
     finally { setBusy(false); }
   }
 
-  async function openWhatsApp(action: 'entrou_fila' | 'falou_equipe', target: House, option?: Option) {
+  async function queue(option: Option) {
+    setBusy(true); setError('');
+    try {
+      const result = await call({ action: 'entrou_fila', house: option.house, date: option.date, slot: option.slot });
+      if (!result.url) throw new Error('Vamos confirmar com a equipe.');
+      go('fim', { final: { option, turno: T(option.slot), price: option.price, url: result.url, fila: true } });
+    } catch (e) { setError(e instanceof Error ? e.message : 'Vamos confirmar com a equipe.'); }
+    finally { setBusy(false); }
+  }
+
+  async function talk(target: House) {
     // Abrir durante o clique evita bloqueio de janela após a consulta ao servidor.
     const popup = window.open('about:blank', '_blank');
     if (popup) popup.opener = null;
     setBusy(true); setError('');
     try {
-      const result = await call({ action, house: target, date: option?.date, slot: option?.slot });
+      const result = await call({ action: 'falou_equipe', house: target });
       if (!result.url) throw new Error('Vamos confirmar com a equipe.');
       if (popup) popup.location.replace(result.url); else window.location.assign(result.url);
     } catch (e) { popup?.close(); setError(e instanceof Error ? e.message : 'Vamos confirmar com a equipe.'); }
     finally { setBusy(false); }
   }
 
-  function goToNextAfterStep1() {
-    if (otherRequested.length > 0) {
-      void call({ action: 'mudou_casa', mode: 'other' }).catch(() => undefined);
-      goTo(2);
-    } else {
-      goTo(3);
-    }
-  }
-
-  const shell = (children: React.ReactNode) => (
-    <div className="min-h-screen bg-background font-journey text-journey-ink">
-      <main className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-5 py-6">{children}</main>
+  const page = (opts: { band: { t: string; u?: string }; m: React.ReactNode; f?: React.ReactNode; short?: boolean }) => (
+    <div className="kpd">
+      <div className={`app ${opts.short === false ? '' : 'short'}`}>
+        <div className="band">
+          <div className="bar">{hist.length ? <button type="button" className="back" onClick={back} disabled={busy}>‹ Voltar</button> : <i />}<em className="brand">Kids Point</em></div>
+          <strong>{opts.band.t}</strong>
+          {opts.band.u && <span>{opts.band.u}</span>}
+        </div>
+        <div className="main">
+          {opts.m}
+          {error && <p className="cap" role="alert">{error}</p>}
+        </div>
+        {opts.f && <div className="foot">{opts.f}</div>}
+      </div>
     </div>
   );
+  const hi = { t: `Oi, ${view.firstName}!` };
+  const noPrice = view.noPrice;
 
-  if (view.error) return shell(<SimpleMessage title="Link indisponível." />);
-  if (view.state === 'unopened') return shell(<SimpleMessage title="Este calendário ainda não abriu." whatsapp onTalk={() => openWhatsApp('falou_equipe', house)} busy={busy} house={house} />);
-  if (view.state === 'unavailable') return shell(<SimpleMessage title="Vamos confirmar com a equipe." whatsapp onTalk={() => openWhatsApp('falou_equipe', house)} busy={busy} house={house} />);
+  if (view.error) return page({ band: { t: 'Link indisponível.' }, m: null });
+  if (view.state === 'unopened' || view.state === 'unavailable') {
+    const title = view.state === 'unopened' ? 'O calendário dessa data ainda não abriu' : 'Vamos confirmar com a equipe';
+    return page({
+      band: hi,
+      m: <><Pill house={house} /><h1>{title}</h1>{view.state === 'unopened' && <p className="hi">Fale com a nossa equipe, que ajudamos a planejar a festa.</p>}</>,
+      f: <button type="button" className="btn w" disabled={busy} onClick={() => talk(house)}>Falar com a equipe</button>,
+    });
+  }
 
-  const stepHeader = step <= 3 ? (
-    <div className="mb-5 flex items-center gap-3">
-      {history.length > 0 && (
-        <button type="button" onClick={goBack} disabled={busy} className="flex min-h-11 items-center gap-1 text-sm font-semibold text-journey-ink/70">
-          <ArrowLeft className="size-4" /> Voltar
-        </button>
-      )}
-      <span className="ml-auto text-xs font-semibold tracking-wide text-journey-ink/60">Passo {step} de 3</span>
-    </div>
-  ) : null;
-
-  return shell(
-    <>
-      {stepHeader}
-      {step === 1 && (
-        <section className="flex flex-1 flex-col">
-          <h1 className="font-journey-display text-2xl font-semibold leading-tight">
-            {requestedAvailable.length > 0 ? `${view.firstName}, temos uma opção nessa data` : 'Sua data na Kids Point'}
-          </h1>
-          <p className="mt-2 text-sm text-journey-ink/70">{requestedDate ? dateLabel(requestedDate) : ''} · {HOUSES[house].name}</p>
-          <div className="mt-5 flex flex-col gap-3">
-            {requested.map(option => (
-              <RequestedLine key={option.slot} option={option} noPrice={view.noPrice} selected={selectedSlot === option.slot} onSelect={() => setSelectedSlot(option.slot)} onQueue={() => openWhatsApp('entrou_fila', house, option)} busy={busy} />
-            ))}
-          </div>
-          <div className="mt-auto flex flex-col gap-3 pt-6">
-            {requestedAvailable.length > 0 && (
-              <button type="button" disabled={busy || (requestedAvailable.length === 2 && !selectedSlot)} onClick={() => { const slot = requestedAvailable.length === 1 ? requestedAvailable[0].slot : selectedSlot; const option = requested.find(o => o.slot === slot); if (option) void chooseDate(option); }} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-journey-coral px-4 py-3 text-base font-bold text-white disabled:opacity-50">
-                {requestedAvailable.length === 1 ? `Quero o ${requestedAvailable[0].slot === 'almoco' ? 'almoço' : 'jantar'}` : selectedSlot ? `Quero o ${selectedSlot === 'almoco' ? 'almoço' : 'jantar'}` : 'Escolha um turno acima'}
-                <ArrowRight className="size-4" />
-              </button>
-            )}
-            <button type="button" disabled={busy} onClick={goToNextAfterStep1} className="flex min-h-11 w-full items-center justify-center rounded-xl border border-journey-ink/20 px-4 py-3 text-base font-semibold text-journey-ink">
-              Ver outras opções
-            </button>
-            {!view.noPrice && <p className="text-center text-xs text-journey-ink/60">Valores para 40 pagantes. Disponível no momento.</p>}
-          </div>
-        </section>
-      )}
-      {step === 2 && otherRequested.length > 0 && (
-        <section className="flex flex-1 flex-col">
-          <h1 className="font-journey-display text-2xl font-semibold leading-tight">Essa data está ocupada na {HOUSES[house].name}</h1>
-          <article className="mt-5 rounded-2xl border-2 border-journey-mint-border bg-journey-mint p-5">
-            <p className="text-lg font-bold">{HOUSES[otherHouse].name}</p>
-            <p className="mt-1 flex items-center gap-1 text-sm text-journey-ink/70"><MapPin className="size-3.5 shrink-0" />{HOUSES[otherHouse].address}</p>
-            <p className="mt-3 text-sm font-semibold">{requestedDate ? dateLabel(requestedDate) : ''}</p>
-            <div className="mt-2 flex flex-col gap-1">
-              {otherRequested.map(o => (
-                <p key={o.slot} className="flex items-center gap-2 text-sm">
-                  {o.slot === 'almoco' ? <Sun className="size-4" /> : <Moon className="size-4" />}
-                  {slotLabel(o.slot)}
-                  {!view.noPrice && <span className="ml-auto font-bold">A partir de {priceLabel(o.price)}</span>}
-                </p>
-              ))}
-            </div>
-          </article>
-          <div className="mt-auto flex flex-col gap-3 pt-6">
-            <button type="button" disabled={busy} onClick={() => { const option = otherRequested.length === 1 ? otherRequested[0] : otherRequested.find(o => o.slot === selectedSlot) ?? otherRequested[0]; void chooseDate(option); }} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-journey-coral px-4 py-3 text-base font-bold text-white disabled:opacity-50">
-              Quero na {HOUSES[otherHouse].name}<ArrowRight className="size-4" />
-            </button>
-            <button type="button" disabled={busy} onClick={() => goTo(3)} className="flex min-h-11 w-full items-center justify-center rounded-xl border border-journey-ink/20 px-4 py-3 text-base font-semibold text-journey-ink">
-              Ver datas próximas na {HOUSES[house].name}
-            </button>
-          </div>
-        </section>
-      )}
-      {step === 3 && (
-        <section className="flex flex-1 flex-col">
-          <h1 className="font-journey-display text-2xl font-semibold leading-tight">Datas próximas na {HOUSES[house].name}</h1>
-          <div className="mt-5 flex flex-col gap-2">
-            {nearby.slice(0, nearbyCount).map((option, index) => {
-              const alternate = option.house !== house;
-              const selected = selectedNearby === index;
+  if (S.v === 'res' && requestedDate) {
+    const both = available.length === 2;
+    const samePrice = both && available[0].price === available[1].price;
+    const only = available.length === 1 ? available[0] : null;
+    return page({
+      band: hi,
+      m: (
+        <>
+          <Pill house={house} />
+          <h1>{longDate(requestedDate)}</h1>
+          {both && <p className="ans">Essa data está livre nos dois turnos</p>}
+          {only && <p className="ans">Temos {t(only.slot)} disponível nessa data</p>}
+          {both && samePrice && !noPrice && <p className="cap">A partir de <strong>{R(available[0].price)}</strong> para 40 pagantes</p>}
+          <div className="rows">
+            {requested.map(o => {
+              if (o.status === 'ocupado') return <div key={o.slot} className="row off"><b>{T(o.slot)}</b><span className="st off">Ocupado</span></div>;
+              if (o.status === 'interesse') return (
+                <div key={o.slot} className="row int">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><b>{T(o.slot)}</b><span className="st int">Pré-reservado</span></div>
+                  <p>Outra família está com este turno em pré-reserva. Se ela não confirmar, ele pode ficar com você.</p>
+                  <button type="button" className="btn s mini" disabled={busy} onClick={() => queue(o)}>Entrar na fila do {t(o.slot)}</button>
+                </div>
+              );
               return (
-                <button key={`${option.house}${option.date}${option.slot}`} type="button" onClick={() => setSelectedNearby(index)} className={`flex min-h-11 items-center gap-3 rounded-xl border px-4 py-3 text-left ${selected ? 'border-journey-coral bg-journey-mint' : alternate ? 'border-journey-mint-border bg-journey-mint/50' : 'border-journey-ink/15 bg-card'}`}>
-                  <span className="flex-1">
-                    <span className="block text-sm font-bold">{shortDate(option.date)} · {slotLabel(option.slot)}</span>
-                    {alternate && <span className="block text-xs font-semibold text-journey-ink/70">{HOUSES[option.house].name}</span>}
-                  </span>
-                  {!view.noPrice && <span className="text-sm font-bold">{priceLabel(option.price)}</span>}
-                  {!view.noPrice && option.cheaper && <span className="rounded-full bg-journey-warning px-2 py-0.5 text-[11px] font-bold">Mais em conta</span>}
-                </button>
+                <div key={o.slot} className={`row ${only ? 'sel' : ''}`}>
+                  <b>{T(o.slot)}</b><span className="st on">Disponível</span>
+                  {!noPrice && !(both && samePrice) && <Price n={o.price} />}
+                  {both && <button type="button" className="btn p mini" disabled={busy} onClick={() => choose(o)}>Quero o {t(o.slot)}</button>}
+                </div>
               );
             })}
-            {nearby.length === 0 && <p className="text-sm text-journey-ink/70">Vamos confirmar com a equipe.</p>}
           </div>
-          {nearbyCount < nearby.length && (
-            <button type="button" onClick={() => setNearbyCount(c => c + 3)} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-journey-ink/20 px-4 py-2 text-sm font-semibold text-journey-ink">
-              Ver mais datas
-            </button>
+        </>
+      ),
+      f: (
+        <>
+          {only && <button type="button" className="btn p" disabled={busy} onClick={() => choose(only)}>Quero o {t(only.slot)}</button>}
+          <button type="button" className="btn s" disabled={busy} onClick={() => go('lista')}>Ver mais opções</button>
+        </>
+      ),
+    });
+  }
+
+  if (S.v === 'outra' && requestedDate && otherRequested.length > 0) {
+    const turnos = otherRequested.length === 2 ? 'almoço ou jantar' : t(otherRequested[0].slot);
+    const cheapest = otherRequested.reduce((a, b) => (b.price < a.price ? b : a));
+    return page({
+      band: hi,
+      m: (
+        <>
+          <Pill house={house} />
+          <h1>Sua data está ocupada na {C[house].n}</h1>
+          <p className="hi" style={{ color: 'var(--ink)' }}>Mas ela está disponível na nossa outra unidade:</p>
+          <div className="house">
+            <h2>{C[otherHouse].n}</h2>
+            <div className="addr">{C[otherHouse].a}</div>
+            <div className="line">{longDate(requestedDate)} · {turnos}</div>
+            {!noPrice && <Price n={cheapest.price} />}
+          </div>
+        </>
+      ),
+      f: (
+        <>
+          <button type="button" className="btn p" disabled={busy} onClick={() => { void call({ action: 'mudou_casa', mode: 'other' }).catch(() => undefined); void choose(otherRequested[0], otherRequested.length === 2 ? 'Almoço ou jantar' : T(otherRequested[0].slot), cheapest.price); }}>Quero na {C[otherHouse].n}</button>
+          <button type="button" className="btn s" disabled={busy} onClick={() => go('lista', { casa: house, page: 0 })}>Ver datas na {C[house].n}</button>
+        </>
+      ),
+    });
+  }
+
+  if (S.v === 'fim' && S.final) {
+    const q = S.final;
+    return page({
+      band: { t: q.fila ? 'Você entrou na fila' : `Boa escolha, ${view.firstName}!` },
+      m: (
+        <>
+          <Pill house={q.option.house} />
+          <div className="sum"><strong>{longDate(q.option.date)}</strong>{q.turno}<br />{C[q.option.house].a}{!noPrice && <><br />A partir de <b>{R(q.price)}</b> para 40 pagantes</>}</div>
+          {q.fila ? (
+            <>
+              <ol className="steps"><li>Continue a conversa com a nossa equipe no WhatsApp.</li><li>Se a pré-reserva não for confirmada, nossa equipe vai te orientar.</li><li>Com o turno liberado, você garante a data com o sinal e o contrato.</li></ol>
+              <div className="note"><b>Entrar na fila não reserva a data.</b>Enquanto isso, você pode ver outras opções com a equipe.</div>
+            </>
+          ) : (
+            <div className="note"><b>Esta data ainda não está reservada.</b>A reserva só acontece com o sinal pago e o contrato fechado.</div>
           )}
-          <div className="mt-auto flex flex-col gap-3 pt-6">
-            <button type="button" disabled={busy || selectedNearby === null} onClick={() => { const option = selectedNearby !== null ? nearby[selectedNearby] : null; if (option) void chooseDate(option); }} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-journey-coral px-4 py-3 text-base font-bold text-white disabled:opacity-50">
-              Quero esta data<ArrowRight className="size-4" />
-            </button>
-            <button type="button" disabled={busy} onClick={() => openWhatsApp('falou_equipe', house)} className="text-sm font-semibold text-journey-ink/60 underline underline-offset-2">
-              Nenhuma serve, falar com a equipe
-            </button>
-          </div>
-        </section>
-      )}
-      {step === 4 && chosen && (
-        <section className="flex flex-1 flex-col">
-          <h1 className="font-journey-display text-2xl font-semibold leading-tight">Boa escolha, {view.firstName}!</h1>
-          <article className="mt-5 rounded-2xl border border-journey-ink/15 bg-card p-5">
-            <p className="text-lg font-bold">{dateLabel(chosen.option.date)}</p>
-            <p className="mt-1 flex items-center gap-2 text-sm font-semibold">{chosen.option.slot === 'almoco' ? <Sun className="size-4" /> : <Moon className="size-4" />}{slotLabel(chosen.option.slot)}</p>
-            <p className="mt-3 text-sm font-bold">{HOUSES[chosen.option.house].name}</p>
-            <p className="mt-1 flex items-center gap-1 text-sm text-journey-ink/70"><MapPin className="size-3.5 shrink-0" />{HOUSES[chosen.option.house].address}</p>
-          </article>
-          <p className="mt-4 text-sm">Agora é só falar com nossa equipe para combinar os detalhes.</p>
-          <p className="mt-3 rounded-xl bg-journey-warning p-3 text-xs font-semibold">Esta data ainda não está reservada. A reserva acontece com o sinal pago e o contrato fechado.</p>
-          <div className="mt-auto flex flex-col gap-3 pt-6">
-            <button type="button" onClick={() => window.open(chosen.url, '_blank', 'noopener')} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-journey-whatsapp px-4 py-3 text-base font-bold text-white">
-              <MessageCircle className="size-5" />Continuar no WhatsApp da {HOUSES[chosen.option.house].name}
-            </button>
-            <button type="button" disabled={busy} onClick={() => { setChosen(null); setSelectedNearby(null); setSelectedSlot(null); setHistory([]); setStep(3); }} className="text-sm font-semibold text-journey-ink/60 underline underline-offset-2">
-              Voltar e escolher outra data
-            </button>
-          </div>
-        </section>
-      )}
-      {error && <p role="alert" className="mt-4 text-sm font-semibold text-destructive">{error}</p>}
-    </>,
-  );
-}
-
-function RequestedLine({ option, noPrice, selected, onSelect, onQueue, busy }: { option: Option; noPrice: boolean; selected: boolean; onSelect: () => void; onQueue: () => void; busy: boolean }) {
-  if (option.status === 'ocupado') {
-    return (
-      <div className="flex min-h-11 items-center gap-2 rounded-xl bg-journey-ink/5 px-4 py-3 text-sm text-journey-ink/50">
-        {option.slot === 'almoco' ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        {slotLabel(option.slot)}<span className="ml-auto font-semibold">Ocupado</span>
-      </div>
-    );
+        </>
+      ),
+      f: <button type="button" className="btn w" onClick={() => window.open(q.url, '_blank', 'noopener')}>Continuar no WhatsApp da {C[q.option.house].n}</button>,
+    });
   }
-  if (option.status === 'interesse') {
-    return (
-      <div className="rounded-xl bg-journey-warning p-4">
-        <p className="flex items-center gap-2 text-sm font-bold">{option.slot === 'almoco' ? <Sun className="size-4" /> : <Moon className="size-4" />}{slotLabel(option.slot)}</p>
-        <p className="mt-1 text-xs">Existe outra pessoa interessada neste turno.</p>
-        <button type="button" disabled={busy} onClick={onQueue} className="mt-3 flex min-h-11 w-full items-center justify-center rounded-xl border border-journey-ink/25 px-4 py-2 text-sm font-bold">
-          Entrar na fila desta data
-        </button>
-        <p className="mt-2 text-[11px] text-journey-ink/60">A fila não é reserva nem pré-reserva.</p>
-      </div>
-    );
-  }
-  return (
-    <button type="button" onClick={onSelect} className={`flex min-h-11 items-center gap-2 rounded-xl border-2 px-4 py-3 text-left ${selected ? 'border-journey-coral bg-journey-mint' : 'border-journey-mint-border bg-journey-mint'}`}>
-      {option.slot === 'almoco' ? <Sun className="size-4" /> : <Moon className="size-4" />}
-      <span className="text-sm font-bold">{slotLabel(option.slot)}</span>
-      {!noPrice && <span className="ml-auto text-sm font-bold">A partir de {priceLabel(option.price)}</span>}
-      {!noPrice && option.cheaper && <span className="rounded-full bg-journey-warning px-2 py-0.5 text-[11px] font-bold">Mais em conta</span>}
-    </button>
-  );
-}
 
-function SimpleMessage({ title, whatsapp = false, onTalk, busy = false, house = 'bosque' }: { title: string; whatsapp?: boolean; onTalk?: () => void; busy?: boolean; house?: House }) {
-  return (
-    <section className="flex flex-1 flex-col">
-      <h1 className="font-journey-display text-2xl font-semibold leading-tight">{title}</h1>
-      {whatsapp && (
-        <div className="mt-auto pt-6">
-          <button type="button" disabled={busy} onClick={onTalk} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-journey-whatsapp px-4 py-3 text-base font-bold text-white">
-            <MessageCircle className="size-5" />Falar com a equipe da {HOUSES[house].name}
-          </button>
+  // Tela de datas
+  const { days, shown } = pageOf(S.casa, S.page);
+  const q = S.pick;
+  const switchHouse = (h: House) => {
+    if (h === S.casa) return;
+    void call({ action: 'mudou_casa', mode: h === house ? 'origin' : 'other' }).catch(() => undefined);
+    setS({ ...S, casa: h, page: 0, pick: null });
+  };
+  return page({
+    short: false,
+    band: { t: 'Escolha uma data', u: bothOccupied && otherRequested.length === 0 ? 'Sua data está ocupada nas duas unidades' : 'Outras opções' },
+    m: (
+      <>
+        <div className="seg" role="group" aria-label="Escolha a unidade">
+          {(['bosque', 'vila'] as House[]).map(k => <button key={k} type="button" className={S.casa === k ? 'on' : ''} onClick={() => switchHouse(k)}>{C[k].n}</button>)}
         </div>
-      )}
-    </section>
-  );
+        <p className="cap">{C[S.casa].a}</p>
+        <div className="days">
+          {shown.map(d => (
+            <div key={d.date} className="day">
+              <h3>{longDate(d.date)}</h3>
+              <div className="chips">
+                {d.slots.map(o => (
+                  <button key={o.slot} type="button" className={`chip ${q && q.date === o.date && q.slot === o.slot && q.house === o.house ? 'sel' : ''}`} onClick={() => setS({ ...S, pick: o })}>
+                    <b>{T(o.slot)}</b>
+                    {!noPrice && <span>{R(o.price)}</span>}
+                    {!noPrice && o.cheaper && <em>Menor investimento</em>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {shown.length === 0 && <p className="cap">Vamos confirmar com a equipe.</p>}
+        </div>
+        {days.length > P && <button type="button" className="more" onClick={() => setS({ ...S, page: (S.page + 1) * P >= days.length ? 0 : S.page + 1, pick: null })}>Mostrar outras datas</button>}
+        <button type="button" className="more" disabled={busy} onClick={() => talk(S.casa)}>Nenhuma serve, falar com a equipe</button>
+      </>
+    ),
+    f: (
+      <>
+        {!noPrice && <p className="cap" style={{ textAlign: 'center' }}>Valores a partir de, para 40 pagantes</p>}
+        <button type="button" className="btn p" disabled={!q || busy} onClick={() => q && choose(q)}>{q ? `Quero ${shortDate(q.date)}, ${t(q.slot)}` : 'Escolha uma data'}</button>
+      </>
+    ),
+  });
 }
