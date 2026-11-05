@@ -37,7 +37,8 @@ function localTimestamp(value: string) {
 }
 function slotsFor(event: CalendarEvent, date: string): Slot[] {
   if (event.status === 'cancelled') return [];
-  if (event.start.date && event.end.date) return date >= event.start.date && date < event.end.date ? ['almoco', 'jantar'] : [];
+  // Eventos de dia todo (lembretes, itens) nunca bloqueiam turnos.
+  if (event.start.date || event.end.date) return [];
   if (!event.start.dateTime || !event.end.dateTime) throw new Error('Evento incompleto');
   const start = localTimestamp(event.start.dateTime), end = localTimestamp(event.end.dateTime);
   if (Date.parse(event.end.dateTime) <= Date.parse(event.start.dateTime)) throw new Error('Evento com duração inválida');
