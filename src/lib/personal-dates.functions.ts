@@ -10,7 +10,7 @@ export const getDateSettings = createServerFn({ method: 'GET' }).middleware([req
   if (!me?.active || me.tenant_role !== 'owner') throw new Error('Acesso restrito ao responsável da empresa');
   const [settings, holidays] = await Promise.all([context.supabase.from('date_calendar_settings').select('*').eq('tenant_id', me.tenant_id).maybeSingle(), context.supabase.from('date_holidays').select('*').eq('tenant_id', me.tenant_id).order('holiday_date')]);
   if (settings.error || holidays.error) throw new Error('Não foi possível carregar o calendário');
-  return { settings: settings.data, holidays: holidays.data ?? [], serviceAccountReady: Boolean(process.env['GOOGLE_SERVICE_ACCOUNT_JSON']) };
+  return { settings: settings.data, holidays: holidays.data ?? [], serviceAccountReady: Boolean(process.env.LOVABLE_API_KEY && process.env.GOOGLE_CALENDAR_API_KEY) };
 });
 export const saveDateSettings = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(d => settingsSchema.parse(d)).handler(async ({ data, context }) => {
   const { data: me } = await context.supabase.from('users').select('tenant_id,tenant_role,active').eq('id', context.userId).maybeSingle();
@@ -55,6 +55,6 @@ export const checkDateCalendars = createServerFn({ method: 'POST' }).middleware(
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
   const { loadCalendars } = await import('./personal-calendar.server');
   const { saoPauloToday } = await import('./personal-dates');
-  await loadCalendars(supabaseAdmin, me.tenant_id, process.env['GOOGLE_SERVICE_ACCOUNT_JSON'], saoPauloToday());
+  await loadCalendars(supabaseAdmin, me.tenant_id, saoPauloToday());
   return { ok: true };
 });
