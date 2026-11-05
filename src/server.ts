@@ -69,6 +69,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const { homeRedirectFor } = await import("./lib/personal-link-base");
+      const target = homeRedirectFor(new URL(request.url));
+      if (target) return Response.redirect(target, 302);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
