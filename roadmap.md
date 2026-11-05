@@ -13,6 +13,7 @@
 - [ ] Pendente do usuário: publicar (PDF público + rotas novas) e verificar domínio kidspoint.com.br no Resend
 
 ## Página pessoal de datas — sem publicação
+- [ ] Ajustar valores e ícones; incluir pré-reservas nas sugestões e fila; medir WhatsApp antes/depois e entregar prints de celular.
 - [x] Plano aprovado; cinco feriados nacionais incluídos.
 - [x] Configurações de Calendário, feriados, links pessoais, cache e interações isolados.
 - [x] Leitura Google Calendar preparada; instruções de conta de serviço fornecidas.
