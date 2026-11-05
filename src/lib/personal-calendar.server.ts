@@ -33,7 +33,8 @@ export async function loadCalendars(db: SupabaseClient<Database>, tenant: string
   const accessToken = await googleAccessToken(json);
   const entries = await Promise.all(keys.map(async key => {
     const id = config[key];
-    const { data: cached } = await db.from('date_calendar_cache').select('fetched_at,events').eq('tenant_id', tenant).eq('calendar_id', id).maybeSingle();
+    const cacheKey = `${id}|${today}`;
+    const { data: cached } = await db.from('date_calendar_cache').select('fetched_at,events').eq('tenant_id', tenant).eq('calendar_id', cacheKey).maybeSingle();
     const age = cached ? Date.now() - Date.parse(cached.fetched_at) : Infinity;
     if (cached && age >= 0 && age < 60000) return [key, cached.events as unknown as CalendarEvent[]] as const;
     const events: CalendarEvent[] = [];
@@ -49,7 +50,7 @@ export async function loadCalendars(db: SupabaseClient<Database>, tenant: string
       events.push(...(data.items ?? []).filter(e => e.status !== 'cancelled').map(e => ({ start: e.start, end: e.end, status: e.status })));
       nextPage = data.nextPageToken;
     } while (nextPage);
-    const { error: cacheError } = await db.from('date_calendar_cache').upsert({ tenant_id: tenant, calendar_id: id, fetched_at: fetchedAt, events: events as unknown as Database['public']['Tables']['date_calendar_cache']['Insert']['events'] });
+    const { error: cacheError } = await db.from('date_calendar_cache').upsert({ tenant_id: tenant, calendar_id: cacheKey, fetched_at: fetchedAt, events: events as unknown as Database['public']['Tables']['date_calendar_cache']['Insert']['events'] });
     if (cacheError) throw new Error('Não foi possível atualizar as agendas');
     return [key, events] as const;
   }));

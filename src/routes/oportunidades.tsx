@@ -313,6 +313,7 @@ function buildOpportunitiesCsv(rows: Opportunity[], sendsByOp: Map<string, Quote
 }
 
 export const Route = createFileRoute("/oportunidades")({
+  head: () => ({ meta: [{ title: 'Oportunidades — Kids Point' }, { name: 'description', content: 'Acompanhamento comercial e escolhas de datas das festas Kids Point.' }, { property: 'og:title', content: 'Oportunidades — Kids Point' }, { property: 'og:description', content: 'Acompanhamento comercial e escolhas de datas das festas Kids Point.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: OportunidadesPage,
   validateSearch: (s: Record<string, unknown>) => ({ op: typeof s.op === "string" ? s.op : undefined }),
 });

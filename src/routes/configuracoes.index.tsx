@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/browser-client";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/configuracoes/")({
+  head: () => ({ meta: [{ title: 'Configurações — Kids Point' }, { name: 'description', content: 'Configurações comerciais das casas Kids Point.' }, { property: 'og:title', content: 'Configurações — Kids Point' }, { property: 'og:description', content: 'Configurações comerciais das casas Kids Point.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: ConfiguracoesIndex,
 });
 
