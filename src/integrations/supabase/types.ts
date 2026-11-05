@@ -668,6 +668,161 @@ export type Database = {
           },
         ]
       }
+      date_calendar_cache: {
+        Row: {
+          calendar_id: string
+          events: Json
+          fetched_at: string
+          tenant_id: string
+        }
+        Insert: {
+          calendar_id: string
+          events: Json
+          fetched_at: string
+          tenant_id: string
+        }
+        Update: {
+          calendar_id?: string
+          events?: Json
+          fetched_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      date_calendar_settings: {
+        Row: {
+          bosque_closed: string
+          bosque_interest: string
+          tenant_id: string
+          updated_at: string
+          vila_closed: string
+          vila_interest: string
+        }
+        Insert: {
+          bosque_closed?: string
+          bosque_interest?: string
+          tenant_id: string
+          updated_at?: string
+          vila_closed?: string
+          vila_interest?: string
+        }
+        Update: {
+          bosque_closed?: string
+          bosque_interest?: string
+          tenant_id?: string
+          updated_at?: string
+          vila_closed?: string
+          vila_interest?: string
+        }
+        Relationships: []
+      }
+      date_holidays: {
+        Row: {
+          holiday_date: string
+          id: string
+          name: string
+          tenant_id: string
+        }
+        Insert: {
+          holiday_date: string
+          id?: string
+          name: string
+          tenant_id: string
+        }
+        Update: {
+          holiday_date?: string
+          id?: string
+          name?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      date_interactions: {
+        Row: {
+          action: string
+          created_at: string
+          house: string | null
+          id: string
+          link_id: string
+          opportunity_id: string
+          party_date: string | null
+          slot: string | null
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          house?: string | null
+          id?: string
+          link_id: string
+          opportunity_id: string
+          party_date?: string | null
+          slot?: string | null
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          house?: string | null
+          id?: string
+          link_id?: string
+          opportunity_id?: string
+          party_date?: string | null
+          slot?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "date_interactions_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "date_personal_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "date_interactions_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      date_personal_links: {
+        Row: {
+          created_at: string
+          id: string
+          opportunity_id: string
+          revoked_at: string | null
+          tenant_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          opportunity_id: string
+          revoked_at?: string | null
+          tenant_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          opportunity_id?: string
+          revoked_at?: string | null
+          tenant_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "date_personal_links_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forms: {
         Row: {
           active: boolean

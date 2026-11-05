@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Webhook, Building2, Plug, FileSpreadsheet, FileText, Users } from "lucide-react";
+import { Webhook, Building2, Plug, FileSpreadsheet, FileText, Users, CalendarDays } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/browser-client";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/configuracoes/")({
+  head: () => ({ meta: [{ title: 'Configurações — Kids Point' }, { name: 'description', content: 'Configurações comerciais das casas Kids Point.' }, { property: 'og:title', content: 'Configurações — Kids Point' }, { property: 'og:description', content: 'Configurações comerciais das casas Kids Point.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: ConfiguracoesIndex,
 });
 
@@ -37,6 +38,7 @@ function ConfiguracoesIndex() {
     ...(isOwner ? [
       { to: "/configuracoes/unidades", title: "Unidades", desc: "Gerencie as unidades do buffet.", icon: Building2, enabled: true, group: "Administração" },
       { to: "/configuracoes/equipe", title: "Equipe", desc: "Defina quais unidades cada pessoa acessa.", icon: Users, enabled: true, group: "Administração" },
+      { to: "/configuracoes/calendario", title: "Calendário", desc: "Agendas das casas e feriados.", icon: CalendarDays, enabled: true, group: "Administração" },
     ] : []),
     { to: "#", title: "Dados da empresa", desc: "Nome do buffet, CNPJ e informações da contratada.", icon: Building2, enabled: false, group: "Administração" },
     { to: "/configuracoes/integracoes", title: "Integrações", desc: "Conecte o Google Analytics e outras integrações.", icon: Plug, enabled: true, group: "Administração" },
