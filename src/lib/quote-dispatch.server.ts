@@ -41,7 +41,7 @@ export async function dispatchQuote(
   // --- Carrega oportunidade, cliente e config do formulário ---
   const { data: opp, error: oErr } = await supabaseAdmin
     .from("opportunities")
-    .select("id, tenant_id, unit_id, client_id, desired_date, email, form_slug, created_at")
+    .select("id, tenant_id, unit_id, client_id, desired_date, email, form_slug, created_at, contact_name")
     .eq("id", opportunityId)
     .maybeSingle();
   if (oErr || !opp) {
@@ -106,7 +106,7 @@ export async function dispatchQuote(
 
   // O e-mail informado no formulário (opportunities.email) tem sempre prioridade.
   const recipientEmail = opp.email || client?.email || null;
-  const nome = firstName(client?.full_name);
+  const nome = firstName((opp as any).contact_name || client?.full_name);
   const dateBR = formatBR(opp.desired_date);
 
   // --- Dedupe: mesmo telefone + mesma data em 24h não dispara de novo ---

@@ -19,13 +19,13 @@ export async function handlePersonalDates(request: Request) {
   const { data: link, error: linkError } = await db.from('date_personal_links').select('id,opportunity_id,tenant_id').eq('token_hash', await tokenHash(input.token)).is('revoked_at', null).maybeSingle();
   if (linkError) return respond({ error: 'Vamos confirmar com a equipe.' }, 503);
   if (!link) return respond({ error: 'Link indisponível' }, 404);
-  const { data: op } = await db.from('opportunities').select('id,tenant_id,unit_id,form_slug,desired_date,desired_slot,client:clients(full_name)').eq('id', link.opportunity_id).eq('tenant_id', link.tenant_id).maybeSingle();
+  const { data: op } = await db.from('opportunities').select('id,tenant_id,unit_id,form_slug,desired_date,desired_slot,contact_name,client:clients(full_name)').eq('id', link.opportunity_id).eq('tenant_id', link.tenant_id).maybeSingle();
   if (!op || !isAllowedForm(op.form_slug)) return respond({ error: 'Link indisponível' }, 404);
   const { data: unit } = await db.from('units').select('slug').eq('id', op.unit_id ?? '').eq('tenant_id', link.tenant_id).maybeSingle();
   const origin: House | null = unit?.slug === 'bosque-da-saude' ? 'bosque' : unit?.slug === 'vila-mariana' ? 'vila' : null;
   if (!origin) return respond({ error: 'Vamos confirmar com a equipe.' }, 503);
   const client = Array.isArray(op.client) ? op.client[0] : op.client;
-  const firstName = client?.full_name?.trim().split(/\s+/)[0] || 'Olá';
+  const firstName = ((op as any)?.contact_name || client?.full_name)?.trim().split(/\s+/)[0] || 'Olá';
   const today = saoPauloToday();
   const requested = op.desired_date;
   const base = { firstName, origin, requestedDate: requested && requested > today ? requested : null, noPrice: String(op.form_slug) === 'bs-kids-day', today, horizon: horizon(today) };

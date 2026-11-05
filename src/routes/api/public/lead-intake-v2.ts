@@ -218,13 +218,10 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
                 oppUpd.marketing_consent = consent;
                 oppUpd.marketing_consent_at = consent ? new Date().toISOString() : null;
               }
+              // Nome digitado fica na oportunidade; o cadastro do cliente não muda.
+              if (b.parent_name) oppUpd.contact_name = b.parent_name;
               if (Object.keys(oppUpd).length)
                 await supabaseAdmin.from("opportunities").update(oppUpd as never).eq("id", d.id);
-              if (b.parent_name && b.parent_name !== d.clients?.full_name)
-                await supabaseAdmin
-                  .from("clients")
-                  .update({ full_name: b.parent_name } as never)
-                  .eq("id", d.client_id);
               return json({
                 success: true,
                 opportunity_id: d.id,
@@ -340,6 +337,7 @@ export const Route = createFileRoute("/api/public/lead-intake-v2")({
               form_id: form.id,
               form_slug: b.form_slug,
               email: emailClean,
+              contact_name: b.parent_name || null,
               marketing_consent: consentGiven,
               marketing_consent_at: consentGiven ? new Date().toISOString() : null,
               utm_source: b.utm_source || null,
