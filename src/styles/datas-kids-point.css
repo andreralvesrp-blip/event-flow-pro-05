@@ -135,3 +135,16 @@
 .kpd .app{min-height:100dvh}
 /* Botões desativados: fundo cinza, texto acinzentado, sem aparência de clicável. */
 .kpd .btn:disabled,.kpd .btn.p:disabled,.kpd .btn.s:disabled,.kpd .btn.w:disabled{background:#e6e9ea;color:#667;border-color:#e6e9ea;box-shadow:none;cursor:default}
+.kpd{--turn-sun:#d97706;--queue-border:#ffd166;--selected-ink:#fff}
+.kpd .values-notice{margin:0;padding:12px 14px;border-radius:8px;background:var(--sun);color:var(--sunT);font-weight:800;text-align:center}
+.kpd .turn-label{display:inline-flex;align-items:center;gap:6px;color:inherit;font-size:inherit}
+.kpd .turn-icon{width:18px;height:18px;flex:none}
+.kpd .turn-icon.sun{color:var(--turn-sun)}
+.kpd .turn-icon.moon{color:var(--ink)}
+.kpd .chip b{font-size:17px}
+.kpd .chip .turn-label{font-size:17px;color:inherit}
+.kpd .chip.int{background:var(--sun);border-color:var(--queue-border)}
+.kpd .chip .queue-status{color:var(--sunT);display:block;font-weight:700}
+.kpd .chip.sel{background:var(--teal);border-color:var(--teal);color:var(--selected-ink)}
+.kpd .chip.sel .turn-icon,.kpd .chip.sel .queue-status{color:var(--selected-ink)}
+.kpd .btn{white-space:normal;padding:10px 12px}

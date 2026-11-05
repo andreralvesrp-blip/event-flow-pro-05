@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { availability, priceFor, horizon, inWindow, buildOptions, isAllowedForm, whatsappUrl, type CalendarEvent, type CalendarSet } from './personal-dates';
+import { availability, priceFor, horizon, inWindow, buildOptions, isAllowedForm, whatsappUrl, orderDaySlots, type CalendarEvent, type CalendarSet } from './personal-dates';
 const event = (start: string, end: string): CalendarEvent => ({ start: { dateTime: `2027-01-23T${start}:00-03:00` }, end: { dateTime: `2027-01-23T${end}:00-03:00` } });
 const empty: CalendarSet = { bosque: { closed: [], interest: [] }, vila: { closed: [], interest: [] } };
 describe('Turnos', () => {
@@ -25,12 +25,15 @@ describe('Preços', () => {
   it('feriado sábado mantém 11030', () => expect(priceFor('2027-05-01','jantar',['2027-05-01'])).toBe(11030));
 });
 describe('Sugestões e segurança', () => {
+  it('turno disponível vem antes da pré-reserva no mesmo dia', () => { const options = buildOptions('2027-01-23','bosque',{...empty,bosque:{closed:[],interest:[event('12:00','14:00')]}},[],'2026-11-05').filter(o => o.house === 'bosque' && o.date === '2027-01-23'); expect(orderDaySlots(options).map(o => `${o.slot}:${o.status}`)).toEqual(['jantar:disponivel','almoco:interesse']); });
   it('limite de dez meses', () => expect(horizon('2026-11-05')).toBe('2027-09-05'));
   it('exclui hoje e passado', () => { expect(inWindow('2026-11-05','2026-11-05')).toBe(false); expect(inWindow('2026-11-04','2026-11-05')).toBe(false); });
   it('exclui além de dez meses', () => expect(inWindow('2027-09-06','2026-11-05')).toBe(false));
   it('prioriza mesma data/casa depois outra casa', () => expect(buildOptions('2027-01-23','bosque',empty,[],'2026-11-05').slice(0,4).map(o => `${o.date}:${o.house}`)).toEqual(['2027-01-23:bosque','2027-01-23:bosque','2027-01-23:vila','2027-01-23:vila']));
   it('pedido de fim de semana nunca sugere segunda a quinta', () => expect(buildOptions('2027-01-23','bosque',empty,[],'2026-11-05').every(o => [0,5,6].includes(new Date(`${o.date}T12:00:00Z`).getUTCDay()))).toBe(true));
-  it('interesse não entra como sugestão', () => { const cal = { ...empty, bosque: { closed: [], interest: [event('12:00','14:00')] } }; expect(buildOptions('2027-01-23','bosque',cal,[],'2026-11-05').some(o => o.house === 'bosque' && o.date === '2027-01-23' && o.slot === 'almoco')).toBe(false); });
+  it('pré-reserva entra como sugestão sem selo', () => { const cal = { ...empty, bosque: { closed: [], interest: [event('12:00','14:00')] } }; const option = buildOptions('2027-01-23','bosque',cal,[],'2026-11-05').find(o => o.house === 'bosque' && o.date === '2027-01-23' && o.slot === 'almoco'); expect(option?.status).toBe('interesse'); expect(option?.cheaper).toBe(false); });
+  it('06/12 Bosque sugere 04/12 jantar pré-reservado', () => { const cal = { ...empty, bosque: { closed: [], interest: [{start:{dateTime:'2026-12-04T19:00:00-03:00'},end:{dateTime:'2026-12-04T23:00:00-03:00'}}] } }; expect(buildOptions('2026-12-06','bosque',cal,[],'2026-11-05').find(o => o.house === 'bosque' && o.date === '2026-12-04' && o.slot === 'jantar')?.status).toBe('interesse'); });
+  it('ocupados continuam fora das sugestões', () => { const cal = { ...empty, bosque: { closed: [event('12:00','14:00')], interest: [] } }; expect(buildOptions('2027-01-23','bosque',cal,[],'2026-11-05').some(o => o.house === 'bosque' && o.date === '2027-01-23' && o.slot === 'almoco')).toBe(false); });
   it('pedido semanal não tem selo', () => expect(buildOptions('2027-01-20','bosque',empty,[],'2026-11-05').some(o => o.cheaper)).toBe(false));
   it('faixa menor que nobre tem selo', () => expect(buildOptions('2027-01-23','bosque',empty,[],'2026-11-05').find(o => o.date === '2027-01-24' && o.slot === 'jantar')?.cheaper).toBe(true));
   it('mais barato respeita pedido domingo jantar', () => expect(buildOptions('2027-01-24','bosque',empty,[],'2026-11-05','all','jantar').some(o => o.cheaper)).toBe(false));

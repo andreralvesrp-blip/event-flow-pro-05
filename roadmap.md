@@ -13,11 +13,12 @@
 - [ ] Pendente do usuário: publicar (PDF público + rotas novas) e verificar domínio kidspoint.com.br no Resend
 
 ## Página pessoal de datas — sem publicação
+- [x] Ajustar valores e ícones; incluir pré-reservas nas sugestões e fila; medir WhatsApp antes/depois e entregar prints de celular.
 - [x] Plano aprovado; cinco feriados nacionais incluídos.
 - [x] Configurações de Calendário, feriados, links pessoais, cache e interações isolados.
 - [x] Leitura Google Calendar preparada; instruções de conta de serviço fornecidas.
 - [x] Turnos, preços, ordenação e proteção com testes controlados.
 - [x] Página pessoal sem indexação e sem links nos fluxos existentes; link inexistente rejeitado.
 - [x] Resumo de interações nos cards; Calendário conferido com sessão real.
-- [ ] Pendente do usuário: chave Google recusada nesta etapa e IDs das quatro agendas ausentes; leitura real e escolha com agenda real não verificadas.
-- [ ] Pendente do usuário: não existe oportunidade de bs-orcamento-teste no banco; fornecer/criar uma para gerar link e verificar página com dados reais e resumo no card.
+- [x] Conector Google Calendar e quatro agendas conferidos; sem conta de serviço adicional.
+- [x] Link de oportunidade teste verificado com dados reais; fila de 04/12/2026 jantar Bosque registrada e lida no card.

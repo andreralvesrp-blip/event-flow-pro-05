@@ -7,6 +7,7 @@ export type Turno = Slot | 'ambos';
 export type Availability = 'disponivel' | 'interesse' | 'ocupado';
 export type CalendarEvent = { start: { date?: string; dateTime?: string }; end: { date?: string; dateTime?: string }; status?: string };
 export type Option = { house: House; date: string; slot: Slot; status: Availability; price: number; cheaper: boolean };
+export const orderDaySlots = (options: Option[]) => [...options].sort((a, b) => Number(a.status === 'interesse') - Number(b.status === 'interesse'));
 export const HOUSES = {
   bosque: { name: 'Bosque da Saúde', address: 'Rua Tiquatira, 394', whatsapp: '5511914454455' },
   vila: { name: 'Vila Mariana', address: 'Rua Padre Machado, 1161', whatsapp: '5511937123020' },
@@ -98,9 +99,9 @@ export function buildOptions(requested: string, origin: House, calendars: Calend
     seen.add(key);
     if ((mode === 'origin' && (c.house !== origin || c.date === requested)) || (mode === 'other' && c.house !== other)) continue;
     const status = availability(c.date, calendars[c.house].closed, calendars[c.house].interest)[c.slot];
-    if (status !== 'disponivel') continue;
+    if (status === 'ocupado') continue;
     const price = priceFor(c.date, c.slot, holidays);
-    options.push({ ...c, status, price, cheaper: !isWeek && price < baseline });
+    options.push({ ...c, status, price, cheaper: status === 'disponivel' && !isWeek && price < baseline });
   }
   return options;
 }
