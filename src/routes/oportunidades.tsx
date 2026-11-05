@@ -135,6 +135,7 @@ const SEND_STATUS_LABELS: Record<QuoteSend["status"], string> = {
 };
 
 type FormLite = { slug: string; name: string; flow_version?: string | null };
+type DateInteraction = { opportunity_id: string; action: string; house: string | null; party_date: string | null; slot: string | null; created_at: string };
 
 type Visit = {
   id: string;
@@ -325,6 +326,7 @@ function OportunidadesPage() {
   const [forms, setForms] = useState<FormLite[]>([]);
   const [formFilter, setFormFilter] = useState<string>("all");
   const [sends, setSends] = useState<QuoteSend[]>([]);
+  const [dateInteractions, setDateInteractions] = useState<DateInteraction[]>([]);
   const [onlyFailedSends, setOnlyFailedSends] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Opportunity | null>(null);
@@ -378,8 +380,24 @@ function OportunidadesPage() {
         all.push(...((qs ?? []) as QuoteSend[]));
       }
       setSends(all);
+      const interactions: DateInteraction[] = [];
+      for (let i = 0; i < oppIds.length; i += 200) {
+        let page = 0;
+        while (true) {
+          const { data: history, error: historyError } = await supabase.from('date_interactions')
+            .select('opportunity_id,action,house,party_date,slot,created_at')
+            .in('opportunity_id', oppIds.slice(i, i + 200))
+            .order('created_at', { ascending: false }).range(page * 1000, page * 1000 + 999);
+          if (historyError) { setErr('Não foi possível carregar as interações de datas'); break; }
+          interactions.push(...(history ?? []));
+          if ((history?.length ?? 0) < 1000) break;
+          page++;
+        }
+      }
+      setDateInteractions(interactions);
     } else {
       setSends([]);
+      setDateInteractions([]);
     }
   }, [unitFilter]);
 
@@ -601,6 +619,7 @@ function OportunidadesPage() {
                   op={o}
                   formLabel={formLabel}
                   sends={sendsByOp.get(o.id) ?? []}
+                  dateInteractions={dateInteractions.filter(interaction => interaction.opportunity_id === o.id)}
                   isV2={forms.some((f) => f.slug === o.form_slug && f.flow_version === "orcamento_automatico")}
                   onClick={() => setSelected(o)}
                   onToggleContacted={async (next) => {
@@ -720,6 +739,7 @@ function OpCard({
   formLabel,
   sends,
   isV2,
+  dateInteractions,
   onClick,
   onToggleContacted,
 }: {
@@ -727,6 +747,7 @@ function OpCard({
   formLabel: (slug: string | null | undefined) => string;
   sends: QuoteSend[];
   isV2: boolean;
+  dateInteractions: DateInteraction[];
   onClick: () => void;
   onToggleContacted: (next: boolean) => void;
 }) {
@@ -825,6 +846,12 @@ function OpCard({
         </Badge>
         <span className="text-[10px] text-slate-400 shrink-0">parado há {parado}d</span>
       </div>
+      {dateInteractions.length > 0 && <div className="border-t border-border mt-2 pt-2 text-xs text-muted-foreground space-y-1">
+        <p>Datas: {dateInteractions.filter(i => i.action === 'abriu').length} abertura(s) · {dateInteractions.filter(i => i.action === 'viu_opcao').length} opção(ões) vista(s)</p>
+        {dateInteractions.filter(i => ['escolheu_data','entrou_fila','mudou_casa','falou_equipe'].includes(i.action)).map((i, index) => <p key={`${i.created_at}${index}`}>
+          {i.action === 'escolheu_data' ? 'Escolheu' : i.action === 'entrou_fila' ? 'Fila (não é reserva)' : i.action === 'mudou_casa' ? 'Casa escolhida' : 'Falou com a equipe'}: {i.house === 'vila' ? 'Vila Mariana' : i.house === 'bosque' ? 'Bosque da Saúde' : '—'}{i.party_date ? ` · ${fmtDate(i.party_date)}` : ''}{i.slot ? ` · ${i.slot === 'almoco' ? 'almoço' : 'jantar'}` : ''}
+        </p>)}
+      </div>}
     </div>
   );
 }
