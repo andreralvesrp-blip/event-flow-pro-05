@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -13,8 +14,11 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/useAuth";
 import { UnitProvider } from "@/contexts/UnitContext";
 import { Toaster } from "@/components/ui/sonner";
+import { LinkUnavailable } from "@/components/LinkUnavailable";
 
 function NotFoundComponent() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname.startsWith("/datas")) return <LinkUnavailable />;
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">

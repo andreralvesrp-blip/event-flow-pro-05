@@ -29,6 +29,7 @@ import { Route as ConfiguracoesEquipeRouteImport } from './routes/configuracoes.
 import { Route as ConfiguracoesImportacaoHistoricaRouteImport } from './routes/configuracoes.importacao-historica'
 import { Route as ConfiguracoesIntegracoesRouteImport } from './routes/configuracoes.integracoes'
 import { Route as ConfiguracoesUnidadesRouteImport } from './routes/configuracoes.unidades'
+import { Route as DatasIndexRouteImport } from './routes/datas.index'
 import { Route as DatasTokenRouteImport } from './routes/datas.$token'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as ApiPublicLeadIntakeV2RouteImport } from './routes/api/public/lead-intake-v2'
@@ -139,6 +140,11 @@ const ConfiguracoesUnidadesRoute = ConfiguracoesUnidadesRouteImport.update({
   path: '/unidades',
   getParentRoute: () => ConfiguracoesRoute,
 } as any)
+const DatasIndexRoute = DatasIndexRouteImport.update({
+  id: '/datas/',
+  path: '/datas/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DatasTokenRoute = DatasTokenRouteImport.update({
   id: '/datas/$token',
   path: '/datas/$token',
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/datas/$token': typeof DatasTokenRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
+  '/datas/': typeof DatasIndexRoute
   '/api/public/lead-intake-v2': typeof ApiPublicLeadIntakeV2Route
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
   '/api/public/personal-dates': typeof ApiPublicPersonalDatesRoute
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/datas/$token': typeof DatasTokenRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes': typeof ConfiguracoesIndexRoute
+  '/datas': typeof DatasIndexRoute
   '/api/public/lead-intake-v2': typeof ApiPublicLeadIntakeV2Route
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
   '/api/public/personal-dates': typeof ApiPublicPersonalDatesRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/datas/$token': typeof DatasTokenRoute
   '/f/$slug': typeof FSlugRoute
   '/configuracoes/': typeof ConfiguracoesIndexRoute
+  '/datas/': typeof DatasIndexRoute
   '/api/public/lead-intake-v2': typeof ApiPublicLeadIntakeV2Route
   '/api/public/marketing-event': typeof ApiPublicMarketingEventRoute
   '/api/public/personal-dates': typeof ApiPublicPersonalDatesRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/datas/$token'
     | '/f/$slug'
     | '/configuracoes/'
+    | '/datas/'
     | '/api/public/lead-intake-v2'
     | '/api/public/marketing-event'
     | '/api/public/personal-dates'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/datas/$token'
     | '/f/$slug'
     | '/configuracoes'
+    | '/datas'
     | '/api/public/lead-intake-v2'
     | '/api/public/marketing-event'
     | '/api/public/personal-dates'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/datas/$token'
     | '/f/$slug'
     | '/configuracoes/'
+    | '/datas/'
     | '/api/public/lead-intake-v2'
     | '/api/public/marketing-event'
     | '/api/public/personal-dates'
@@ -369,6 +381,7 @@ export interface RootRouteChildren {
   AvaliarSlugRoute: typeof AvaliarSlugRoute
   DatasTokenRoute: typeof DatasTokenRoute
   FSlugRoute: typeof FSlugRoute
+  DatasIndexRoute: typeof DatasIndexRoute
   ApiPublicLeadIntakeV2Route: typeof ApiPublicLeadIntakeV2Route
   ApiPublicMarketingEventRoute: typeof ApiPublicMarketingEventRoute
   ApiPublicPersonalDatesRoute: typeof ApiPublicPersonalDatesRoute
@@ -518,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesUnidadesRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
+    '/datas/': {
+      id: '/datas/'
+      path: '/datas'
+      fullPath: '/datas/'
+      preLoaderRoute: typeof DatasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/datas/$token': {
       id: '/datas/$token'
       path: '/datas/$token'
@@ -609,6 +629,7 @@ const rootRouteChildren: RootRouteChildren = {
   AvaliarSlugRoute: AvaliarSlugRoute,
   DatasTokenRoute: DatasTokenRoute,
   FSlugRoute: FSlugRoute,
+  DatasIndexRoute: DatasIndexRoute,
   ApiPublicLeadIntakeV2Route: ApiPublicLeadIntakeV2Route,
   ApiPublicMarketingEventRoute: ApiPublicMarketingEventRoute,
   ApiPublicPersonalDatesRoute: ApiPublicPersonalDatesRoute,

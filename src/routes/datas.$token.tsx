@@ -5,8 +5,9 @@ import { Sun, Moon } from 'lucide-react';
 import { getPersonalDateView, type PersonalDateView } from '@/lib/personal-dates-view.functions';
 import { orderDaySlots, whatsappUrl, type House, type Option, type Slot, type Turno } from '@/lib/personal-dates';
 import pageCss from '@/styles/datas-kids-point.css?url';
+import { LinkUnavailable } from '@/components/LinkUnavailable';
 
-const options = (token: string) => queryOptions({ queryKey: ['personal-dates', token], queryFn: () => getPersonalDateView({ data: { token } }), staleTime: 0, retry: false });
+const options = (token: string) => queryOptions({ queryKey: ['personal-dates', token], queryFn: () => getPersonalDateView({ data: { token } }).catch((): PersonalDateView => ({ error: 'Link indisponível' } as PersonalDateView)), staleTime: 0, retry: false });
 
 export const Route = createFileRoute('/datas/$token')({
   loader: ({ params, context }) => context.queryClient.ensureQueryData(options(params.token)),
@@ -20,6 +21,8 @@ export const Route = createFileRoute('/datas/$token')({
     ],
   }),
   component: PersonalDatesPage,
+  errorComponent: LinkUnavailable,
+  notFoundComponent: LinkUnavailable,
 });
 
 // Nomes e endereços exibidos na página da cliente.
@@ -171,7 +174,7 @@ export function DatesJourney({ token, initial }: { token: string; initial: Perso
   const hi = { t: `Oi, ${view.firstName}!` };
   const noPrice = view.noPrice;
 
-  if (view.error) return page({ band: { t: 'Link indisponível.' }, m: null });
+  if (view.error) return <LinkUnavailable />;
   if (view.state === 'unopened' || view.state === 'unavailable') {
     const title = view.state === 'unopened' ? 'O calendário dessa data ainda não abriu' : 'Vamos confirmar com a equipe';
     return page({
