@@ -103,16 +103,23 @@ export async function sendChatguruWebhook(opportunityId: string, baseUrl: string
     const err = e as Error;
     error = err.name === "TimeoutError" ? `sem resposta em ${TIMEOUT_MS / 1000}s` : err.message;
   }
-  // Nunca grava a URL; o link pessoal aparece só no corpo enviado (com token).
+  // Grava só o endereço sem o código; o link completo vai apenas no corpo enviado.
   const { error: logErr } = await db.from("quote_sends").insert({
     tenant_id: opp.tenant_id,
     opportunity_id: opp.id,
     channel: "whatsapp",
     status,
     recipient: client?.phone_normalized ?? null,
-    provider_response: JSON.stringify({ resposta: response, erro: error, enviado: payload && { ...payload, link_datas: payload.link_datas ? "(link pessoal gerado)" : null } }),
+    provider_response: JSON.stringify({ resposta: response, erro: error, enviado: payload && { ...payload, link_datas: maskPersonalLink(payload.link_datas) } }),
     sent_at: status === "enviado" ? new Date().toISOString() : null,
   } as never);
   if (logErr) console.error("[chatguru] log error", logErr.message);
   return status;
+}
+
+/** Endereço do link pessoal sem o código, ex.: https://orcamento.kidspoint.com.br/datas/(código). */
+export function maskPersonalLink(link: string | null | undefined): string | null {
+  if (!link) return null;
+  const i = link.indexOf("/datas/");
+  return i >= 0 ? `${link.slice(0, i)}/datas/(código)` : "(link pessoal gerado)";
 }

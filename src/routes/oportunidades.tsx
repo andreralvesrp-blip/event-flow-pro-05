@@ -1461,6 +1461,9 @@ function OpDetail({
                       {s.channel === "email" ? "E-mail" : "WhatsApp"}
                     </span>
                     {s.recipient && <span className="text-slate-500"> · {s.recipient}</span>}
+                    {s.channel === "whatsapp" && sentLinkDatas(s.provider_response) && (
+                      <div className="text-slate-500 break-all">{sentLinkDatas(s.provider_response)}</div>
+                    )}
                     {s.provider_response && s.status === "falhou" && (
                       <div className="text-red-500 truncate max-w-[280px]" title={s.provider_response}>
                         {s.provider_response}
@@ -1628,4 +1631,15 @@ function DatesSection({ list }: { list: DateInteraction[] }) {
       </div>
     </div>
   );
+}
+
+/** link_datas registrado no envio (já sem o código). */
+function sentLinkDatas(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw)?.enviado?.link_datas;
+    return typeof v === "string" && v.includes("/datas/") ? v : null;
+  } catch {
+    return null;
+  }
 }
