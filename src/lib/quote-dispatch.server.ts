@@ -199,7 +199,7 @@ export async function dispatchQuote(
     <p style="font-size:16px;line-height:1.6;">Recebemos seu pedido de orçamento para a festa de <strong>${escapeHtml(dateBR)}</strong>. Nosso cardápio e os valores estão no PDF anexo.</p>
     <p style="text-align:center;margin:28px 0;">
       ${personalLink
-        ? `<a href="${escapeHtml(personalLink)}" style="display:inline-block;background:#d9482b;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:14px 28px;border-radius:12px;">Ver datas disponíveis</a>`
+        ? `<a href="${escapeHtml(personalLink + "?o=email")}" style="display:inline-block;background:#d9482b;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:14px 28px;border-radius:12px;">Ver datas disponíveis</a>`
         : `<a href="${waUrl}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:14px 28px;border-radius:12px;">Verificar disponibilidade de data</a>`}
     </p>
     <p style="font-size:16px;line-height:1.6;">Qualquer dúvida, é só responder este e-mail ou chamar a gente no WhatsApp.</p>

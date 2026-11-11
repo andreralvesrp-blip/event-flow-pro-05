@@ -1,0 +1,1 @@
+ALTER TABLE public.date_interactions ADD COLUMN IF NOT EXISTS detail text;

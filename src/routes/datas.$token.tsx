@@ -1,23 +1,27 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
-import { Sun, Moon } from 'lucide-react';
-import { getPersonalDateView, type PersonalDateView } from '@/lib/personal-dates-view.functions';
-import { orderDaySlots, whatsappUrl, type House, type Option, type Slot, type Turno } from '@/lib/personal-dates';
+import { queryOptions, useQuery, useSuspenseQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { Sun, Moon, MapPin, CalendarDays, ChevronLeft, ChevronRight, ArrowLeft, MessageCircle } from 'lucide-react';
+import { getPersonalDateBase, getPersonalDateFull, getPersonalDateMonth, type PersonalDateBase, type Asked, type MonthDay } from '@/lib/personal-dates-view.functions';
+import { pickUrl, UNIT_NAME, type DayTurns, type Slot, type Availability } from '@/lib/personal-dates';
 import pageCss from '@/styles/datas-kids-point.css?url';
+import v2Css from '@/styles/datas-v2.css?url';
 import { LinkUnavailable } from '@/components/LinkUnavailable';
 
-const options = (token: string) => queryOptions({ queryKey: ['personal-dates', token], queryFn: () => getPersonalDateView({ data: { token } }).catch((): PersonalDateView => ({ error: 'Link indisponível' } as PersonalDateView)), staleTime: 0, retry: false });
+const baseQ = (token: string) => queryOptions({ queryKey: ['pd-base', token], queryFn: () => getPersonalDateBase({ data: { token } }).catch((): PersonalDateBase => ({ error: 'Link indisponível' } as PersonalDateBase)), staleTime: 0, retry: false });
+const fullQ = (token: string) => queryOptions({ queryKey: ['pd-full', token], queryFn: () => getPersonalDateFull({ data: { token } }), staleTime: 60_000, retry: 1 });
+const monthQ = (token: string, month: string) => queryOptions({ queryKey: ['pd-month', token, month], queryFn: () => getPersonalDateMonth({ data: { token, month } }), staleTime: 5 * 60_000 });
 
 export const Route = createFileRoute('/datas/$token')({
-  loader: ({ params, context }) => context.queryClient.ensureQueryData(options(params.token)),
+  loader: ({ params, context }) => context.queryClient.ensureQueryData(baseQ(params.token)),
   head: () => ({
-    meta: [{ title: 'Sua data — Kids Point' }, { name: 'description', content: 'Datas da sua festa nas casas Kids Point.' }, { property: 'og:title', content: 'Sua data — Kids Point' }, { property: 'og:description', content: 'Datas da sua festa nas casas Kids Point.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }, { name: 'robots', content: 'noindex, nofollow, noarchive' }, { name: 'referrer', content: 'no-referrer' }],
+    meta: [{ title: 'Sua data — Kids Point' }, { name: 'description', content: 'Veja os turnos livres para a sua festa na Kids Point.' }, { property: 'og:title', content: 'Sua data — Kids Point' }, { property: 'og:description', content: 'Veja os turnos livres para a sua festa na Kids Point.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }, { name: 'robots', content: 'noindex, nofollow, noarchive' }, { name: 'referrer', content: 'no-referrer' }],
     links: [
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito+Sans:wght@400;600;700;800&display=swap' },
       { rel: 'stylesheet', href: pageCss },
+      { rel: 'stylesheet', href: v2Css },
     ],
   }),
   component: PersonalDatesPage,
@@ -25,312 +29,169 @@ export const Route = createFileRoute('/datas/$token')({
   notFoundComponent: LinkUnavailable,
 });
 
-// Nomes e endereços exibidos na página da cliente.
-const C: Record<House, { n: string; a: string }> = { bosque: { n: 'Ud. Bosque', a: 'Rua Tiquatira, 394' }, vila: { n: 'Ud. Vila Mariana', a: 'Rua Padre Machado, 1161' } };
+const asDate = (d: string) => new Date(`${d}T12:00:00-03:00`);
+const fmt = (d: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', ...o }).format(asDate(d));
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const asDate = (date: string) => new Date(`${date}T12:00:00-03:00`);
-const longDate = (date: string) => cap(new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' }).format(asDate(date)).replace('-feira', ''));
-const shortDate = (date: string) => { const d = asDate(date); const w = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'America/Sao_Paulo' }).format(d).replace('-feira', ''); return `${w}, ${Number(date.slice(8, 10))}/${Number(date.slice(5, 7))}`; };
-const R = (n: number) => 'R$ ' + n.toLocaleString('pt-BR');
-const T = (slot: Slot) => (slot === 'almoco' ? 'Almoço' : 'Jantar');
-const t = (slot: Slot) => (slot === 'almoco' ? 'almoço' : 'jantar');
-const P = 3;
-
-type ViewName = 'recesso' | 'res' | 'outra' | 'lista' | 'fim';
-type Final = { option: Option; turno: string; slot: Turno; price: number; url: string; fila?: boolean };
-type State = { v: ViewName; casa: House; page: number; pick: Option | null; final: Final | null };
-
-const Pin = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" /><circle cx="12" cy="10" r="2.4" /></svg>
-);
-const Pill = ({ house }: { house: House }) => <p className="upill"><Pin />{C[house].n}</p>;
-const TurnLabel = ({ slot, label }: { slot: Turno; label?: string }) => <span className="turn-label">{slot !== 'jantar' && <Sun className="turn-icon sun" aria-hidden="true" />}{slot !== 'almoco' && <Moon className="turn-icon moon" aria-hidden="true" />}{label ?? (slot === 'ambos' ? 'Almoço ou jantar' : T(slot))}</span>;
-const Price = ({ n }: { n: number }) => <span className="price">A partir de <strong>{R(n)}</strong> para 40 pagantes</span>;
+const longDate = (d: string) => cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }).replace('-feira', ''));
+const mon3 = (d: string) => fmt(d, { month: 'short' }).replace('.', '');
+const wk3 = (d: string) => fmt(d, { weekday: 'short' }).replace('.', '');
+const T = (s: Slot) => (s === 'almoco' ? 'Almoço' : 'Jantar');
+const SLOTS: Slot[] = ['almoco', 'jantar'];
 
 function PersonalDatesPage() {
   const { token } = Route.useParams();
-  const { data } = useSuspenseQuery(options(token));
-  return <DatesJourney token={token} initial={data} />;
+  const { data } = useSuspenseQuery(baseQ(token));
+  if (data.error) return <LinkUnavailable />;
+  return <DatesPage token={token} base={data} />;
 }
 
-export function DatesJourney({ token, initial }: { token: string; initial: PersonalDateView }) {
-  const [view] = useState<PersonalDateView>(initial);
-  const house: House = view.origin ?? 'bosque';
-  const otherHouse: House = house === 'bosque' ? 'vila' : 'bosque';
-  const requestedDate = view.requestedDate;
-  const requested = view.requested ?? [];
-  const available = requested.filter(o => o.status === 'disponivel');
-  const bothOccupied = requested.length > 0 && requested.every(o => o.status === 'ocupado');
-  const otherRequested = (view.options ?? []).filter(o => o.date === requestedDate && o.house === otherHouse && o.status === 'disponivel');
-  const listFor = (h: House) => (view.options ?? []).filter(o => o.house === h && o.date !== requestedDate);
-  const first: ViewName = view.closure ? 'recesso' : requested.length === 0 ? 'lista' : bothOccupied ? (otherRequested.length > 0 ? 'outra' : 'lista') : 'res';
+function post(token: string, body: Record<string, unknown>) {
+  return fetch('/api/public/personal-dates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }), keepalive: true }).catch(() => undefined);
+}
+function openUrl(url: string) {
+  const w = window.open(url, '_blank');
+  if (w) w.opener = null; else window.location.assign(url);
+}
 
-  const [S, setS] = useState<State>({ v: first, casa: house, page: 0, pick: null, final: null });
-  const [hist, setHist] = useState<State[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [opening, setOpening] = useState(false);
-  const openingRef = useRef(false);
-  const [error, setError] = useState('');
-  const seen = useRef(new Set<string>());
-  const [queuing, setQueuing] = useState<string | null>(null);
-  const qk = (o: Option) => `${o.house}:${o.date}:${o.slot}`;
+const WA = () => <svg className="wa" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" /></svg>;
 
-  const go = (v: ViewName, patch: Partial<State> = {}) => { setHist(h => [...h, S]); setS({ ...S, ...patch, v, pick: null }); setError(''); window.scrollTo(0, 0); };
-  const back = () => { const prev = hist[hist.length - 1]; if (!prev) return; setHist(h => h.slice(0, -1)); setS(prev); setError(''); window.scrollTo(0, 0); };
+function DatesPage({ token, base }: { token: string; base: PersonalDateBase }) {
+  const house = base.origin;
+  const full = useQuery(fullQ(token));
+  const [asked, setAsked] = useState<Asked[]>(base.asked ?? []);
+  const [view, setView] = useState<'main' | 'cal'>('main');
+  const [t0] = useState(() => (typeof performance !== 'undefined' ? performance.now() : 0));
+  useEffect(() => { if (full.data) (window as unknown as { __kpdTurnsMs?: number }).__kpdTurnsMs = Math.round(performance.now() - t0); }, [full.data, t0]);
 
-  async function call(body: Record<string, unknown>) {
-    const response = await fetch('/api/public/personal-dates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }), keepalive: true });
-    const result = await response.json();
-    if (!response.ok || result.error) throw new Error(result.error ?? 'Vamos confirmar com a equipe.');
-    return result;
-  }
-
-  // Uma abertura por carregamento da página (o servidor também ignora repetições em poucos segundos).
   useEffect(() => {
-    if (initial.error) return;
     const w = window as unknown as { __kpdOpened?: Set<string> };
     w.__kpdOpened ??= new Set();
     if (w.__kpdOpened.has(token)) return;
     w.__kpdOpened.add(token);
-    void call({ action: 'abriu' }).catch(() => undefined);
+    const o = new URLSearchParams(window.location.search).get('o');
+    void post(token, { action: 'abriu', detail: o === 'email' ? 'email' : 'whatsapp' });
   }, [token]);
 
-  const pageOf = (h: House, page: number) => {
-    const list = listFor(h);
-    const days = [...new Set(list.map(o => o.date))];
-    return { days, shown: days.slice(page * P, page * P + P).map(d => ({ date: d, slots: orderDaySlots(list.filter(o => o.date === d)) })) };
+  const tap = (date: string, slot: Slot, status: Availability, kind: 'data_pedida' | 'alternativa' | 'calendario') => {
+    const queue = status === 'interesse';
+    openUrl(pickUrl(base.firstName, house, date, slot, queue));
+    setAsked(a => [{ date, slot, queue }, ...a]);
+    void post(token, queue ? { action: 'entrou_fila', date, slot } : { action: 'escolheu_data', date, slot, detail: kind });
   };
+  const isAsked = (date: string, slot: Slot) => asked.find(a => a.date === date && a.slot === slot);
 
-  // Registra "viu_opcao" para as opções visíveis na tela atual.
-  useEffect(() => {
-    if (view.state !== 'ready') return;
-    const visible: Option[] = S.v === 'res' ? requested : S.v === 'outra' ? otherRequested : S.v === 'lista' ? pageOf(S.casa, S.page).shown.flatMap(d => d.slots) : [];
-    for (const option of visible) {
-      const key = `${option.house}:${option.date}:${option.slot}`;
-      // No máximo uma vez por opção em cada sessão do navegador (sobrevive a recarregar a página).
-      const storeKey = `kpd-seen:${token}`;
-      let stored: string[] = [];
-      try { stored = JSON.parse(sessionStorage.getItem(storeKey) ?? '[]'); } catch { stored = []; }
-      if (seen.current.has(key) || stored.includes(key)) { seen.current.add(key); continue; }
-      seen.current.add(key);
-      try { sessionStorage.setItem(storeKey, JSON.stringify([...stored, key])); } catch { /* sessão indisponível */ }
-      void call({ action: 'viu_opcao', house: option.house, date: option.date, slot: option.slot }).catch(() => undefined);
-    }
-  }, [view, S.v, S.casa, S.page]);
+  const Header = ({ back }: { back?: boolean }) => (
+    <header className="v2-head">
+      <span className="v2-circle" aria-hidden="true" /><span className="v2-dot" aria-hidden="true" />
+      {back ? (
+        <div className="v2-calhead"><button type="button" className="v2-back" onClick={() => { setView('main'); window.scrollTo(0, 0); }} aria-label="Voltar"><ArrowLeft size={22} /></button><h1 className="v2-caltitle">Calendário</h1></div>
+      ) : (<>
+        <p className="v2-brand">Kids Point</p>
+        <h1 className="v2-hi">Oi, {base.firstName}!</h1>
+        <p className="v2-unit"><MapPin size={15} aria-hidden="true" />{UNIT_NAME[house]}</p>
+      </>)}
+    </header>
+  );
 
-  async function choose(option: Option, turno = T(option.slot), price = option.price, slot: Turno = option.slot) {
-    setBusy(true); setError('');
-    try {
-      const result = await call({ action: 'escolheu_data', house: option.house, date: option.date, slot });
-      if (!result.url) throw new Error('Vamos confirmar com a equipe.');
-      go('fim', { final: { option, turno, slot, price, url: result.url } });
-    } catch (e) { setError(e instanceof Error ? e.message : 'Vamos confirmar com a equipe.'); }
-    finally { setBusy(false); }
-  }
-
-  async function queue(option: Option) {
-    if (queuing) return;
-    setQueuing(qk(option)); setBusy(true); setError('');
-    try {
-      const result = await call({ action: 'entrou_fila', house: option.house, date: option.date, slot: option.slot });
-      if (!result.url) throw new Error('Vamos confirmar com a equipe.');
-      go('fim', { final: { option, turno: T(option.slot), slot: option.slot, price: option.price, url: result.url, fila: true } });
-    } catch (e) { setError(e instanceof Error && e.message !== 'Failed to fetch' ? `${e.message} Toque de novo para tentar.` : 'Não conseguimos entrar na fila agora. Verifique a internet e toque de novo.'); }
-    finally { setBusy(false); setQueuing(null); }
-  }
-
-  function openWhatsapp(target: House, final?: Final) {
-    if (openingRef.current) return;
-    openingRef.current = true;
-    setOpening(true);
-    const url = final?.url ?? whatsappUrl(view.firstName, target);
-    // Abrir no próprio clique, antes de qualquer chamada de registro.
-    const popup = window.open(url, '_blank');
-    if (popup) popup.opener = null;
-    else window.location.assign(url);
-    void call({ action: 'falou_equipe', house: target, date: final?.option.date, slot: final?.slot }).catch(() => undefined);
-    // O retorno ao aplicativo permite continuar a jornada, sem cliques repetidos na saída.
-    const reset = () => { openingRef.current = false; setOpening(false); };
-    window.addEventListener('focus', reset, { once: true });
-  }
-  const talk = (target: House) => openWhatsapp(target);
-
-  const page = (opts: { band: { t: string; u?: string }; m: React.ReactNode; f?: React.ReactNode; short?: boolean }) => (
-    <div className="kpd">
-      <div className={`app ${opts.short === false ? '' : 'short'}`}>
-        <div className="band">
-          <div className="bar">{hist.length ? <button type="button" className="back" onClick={back} disabled={busy}>‹ Voltar</button> : <i />}<em className="brand">Kids Point</em></div>
-          <strong>{opts.band.t}</strong>
-          {opts.band.u && <span>{opts.band.u}</span>}
-        </div>
-        <div className="main">
-          {opts.m}
-          {error && !opts.f && <p className="cap" role="alert">{error}</p>}
-        </div>
-        {opts.f && <div className="foot">{error && <p className="cap" role="alert" style={{ color: 'var(--red)', fontWeight: 700, margin: '0 0 8px' }}>{error}</p>}{opts.f}</div>}
-      </div>
+  const BigTurns = ({ day, kind, small }: { day: DayTurns; kind: 'data_pedida' | 'calendario'; small?: boolean }) => (
+    <div className={`v2-big${small ? ' small' : ''}`}>
+      {SLOTS.map(s => {
+        const st = day[s]; const Icon = s === 'almoco' ? Sun : Moon; const mine = isAsked(day.date, s);
+        if (mine) return <button key={s} type="button" className="v2-turn asked" onClick={() => openUrl(pickUrl(base.firstName, house, day.date, s, mine.queue))}><span className="v2-you">✓ Você pediu</span><span className="v2-tname">{T(s)}</span><span className="v2-tsub u">Abrir WhatsApp de novo</span></button>;
+        if (st === 'ocupado') return <div key={s} className="v2-turn off"><Icon size={22} strokeWidth={2} aria-hidden="true" /><span className="v2-tname">{T(s)}</span><span className="v2-tsub">Ocupado</span></div>;
+        if (st === 'interesse') return <button key={s} type="button" className="v2-turn fila" onClick={() => tap(day.date, s, st, kind)}><Icon size={22} strokeWidth={2} aria-hidden="true" /><span className="v2-tname">{T(s)}</span><span className="v2-tsub">Entrar na fila</span></button>;
+        return <button key={s} type="button" className="v2-turn free" onClick={() => tap(day.date, s, st, kind)}><WA /><Icon size={22} strokeWidth={2} aria-hidden="true" /><span className="v2-tname">{T(s)}</span><span className="v2-tsub">Livre · pedir agora</span>{day.low[s] && <em className="v2-low">Menor investimento</em>}</button>;
+      })}
     </div>
   );
-  const hi = { t: `Oi, ${view.firstName}!` };
-  const noPrice = view.noPrice;
+  const anyAsked = (dates: string[]) => asked.some(a => dates.includes(a.date));
+  const AskedNote = () => <p className="v2-note"><MessageCircle size={18} aria-hidden="true" />Nossa equipe continua com você no WhatsApp. Se não enviou a mensagem, toque em "Abrir WhatsApp de novo".</p>;
 
-  if (view.error) return <LinkUnavailable />;
-  if (view.state === 'unopened' || view.state === 'unavailable') {
-    const title = view.state === 'unopened' ? 'O calendário dessa data ainda não abriu' : 'Vamos confirmar com a equipe';
-    return page({
-      band: hi,
-      m: <><Pill house={house} /><h1>{title}</h1>{view.state === 'unopened' && <p className="hi">Fale com a nossa equipe, que ajudamos a planejar a festa.</p>}</>,
-      f: <button type="button" className="btn w" disabled={busy || opening} onClick={() => talk(house)}>{opening ? 'Abrindo o WhatsApp...' : 'Falar com a equipe'}</button>,
-    });
-  }
+  if (view === 'cal') return <div className="v2"><Header back /><Calendar token={token} base={base} BigTurns={BigTurns} anyAsked={anyAsked} AskedNote={AskedNote} /></div>;
 
-  if (S.v === 'recesso' && view.closure) {
-    const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
-    return page({
-      band: hi,
-      m: <><Pill house={house} /><h1>Não atendemos nessa data</h1><p className="hi" style={{ color: 'var(--ink)' }}>Estamos em recesso de {dm(view.closure.start_date)} a {dm(view.closure.end_date)}. Separei outras datas para você.</p></>,
-      f: <button type="button" className="btn p" onClick={() => go('lista', { casa: house, page: 0 })}>Ver datas disponíveis</button>,
-    });
-  }
+  const d = full.data;
+  const req = base.requestedDate;
+  const summary = (r: DayTurns) => { const a = r.almoco === 'disponivel', j = r.jantar === 'disponivel'; return a && j ? 'Almoço e jantar livres' : a ? 'Almoço livre' : j ? 'Jantar livre' : r.almoco === 'ocupado' && r.jantar === 'ocupado' ? 'Data ocupada' : 'Entrar na fila'; };
 
-  if (S.v === 'res' && requestedDate) {
-    const both = available.length === 2;
-    const samePrice = both && available[0].price === available[1].price;
-    const only = available.length === 1 ? available[0] : null;
-    return page({
-      band: hi,
-      m: (
-        <>
-          <Pill house={house} />
-          <h1>{longDate(requestedDate)}</h1>
-          {both && <p className="ans">Essa data está livre nos dois turnos</p>}
-          {only && <p className="ans">Temos {t(only.slot)} disponível nessa data</p>}
-          {both && samePrice && !noPrice && <p className="cap">A partir de <strong>{R(available[0].price)}</strong> para 40 pagantes</p>}
-          <div className="rows">
-            {requested.map(o => {
-              if (o.status === 'ocupado') return <div key={o.slot} className="row off"><b><TurnLabel slot={o.slot} /></b><span className="st off">Ocupado</span></div>;
-              if (o.status === 'interesse') return (
-                <div key={o.slot} className="row int">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><b><TurnLabel slot={o.slot} /></b><span className="st int">Pré-reservado</span></div>
-                  <p>Outra família está com este turno em pré-reserva. Se ela não confirmar, ele pode ficar com você.</p>
-                  <button type="button" className={`btn s mini${queuing === qk(o) ? ' queuing' : ''}`} disabled={busy} aria-busy={queuing === qk(o)} onClick={() => queue(o)}>{queuing === qk(o) ? 'Entrando na fila...' : `Entrar na fila do ${t(o.slot)}`}</button>
-                </div>
-              );
-              return (
-                <div key={o.slot} className={`row ${only ? 'sel' : ''}`}>
-                  <b><TurnLabel slot={o.slot} /></b><span className="st on">Disponível</span>
-                  {!noPrice && !(both && samePrice) && <Price n={o.price} />}
-                  {both && <button type="button" className="btn p mini" disabled={busy} onClick={() => choose(o)}>Quero {shortDate(o.date)}, {t(o.slot)}</button>}
-                </div>
-              );
-            })}
-          </div>
-        </>
-      ),
-      f: (
-        <>
-          {only && <button type="button" className="btn p" disabled={busy} onClick={() => choose(only)}>Quero {shortDate(only.date)}, {t(only.slot)}</button>}
-          <button type="button" className="btn s" disabled={busy} onClick={() => go('lista')}>Ver mais opções</button>
-        </>
-      ),
-    });
-  }
-
-  if (S.v === 'outra' && requestedDate && otherRequested.length > 0) {
-    const turnos = otherRequested.length === 2 ? 'almoço ou jantar' : t(otherRequested[0].slot);
-    const cheapest = otherRequested.reduce((a, b) => (b.price < a.price ? b : a));
-    return page({
-      band: hi,
-      m: (
-        <>
-          <Pill house={house} />
-          <h1>Sua data está ocupada na {C[house].n}</h1>
-          <p className="hi" style={{ color: 'var(--ink)' }}>Mas ela está disponível na nossa outra unidade:</p>
-          <div className="house">
-            <h2>{C[otherHouse].n}</h2>
-            <div className="addr">{C[otherHouse].a}</div>
-            <div className="line">{longDate(requestedDate)} · <TurnLabel slot={otherRequested.length === 2 ? 'ambos' : otherRequested[0].slot} label={turnos} /></div>
-            {!noPrice && <Price n={cheapest.price} />}
-          </div>
-        </>
-      ),
-      f: (
-        <>
-          <button type="button" className="btn p" disabled={busy} onClick={() => { void call({ action: 'mudou_casa', mode: 'other' }).catch(() => undefined); const both = otherRequested.length === 2; void choose(otherRequested[0], both ? 'Almoço ou jantar' : T(otherRequested[0].slot), cheapest.price, both ? 'ambos' : otherRequested[0].slot); }}>Quero na {C[otherHouse].n}</button>
-          <button type="button" className="btn s" disabled={busy} onClick={() => go('lista', { casa: house, page: 0 })}>Ver datas na {C[house].n}</button>
-        </>
-      ),
-    });
-  }
-
-  if (S.v === 'fim' && S.final) {
-    const q = S.final;
-    return page({
-      band: { t: q.fila ? 'Você entrou na fila' : `Boa escolha, ${view.firstName}!` },
-      m: (
-        <>
-          <Pill house={q.option.house} />
-          <div className="sum"><strong>{longDate(q.option.date)}</strong><TurnLabel slot={q.slot} label={q.turno} /><br />{C[q.option.house].a}{!noPrice && !q.fila && <><br />A partir de <b>{R(q.price)}</b> para 40 pagantes</>}</div>
-          {q.fila ? (
-            <>
-              <ol className="steps"><li>Continue a conversa com a nossa equipe no WhatsApp.</li><li>Se a pré-reserva não for confirmada, nossa equipe vai te orientar.</li><li>Com o turno liberado, você garante a data com o sinal e o contrato.</li></ol>
-              <div className="note"><b>Entrar na fila não reserva a data.</b>Enquanto isso, você pode ver outras opções com a equipe.</div>
-            </>
-          ) : (
-            <div className="note"><b>Esta data ainda não está reservada.</b>A reserva só acontece com o sinal pago e o contrato fechado.</div>
-          )}
-        </>
-      ),
-      f: <button type="button" className="btn w" disabled={opening} onClick={() => openWhatsapp(q.option.house, q)}>{opening ? 'Abrindo o WhatsApp...' : `Continuar no WhatsApp da ${C[q.option.house].n}`}</button>,
-    });
-  }
-
-  // Tela de datas
-  const { days, shown } = pageOf(S.casa, S.page);
-  const q = S.pick;
-  const switchHouse = (h: House) => {
-    if (h === S.casa) return;
-    void call({ action: 'mudou_casa', mode: h === house ? 'origin' : 'other' }).catch(() => undefined);
-    setS({ ...S, casa: h, page: 0, pick: null });
-  };
-  return page({
-    short: false,
-    band: { t: 'Escolha uma data', u: bothOccupied && otherRequested.length === 0 ? 'Sua data está ocupada nas duas unidades' : 'Outras opções' },
-    m: (
-      <>
-        <div className="seg" role="group" aria-label="Escolha a unidade">
-          {(['bosque', 'vila'] as House[]).map(k => <button key={k} type="button" className={S.casa === k ? 'on' : ''} onClick={() => switchHouse(k)}>{C[k].n}</button>)}
-        </div>
-        <p className="cap">{C[S.casa].a}</p>
-        <div className="days">
-          {shown.map(d => (
-            <div key={d.date} className="day">
-              <h3>{longDate(d.date)}</h3>
-              <div className={`chips ${d.slots.length === 1 ? 'one' : ''}`}>
-                {d.slots.map(o => {
-                  const wide = d.slots.length === 1;
-                  const priceBlock = !noPrice && o.status === 'disponivel' && <span className="chip-price"><span className="from">A partir de <span className="amt">{R(o.price)}</span></span><span className="per40">para 40 pagantes</span></span>;
-                  return (
-                  <button key={o.slot} type="button" className={`chip ${wide ? 'wide' : ''} ${o.status === 'interesse' ? 'int' : ''} ${q && q.date === o.date && q.slot === o.slot && q.house === o.house ? 'sel' : ''}`} onClick={() => setS({ ...S, pick: o })}>
-                    <b><TurnLabel slot={o.slot} /></b>
-                    {o.status === 'interesse' ? <span className="queue-status">Pré-reservado</span> : priceBlock}
-                    {!noPrice && o.status === 'disponivel' && o.cheaper && <em>Menor investimento</em>}
-                  </button>
-                  );
-                })}
-              </div>
+  return (
+    <div className="v2">
+      <Header />
+      <main className="v2-main">
+        {req && (
+          <section className="v2-req">
+            <div className="v2-mini"><span>{mon3(req).toUpperCase()}</span><b>{Number(req.slice(8, 10))}</b></div>
+            <div><h2 className="v2-date">{longDate(req)}</h2>
+              {!d ? <span className="v2-sk line" /> : d.state === 'ready' && d.requested ? <p className={`v2-sum${summary(d.requested) === 'Data ocupada' ? ' busy' : ''}`}>{summary(d.requested)}</p>
+                : d.state === 'unopened' ? <p className="v2-sum busy">O calendário dessa data ainda não abriu</p>
+                : d.state === 'closed' ? <p className="v2-sum busy">Não atendemos nessa data</p>
+                : d.state === 'unavailable' ? <p className="v2-sum busy">Vamos confirmar com a equipe</p> : null}
             </div>
-          ))}
-          {shown.length === 0 && <p className="cap">Vamos confirmar com a equipe.</p>}
-        </div>
-        {days.length > P && <button type="button" className="more" onClick={() => setS({ ...S, page: (S.page + 1) * P >= days.length ? 0 : S.page + 1, pick: null })}>Mostrar outras datas</button>}
-        <button type="button" className="more" disabled={busy || opening} onClick={() => talk(S.casa)}>{opening ? 'Abrindo o WhatsApp...' : 'Nenhuma serve, falar com a equipe'}</button>
-      </>
-    ),
-    f: (
-      <>
-        <button type="button" className={`btn p${q && queuing === qk(q) ? ' queuing' : ''}`} disabled={!q || busy} aria-busy={!!q && queuing === qk(q)} onClick={() => q && (q.status === 'interesse' ? queue(q) : choose(q))}>{q && queuing === qk(q) ? 'Entrando na fila...' : q ? `${q.status === 'interesse' ? 'Entrar na fila de' : 'Quero'} ${shortDate(q.date)}, ${t(q.slot)}` : 'Escolha uma data'}</button>
-      </>
-    ),
-  });
+          </section>
+        )}
+        {!d && <div className="v2-big"><span className="v2-sk turn" /><span className="v2-sk turn" /></div>}
+        {d?.state === 'ready' && d.requested && <BigTurns day={d.requested} kind="data_pedida" />}
+        {d?.state === 'unavailable' && <a className="v2-wabtn" href={base.fallbackUrl} target="_blank" rel="noopener noreferrer"><WA />Falar no WhatsApp da {UNIT_NAME[house]}</a>}
+        {d?.state === 'ready' && req && anyAsked([req]) && <AskedNote />}
+
+        {(!d || d.options.length > 0) && <h3 className="v2-h3">Outras opções</h3>}
+        {!d && [0, 1, 2].map(i => <div key={i} className="v2-row"><span className="v2-sk col" /><span className="v2-sk opt" /><span className="v2-sk opt" /></div>)}
+        {d?.options.map(o => (
+          <div key={o.date} className="v2-row">
+            <div className="v2-col"><span className="w">{wk3(o.date)}</span><b>{Number(o.date.slice(8, 10))}</b><span className="m">{mon3(o.date)}</span></div>
+            <div className="v2-opts">
+              {SLOTS.map(s => {
+                const st = o[s]; const Icon = s === 'almoco' ? Sun : Moon; const mine = isAsked(o.date, s);
+                const label = <span className="v2-oname"><Icon size={14} aria-hidden="true" />{T(s)}</span>;
+                if (mine) return <button key={s} type="button" className="v2-opt asked" onClick={() => openUrl(pickUrl(base.firstName, house, o.date, s, mine.queue))}>{label}<span className="v2-ost">✓ Você pediu</span></button>;
+                if (st === 'ocupado') return <div key={s} className="v2-opt off">{label}<span className="v2-ost">Ocupado</span></div>;
+                return <button key={s} type="button" className={`v2-opt ${st === 'interesse' ? 'fila' : 'free'}`} onClick={() => tap(o.date, s, st, 'alternativa')}>{label}<span className="v2-ost">{st === 'interesse' ? 'Entrar na fila' : 'Livre'}</span>{o.low[s] && <em className="v2-low">Menor investimento</em>}</button>;
+              })}
+            </div>
+          </div>
+        ))}
+        {d && anyAsked(d.options.map(o => o.date)) && !(req && anyAsked([req])) && <AskedNote />}
+        <button type="button" className="v2-callink" onClick={() => { setView('cal'); window.scrollTo(0, 0); void post(token, { action: 'abriu_calendario' }); }}><CalendarDays size={18} aria-hidden="true" />Ver calendário completo</button>
+        <p className="v2-foot">Nada é reservado aqui. A reserva acontece com o sinal pago e o contrato fechado.</p>
+      </main>
+    </div>
+  );
+}
+
+const addMonth = (m: string, n: number) => { const [y, mo] = m.split('-').map(Number); const d = new Date(Date.UTC(y, mo - 1 + n, 1)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
+function Calendar({ token, base, BigTurns, anyAsked, AskedNote }: { token: string; base: PersonalDateBase; BigTurns: (p: { day: DayTurns; kind: 'calendario'; small?: boolean }) => React.ReactElement; anyAsked: (d: string[]) => boolean; AskedNote: () => React.ReactElement }) {
+  const startMonth = (base.requestedDate && base.requestedDate <= base.horizon ? base.requestedDate : base.today).slice(0, 7);
+  const [month, setMonth] = useState(startMonth);
+  const [sel, setSel] = useState<string | null>(base.requestedDate);
+  const qc = useQueryClient();
+  const q = useQuery(monthQ(token, month));
+  useEffect(() => { const next = addMonth(month, 1); if (next <= base.horizon.slice(0, 7)) void qc.prefetchQuery(monthQ(token, next)); }, [month, qc, token, base.horizon]);
+  const days: MonthDay[] = q.data?.days ?? [];
+  const lead = (new Date(`${month}-01T12:00:00Z`).getUTCDay() + 6) % 7;
+  const selDay = useMemo(() => days.find(d => d.date === sel && !('off' in d)) as DayTurns | undefined, [days, sel]);
+  const title = cap(new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${month}-15T12:00:00Z`)));
+  const minM = base.today.slice(0, 7), maxM = base.horizon.slice(0, 7);
+  return (
+    <main className="v2-main">
+      <div className="v2-monthnav">
+        <button type="button" aria-label="Mês anterior" disabled={month <= minM} onClick={() => setMonth(addMonth(month, -1))}><ChevronLeft /></button>
+        <h2>{title}</h2>
+        <button type="button" aria-label="Próximo mês" disabled={month >= maxM} onClick={() => setMonth(addMonth(month, 1))}><ChevronRight /></button>
+      </div>
+      <div className="v2-grid" role="grid">
+        {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((l, i) => <span key={i} className="v2-wd">{l}</span>)}
+        {Array.from({ length: lead }).map((_, i) => <span key={`e${i}`} />)}
+        {!q.data && Array.from({ length: 30 }).map((_, i) => <span key={`s${i}`} className="v2-sk day" />)}
+        {days.map(d => {
+          const n = Number(d.date.slice(8, 10));
+          if ('off' in d) return <span key={d.date} className="v2-day dim">{n}</span>;
+          const free = d.almoco === 'disponivel' || d.jantar === 'disponivel', busy = d.almoco === 'ocupado' && d.jantar === 'ocupado';
+          const cls = free ? 'g' : busy ? 'r' : 'y';
+          return <button key={d.date} type="button" className={`v2-day ${cls}${d.date === base.requestedDate ? ' mine' : ''}${d.date === sel ? ' sel' : ''}`} onClick={() => setSel(d.date)} aria-pressed={d.date === sel}>{n}<i /></button>;
+        })}
+      </div>
+      <ul className="v2-legend"><li><i className="g" />Livre</li><li><i className="y" />Fila</li><li><i className="r" />Ocupado</li><li><i className="mine" />Sua data</li></ul>
+      {selDay && <section className="v2-selcard"><h3 className="v2-h3">{longDate(selDay.date)}</h3><BigTurns day={selDay} kind="calendario" small />{anyAsked([selDay.date]) && <AskedNote />}</section>}
+      <p className="v2-foot">Nada é reservado aqui. A reserva acontece com o sinal pago e o contrato fechado.</p>
+    </main>
+  );
 }

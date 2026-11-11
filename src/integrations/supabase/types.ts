@@ -768,6 +768,7 @@ export type Database = {
         Row: {
           action: string
           created_at: string
+          detail: string | null
           house: string | null
           id: string
           link_id: string
@@ -779,6 +780,7 @@ export type Database = {
         Insert: {
           action: string
           created_at?: string
+          detail?: string | null
           house?: string | null
           id?: string
           link_id: string
@@ -790,6 +792,7 @@ export type Database = {
         Update: {
           action?: string
           created_at?: string
+          detail?: string | null
           house?: string | null
           id?: string
           link_id?: string

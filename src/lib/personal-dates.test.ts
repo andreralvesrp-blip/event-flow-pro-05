@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { availability, priceFor, horizon, inWindow, buildOptions, isAllowedForm, whatsappUrl, orderDaySlots, type CalendarEvent, type CalendarSet } from './personal-dates';
+import { lowerInvestment, otherOptions, pickUrl, availability, priceFor, horizon, inWindow, buildOptions, isAllowedForm, whatsappUrl, orderDaySlots, type CalendarEvent, type CalendarSet } from './personal-dates';
 const event = (start: string, end: string): CalendarEvent => ({ start: { dateTime: `2027-01-23T${start}:00-03:00` }, end: { dateTime: `2027-01-23T${end}:00-03:00` } });
 const empty: CalendarSet = { bosque: { closed: [], interest: [] }, vila: { closed: [], interest: [] } };
 describe('Turnos', () => {
@@ -59,4 +59,12 @@ describe('Sugestões e segurança', () => {
     expect(s.slice(s.indexOf('2027-02-07:almoco') + 1, s.indexOf('2027-02-07:almoco') + 4)).toEqual(['2027-01-22:almoco','2027-01-22:jantar','2027-01-24:jantar']);
   });
   it('domingo jantar (intermediário) começa pelos nobres do mesmo fim de semana', () => expect(seq('2027-01-24').slice(0, 4)).toEqual(['2027-01-24:almoco','2027-01-24:jantar','2027-01-23:almoco','2027-01-23:jantar']));
+});
+
+describe('Página de datas v2', () => {
+  it('selo: seg–qui, sexta, domingo à noite e feriado em dia de semana', () => { expect(lowerInvestment('2027-01-19','almoco')).toBe(true); expect(lowerInvestment('2027-01-22','almoco')).toBe(true); expect(lowerInvestment('2027-01-24','jantar')).toBe(true); expect(lowerInvestment('2027-04-21','almoco',['2027-04-21'])).toBe(true); });
+  it('sem selo: sábado, domingo almoço, feriado no fim de semana', () => { expect(lowerInvestment('2027-01-23','jantar')).toBe(false); expect(lowerInvestment('2027-01-24','almoco')).toBe(false); expect(lowerInvestment('2027-02-07','jantar',['2027-02-07'])).toBe(false); });
+  it('outras opções: 3 datas, só sex/sáb/dom, mesma unidade, sem data toda ocupada', () => { const busy = [{ start: { dateTime: '2027-01-30T12:00:00-03:00' }, end: { dateTime: '2027-01-30T14:00:00-03:00' } }, { start: { dateTime: '2027-01-30T18:00:00-03:00' }, end: { dateTime: '2027-01-30T20:00:00-03:00' } }]; const o = otherOptions('2027-01-23','bosque',{...empty,bosque:{closed:busy,interest:[]}},[],'2026-11-05'); expect(o).toHaveLength(3); for (const d of o) { expect([0,5,6]).toContain(new Date(d.date+'T12:00:00Z').getUTCDay()); expect(d.date).not.toBe('2027-01-30'); } });
+  it('prefere datas com os dois turnos livres', () => { const half = [{ start: { dateTime: '2027-01-24T12:00:00-03:00' }, end: { dateTime: '2027-01-24T14:00:00-03:00' } }]; const o = otherOptions('2027-01-23','bosque',{...empty,bosque:{closed:half,interest:[]}},[],'2026-11-05'); expect(o.map(d => d.date)).not.toContain('2027-01-24'); });
+  it('mensagens do WhatsApp', () => { expect(decodeURIComponent(pickUrl('Ana','bosque','2027-05-15','jantar'))).toContain('Olá! Sou Ana. Quero verificar o jantar de sábado, 15/05, na Ud. Bosque da Saúde.'); expect(decodeURIComponent(pickUrl('Ana','bosque','2027-05-15','almoco',true))).toContain('Quero entrar na fila do almoço de sábado, 15/05, na Ud. Bosque da Saúde. Se a pré-reserva não se confirmar, me avisem.'); });
 });

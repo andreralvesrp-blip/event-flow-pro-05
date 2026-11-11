@@ -78,6 +78,13 @@
       "when": 1793906666332,
       "tag": "0010_opportunity_contact_name",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794410480750,
+      "tag": "0011_date_interactions_detail",
+      "breakpoints": true
     }
   ]
 }

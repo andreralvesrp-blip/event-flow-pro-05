@@ -64,10 +64,10 @@ export type Closure = { start_date: string; end_date: string; name: string };
 /** Período sem atendimento, com início e fim inclusive. */
 export const closureFor = (date: string, closures: Closure[] = []) => closures.find(c => date >= c.start_date && date <= c.end_date) ?? null;
 export type CalendarSet = Record<House, { closed: CalendarEvent[]; interest: CalendarEvent[] }>;
-export function buildOptions(requested: string, origin: House, calendars: CalendarSet, holidays: string[], today: string, mode: 'all' | 'origin' | 'other' = 'all', requestedSlot?: Slot | null, closures: Closure[] = []) {
+export function buildOptions(requested: string, origin: House, calendars: CalendarSet, holidays: string[], today: string, mode: 'all' | 'origin' | 'other' = 'all', requestedSlot?: Slot | null, closures: Closure[] = [], weekendOnly = false) {
   const other: House = origin === 'bosque' ? 'vila' : 'bosque';
   const weekday = getDay(parseISO(requested));
-  const isWeek = weekday >= 1 && weekday <= 4;
+  const isWeek = !weekendOnly && weekday >= 1 && weekday <= 4;
   const baseline = priceFor(requested, requestedSlot ?? 'almoco', holidays);
   const candidate: Array<{ date: string; house: House; slot: Slot }> = [];
   // Datas dentro de um período sem atendimento pulam semana a semana (mesmo dia da semana) para além dele.
@@ -143,4 +143,46 @@ export function whatsappUrl(firstName: string, house: House, date?: string | nul
   const label = date ? format(parseISO(date), 'dd/MM/yyyy') : 'a confirmar';
   const text = `Olá! Sou ${firstName}. ${queue ? 'Quero entrar na fila (não é reserva nem pré-reserva)' : 'Quero falar sobre uma data'}: ${label}, ${slot === 'almoco' ? 'almoço' : slot === 'jantar' ? 'jantar' : slot === 'ambos' ? 'almoço ou jantar' : 'turno a confirmar'}, ${HOUSES[house].name}.`;
   return `https://wa.me/${HOUSES[house].whatsapp}?text=${encodeURIComponent(text)}`;
+}
+export const UNIT_NAME: Record<House, string> = { bosque: 'Ud. Bosque da Saúde', vila: 'Ud. Vila Mariana' };
+/** Selo "Menor investimento": seg–qui, sexta, domingo à noite e feriado em dia de semana; nunca sábado, domingo no almoço ou feriado no fim de semana. */
+export function lowerInvestment(date: string, slot: Slot, holidays: string[] = []) {
+  const d = getDay(parseISO(date));
+  if (d === 6) return false;
+  if (d === 0) return slot === 'jantar' && !holidays.includes(date);
+  return true;
+}
+const WEEK = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+/** Mensagem pronta do WhatsApp ao tocar num turno (livre ou fila). */
+export function pickUrl(firstName: string, house: House, date: string, slot: Slot, queue = false) {
+  const when = `${slot === 'almoco' ? 'almoço' : 'jantar'} de ${WEEK[getDay(parseISO(date))]}, ${date.slice(8, 10)}/${date.slice(5, 7)}, na ${UNIT_NAME[house]}`;
+  const text = queue ? `Olá! Sou ${firstName}. Quero entrar na fila do ${when}. Se a pré-reserva não se confirmar, me avisem.` : `Olá! Sou ${firstName}. Quero verificar o ${when}.`;
+  return `https://wa.me/${HOUSES[house].whatsapp}?text=${encodeURIComponent(text)}`;
+}
+export type DayTurns = { date: string; almoco: Availability; jantar: Availability; low: Record<Slot, boolean> };
+const dayTurns = (date: string, house: House, calendars: CalendarSet, holidays: string[]): DayTurns => {
+  const a = availability(date, calendars[house].closed, calendars[house].interest);
+  return { date, almoco: a.almoco, jantar: a.jantar, low: { almoco: a.almoco === 'disponivel' && lowerInvestment(date, 'almoco', holidays), jantar: a.jantar === 'disponivel' && lowerInvestment(date, 'jantar', holidays) } };
+};
+/** 3 outras datas da mesma unidade, na ordem de prioridade; prefere dois turnos livres, nunca dois ocupados, sem seg–qui. */
+export function otherOptions(requested: string, house: House, calendars: CalendarSet, holidays: string[], today: string, closures: Closure[] = [], count = 3): DayTurns[] {
+  const dates: string[] = [];
+  for (const o of buildOptions(requested, house, calendars, holidays, today, 'origin', null, closures, true)) if (!dates.includes(o.date)) dates.push(o.date);
+  const days = dates.filter(d => { const w = getDay(parseISO(d)); return w === 0 || w === 5 || w === 6; }).map(d => dayTurns(d, house, calendars, holidays)).filter(d => !(d.almoco === 'ocupado' && d.jantar === 'ocupado'));
+  const free = days.filter(d => d.almoco === 'disponivel' && d.jantar === 'disponivel');
+  const rest = days.filter(d => !free.includes(d));
+  const best = free.slice(0, count);
+  if (best.length < count) best.push(...rest.filter(d => d.almoco !== 'ocupado' && d.jantar !== 'ocupado').slice(0, count - best.length));
+  if (best.length < count) best.push(...rest.filter(d => !best.includes(d)).slice(0, count - best.length));
+  return best.sort((a, b) => dates.indexOf(a.date) - dates.indexOf(b.date));
+}
+export function requestedTurns(date: string, house: House, calendars: CalendarSet, holidays: string[]) { return dayTurns(date, house, calendars, holidays); }
+/** Dias do mês (yyyy-MM) com status; fora da janela ou em recesso = null. */
+export function monthTurns(month: string, house: House, calendars: CalendarSet, holidays: string[], today: string, closures: Closure[] = []) {
+  const first = parseISO(`${month}-01`); const out: Array<DayTurns | { date: string; off: true }> = [];
+  for (let d = first; format(d, 'yyyy-MM') === month; d = addDays(d, 1)) {
+    const ds = dayString(d);
+    out.push(!inWindow(ds, today) || closureFor(ds, closures) ? { date: ds, off: true } : dayTurns(ds, house, calendars, holidays));
+  }
+  return out;
 }

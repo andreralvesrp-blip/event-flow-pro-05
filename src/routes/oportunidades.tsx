@@ -136,7 +136,7 @@ const SEND_STATUS_LABELS: Record<QuoteSend["status"], string> = {
 };
 
 type FormLite = { slug: string; name: string; flow_version?: string | null };
-type DateInteraction = { opportunity_id: string; action: string; house: string | null; party_date: string | null; slot: string | null; created_at: string };
+type DateInteraction = { opportunity_id: string; action: string; house: string | null; party_date: string | null; slot: string | null; created_at: string; detail?: string | null };
 
 /** Nome do pedido: o digitado no formulário (contact_name) quando existir; senão, o do cadastro. */
 function displayName(o: { contact_name?: string | null; client?: { full_name: string } | null } | null | undefined): string {
@@ -410,7 +410,7 @@ function OportunidadesPage() {
         let page = 0;
         while (true) {
           const { data: history, error: historyError } = await supabase.from('date_interactions')
-            .select('opportunity_id,action,house,party_date,slot,created_at')
+            .select('opportunity_id,action,house,party_date,slot,created_at,detail')
             .in('opportunity_id', oppIds.slice(i, i + 200))
             .order('created_at', { ascending: false }).range(page * 1000, page * 1000 + 999);
           if (historyError) { setErr('Não foi possível carregar as interações de datas'); break; }
@@ -1613,21 +1613,21 @@ function OpDetail({
   );
 }
 
+const KIND_TXT: Record<string, string> = { data_pedida: 'data pedida', alternativa: 'outra opção', calendario: 'calendário' };
 function DatesSection({ list }: { list: DateInteraction[] }) {
-  const opens = list.filter(i => i.action === 'abriu').sort((a, b) => b.created_at.localeCompare(a.created_at));
   const byAction = (a: string) => list.filter(i => i.action === a).sort((x, y) => y.created_at.localeCompare(x.created_at));
-  const chosen = byAction('escolheu_data'), queued = byAction('entrou_fila'), moved = byAction('mudou_casa');
-  const line = (i: DateInteraction) => `${i.party_date ? fmtDate(i.party_date) : '—'}${i.slot ? ` · ${SLOT_TXT(i.slot)}` : ''} · ${HOUSE_LABEL(i.house)} (${fmtDateTime(i.created_at)})`;
+  const opens = byAction('abriu'), chosen = byAction('escolheu_data'), queued = byAction('entrou_fila'), cal = byAction('abriu_calendario');
+  const src = (d?: string | null) => (d === 'email' ? 'e-mail' : d === 'whatsapp' ? 'WhatsApp' : '—');
+  const line = (i: DateInteraction) => `${i.party_date ? fmtDate(i.party_date) : '—'}${i.slot ? ` · ${SLOT_TXT(i.slot)}` : ''}${i.detail && KIND_TXT[i.detail] ? ` · ${KIND_TXT[i.detail]}` : ''} (${fmtDateTime(i.created_at)})`;
   return (
     <div className="border-t pt-3">
       <div className="text-sm font-semibold mb-2">Página de datas</div>
       <div className="grid grid-cols-2 gap-3 text-sm">
-        <div><div className="text-xs text-muted-foreground">Abriu?</div><div>{opens.length ? 'Sim' : 'Não'}</div></div>
-        <div><div className="text-xs text-muted-foreground">Vezes que abriu</div><div>{opens.length}</div></div>
-        <div className="col-span-2"><div className="text-xs text-muted-foreground">Última abertura</div><div>{opens[0] ? fmtDateTime(opens[0].created_at) : '—'}</div></div>
-        <div className="col-span-2"><div className="text-xs text-muted-foreground">Datas escolhidas</div>{chosen.length ? chosen.map((i, k) => <div key={k}>{line(i)}</div>) : <div>—</div>}</div>
-        <div className="col-span-2"><div className="text-xs text-muted-foreground">Entrada na fila (não é reserva)</div>{queued.length ? queued.map((i, k) => <div key={k}>{line(i)}</div>) : <div>—</div>}</div>
-        <div className="col-span-2"><div className="text-xs text-muted-foreground">Mudança de unidade</div>{moved.length ? moved.map((i, k) => <div key={k}>Para {HOUSE_LABEL(i.house)} ({fmtDateTime(i.created_at)})</div>) : <div>—</div>}</div>
+        <div><div className="text-xs text-muted-foreground">Abriu?</div><div>{opens.length ? `Sim, ${opens.length}x` : 'Não'}</div></div>
+        <div><div className="text-xs text-muted-foreground">Origem da última abertura</div><div>{opens[0] ? `${src(opens[0].detail)} (${fmtDateTime(opens[0].created_at)})` : '—'}</div></div>
+        <div className="col-span-2"><div className="text-xs text-muted-foreground">Turnos escolhidos</div>{chosen.length ? chosen.map((i, k) => <div key={k}>{line(i)}</div>) : <div>—</div>}</div>
+        <div className="col-span-2"><div className="text-xs text-muted-foreground">Filas (não é reserva)</div>{queued.length ? queued.map((i, k) => <div key={k}>{line(i)}</div>) : <div>—</div>}</div>
+        <div className="col-span-2"><div className="text-xs text-muted-foreground">Abriu o calendário?</div><div>{cal.length ? `Sim, ${cal.length}x` : 'Não'}</div></div>
       </div>
     </div>
   );

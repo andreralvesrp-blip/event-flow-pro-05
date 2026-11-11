@@ -1,9 +1,17 @@
 import { z } from 'zod';
-import { availability, buildOptions, closureFor, type Closure, inWindow, isAllowedForm, priceFor, saoPauloToday, horizon, whatsappUrl, type Availability, type House, type Slot, type Turno } from './personal-dates';
+import { closureFor, type Closure, inWindow, isAllowedForm, saoPauloToday, horizon, whatsappUrl, otherOptions, requestedTurns, monthTurns, type House } from './personal-dates';
 import { loadCalendars, tokenHash } from './personal-calendar.server';
 
 const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
-const inputSchema = z.object({ token: tokenSchema, mode: z.enum(['all','origin','other']).default('all'), action: z.enum(['abriu','viu_opcao','escolheu_data','entrou_fila','mudou_casa','falou_equipe']).optional(), house: z.enum(['bosque','vila']).optional(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), slot: z.enum(['almoco','jantar','ambos']).optional() });
+const inputSchema = z.object({
+  token: tokenSchema,
+  part: z.enum(['base', 'full']).default('full'),
+  month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  action: z.enum(['abriu', 'escolheu_data', 'entrou_fila', 'abriu_calendario', 'falou_equipe']).optional(),
+  detail: z.enum(['email', 'whatsapp', 'data_pedida', 'alternativa', 'calendario']).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  slot: z.enum(['almoco', 'jantar']).optional(),
+});
 export async function handlePersonalDates(request: Request) {
   const headers = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow, noarchive', 'Referrer-Policy': 'no-referrer' };
   const respond = (body: unknown, status = 200) => Response.json(body, { status, headers });
@@ -27,71 +35,49 @@ export async function handlePersonalDates(request: Request) {
   const client = Array.isArray(op.client) ? op.client[0] : op.client;
   const firstName = ((op as any)?.contact_name || client?.full_name)?.trim().split(/\s+/)[0] || 'Olá';
   const today = saoPauloToday();
-  const requested = op.desired_date;
-  const base = { firstName, origin, requestedDate: requested && requested > today ? requested : null, noPrice: String(op.form_slug) === 'bs-kids-day', today, horizon: horizon(today) };
-  const record = async (action: NonNullable<typeof input.action>, house?: House, date?: string, slot?: Turno) => {
-    const { error } = await db.from('date_interactions').insert({ tenant_id: link.tenant_id, opportunity_id: op.id, link_id: link.id, action, house: house ?? null, party_date: date ?? null, slot: slot ?? null });
+  const requested = op.desired_date && op.desired_date > today ? op.desired_date : null;
+  const record = async (action: string, date?: string, slot?: string, detail?: string) => {
+    const { error } = await db.from('date_interactions').insert({ tenant_id: link.tenant_id, opportunity_id: op.id, link_id: link.id, action, house: origin, party_date: date ?? null, slot: slot ?? null, detail: detail ?? null });
     if (error) throw new Error('Falha ao registrar interação');
   };
   try {
-    if (input.action === 'abriu') {
-      // Uma abertura = um registro: ignora repetições do mesmo link em poucos segundos (StrictMode, retomada de aba).
-      const since = new Date(Date.now() - 10_000).toISOString();
-      const { data: recent } = await db.from('date_interactions').select('id').eq('link_id', link.id).eq('action', 'abriu').gte('created_at', since).limit(1);
-      if (!recent?.length) await record('abriu');
+    if (input.action) {
+      if (input.action === 'abriu') {
+        const since = new Date(Date.now() - 10_000).toISOString();
+        const { data: recent } = await db.from('date_interactions').select('id').eq('link_id', link.id).eq('action', 'abriu').gte('created_at', since).limit(1);
+        if (!recent?.length) await record('abriu', undefined, undefined, input.detail === 'email' ? 'email' : 'whatsapp');
+      } else if (input.action === 'abriu_calendario' || input.action === 'falou_equipe') {
+        await record(input.action);
+      } else {
+        // Sem reler agendas: só confere a janela de datas e grava (a navegação ao WhatsApp já aconteceu).
+        if (!input.date || !input.slot || !inWindow(input.date, today)) return respond({ error: 'Opção indisponível' }, 409);
+        if (input.action === 'entrou_fila') {
+          const { data: dup } = await db.from('date_interactions').select('id').eq('opportunity_id', op.id).eq('action', 'entrou_fila').eq('house', origin).eq('party_date', input.date).eq('slot', input.slot).limit(1);
+          if (!dup?.length) await record('entrou_fila', input.date, input.slot);
+        } else await record('escolheu_data', input.date, input.slot, input.detail ?? 'alternativa');
+      }
       return respond({ ok: true });
     }
-    if (input.action === 'viu_opcao') {
-      // Telemetria: não precisa ler agendas; a sessão do navegador já limita a uma vez por opção.
-      if (!input.house || !input.date || !input.slot || input.slot === 'ambos' || !inWindow(input.date, today)) return respond({ error: 'Opção indisponível' }, 409);
-      await record('viu_opcao', input.house, input.date, input.slot);
-      return respond({ ok: true });
-    }
-    if (input.action === 'falou_equipe') {
-      const house = input.house ?? origin;
-      // Não confiar na data recebida para apresentar datas fora da janela.
-      const date = input.date && inWindow(input.date, today) ? input.date : undefined;
-      await record('falou_equipe', house, date, input.slot);
-      return respond({ ok: true, url: whatsappUrl(firstName, house, date, input.slot) });
-    }
-    if (!requested || requested > horizon(today)) return respond({ ...base, state: 'unopened', requested: [], options: [] });
-    // Agendas, feriados e recessos em paralelo para reduzir a espera (ex.: "Entrar na fila").
-    const [calendars, { data: holidayRows, error: holidayError }, { data: closureRows, error: closureError }] = await Promise.all([
+    const { data: asked } = await db.from('date_interactions').select('action,party_date,slot,created_at').eq('opportunity_id', op.id).in('action', ['escolheu_data', 'entrou_fila']).order('created_at', { ascending: false }).limit(50);
+    const base = { firstName, origin, requestedDate: requested, today, horizon: horizon(today), fallbackUrl: whatsappUrl(firstName, origin), asked: (asked ?? []).filter(a => a.party_date && a.slot).map(a => ({ date: a.party_date as string, slot: a.slot as 'almoco' | 'jantar', queue: a.action === 'entrou_fila' })) };
+    if (input.part === 'base') return respond(base);
+    const [calendars, { data: holidayRows, error: he }, { data: closureRows, error: ce }] = await Promise.all([
       loadCalendars(db, link.tenant_id, today),
       db.from('date_holidays').select('holiday_date').eq('tenant_id', link.tenant_id),
       db.from('date_closures').select('start_date,end_date,name').eq('tenant_id', link.tenant_id),
     ]);
-    if (holidayError) throw new Error('Falha ao ler feriados');
+    if (he || ce) throw new Error('Falha ao ler datas');
     const holidays = (holidayRows ?? []).map(h => h.holiday_date);
-    if (closureError) throw new Error('Falha ao ler períodos sem atendimento');
     const closures: Closure[] = closureRows ?? [];
+    if (input.month) return respond({ ...base, month: input.month, days: monthTurns(input.month, origin, calendars, holidays, today, closures) });
+    if (!requested) return respond({ ...base, state: 'nodate', options: [] });
+    const anchor = requested > horizon(today) ? horizon(today) : requested;
+    const options = otherOptions(anchor, origin, calendars, holidays, today, closures);
+    if (requested > horizon(today)) return respond({ ...base, state: 'unopened', options });
     const closure = closureFor(requested, closures);
-    const requestedOptions = inWindow(requested, today) && !closure ? (['almoco','jantar'] as const).map(slot => ({ house: origin, date: requested, slot, status: availability(requested, calendars[origin].closed, calendars[origin].interest)[slot], price: priceFor(requested, slot, holidays), cheaper: false })) : [];
-    if (input.action === 'mudou_casa') await record('mudou_casa', input.mode === 'other' ? origin === 'bosque' ? 'vila' : 'bosque' : origin);
-    if (input.action === 'escolheu_data' || input.action === 'entrou_fila') {
-      if (!input.house || !input.date || !input.slot || !inWindow(input.date, today)) return respond({ error: 'Opção indisponível' }, 409);
-      // "almoço ou jantar" só existe como escolha de data; fila e visualização são por turno.
-      if (input.slot === 'ambos' && input.action === 'entrou_fila') return respond({ error: 'Opção indisponível' }, 409);
-      const turns = availability(input.date, calendars[input.house].closed, calendars[input.house].interest);
-      // "ambos" = almoço ou jantar: só vale quando os dois turnos estão livres na mesma data e casa.
-      const slots: Slot[] = input.slot === 'ambos' ? ['almoco', 'jantar'] : [input.slot];
-      const status: Availability = slots.every(s => turns[s] === 'disponivel') ? 'disponivel' : slots.some(s => turns[s] === 'interesse') ? 'interesse' : 'ocupado';
-      const pool = [...buildOptions(requested, origin, calendars, holidays, today, 'all', op.desired_slot as Slot | null, closures), ...requestedOptions];
-      const legal = slots.every(s => pool.some(o => o.house === input.house && o.date === input.date && o.slot === s));
-       if (!legal || (input.action === 'escolheu_data' && status !== 'disponivel') || (input.action === 'entrou_fila' && status !== 'interesse')) return respond({ error: 'Esta opção mudou. Vamos confirmar com a equipe.' }, 409);
-      // Fila: a mesma oportunidade não entra duas vezes na mesma data, turno e unidade; responde a confirmação normal.
-      let already = false;
-      if (input.action === 'entrou_fila') {
-        const { data: dup } = await db.from('date_interactions').select('id').eq('opportunity_id', op.id).eq('action', 'entrou_fila').eq('house', input.house).eq('party_date', input.date).eq('slot', input.slot).limit(1);
-        already = !!dup?.length;
-      }
-      if (!already) await record(input.action, input.house, input.date, input.slot);
-      if (input.house !== origin && input.action === 'escolheu_data') await record('mudou_casa', input.house, input.date, input.slot);
-      return respond({ ok: true, url: whatsappUrl(firstName, input.house, input.date, input.slot, input.action === 'entrou_fila') });
-    }
-    const allOptions = buildOptions(requested, origin, calendars, holidays, today, input.mode, op.desired_slot as Slot | null, closures);
-    return respond({ ...base, state: 'ready', closure, requested: requestedOptions, options: allOptions });
+    if (closure) return respond({ ...base, state: 'closed', closure, options });
+    return respond({ ...base, state: 'ready', requested: requestedTurns(requested, origin, calendars, holidays), options });
   } catch {
-    return respond({ ...base, state: 'unavailable', requested: [], options: [], message: 'Vamos confirmar com a equipe.' });
+    return respond({ firstName, origin, requestedDate: requested, today, horizon: horizon(today), fallbackUrl: whatsappUrl(firstName, origin), asked: [], state: 'unavailable', options: [] });
   }
 }

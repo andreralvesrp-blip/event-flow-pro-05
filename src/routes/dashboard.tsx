@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DatesFunnel } from "@/components/DatesFunnel";
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
@@ -334,6 +335,7 @@ function DashboardPage() {
 
   return (
     <AppLayout title="Dashboard">
+      <DatesFunnel unitFilter={unitFilter ?? null} />
       {/* período */}
       <div className="flex flex-wrap items-center gap-2 mb-6">
         <span className="text-sm text-slate-500 mr-2">Período:</span>
